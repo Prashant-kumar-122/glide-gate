@@ -29,14 +29,15 @@
 
 ---
 
-### [ ] STEP-02 — Backend Setup (FastAPI + SQLAlchemy + python-socketio)
-**BRD:** Section 9.2, Section 10.2 NFRs | **Depends:** STEP-01
+### [DONE] STEP-02 — Backend Setup (FastAPI + SQLAlchemy + python-socketio)
+**Date:** 2026-05-11 | **BRD:** Section 9.2, Section 10.2 NFRs | **Depends:** STEP-01
 
-**Artifacts to produce:**
-- `backend/app/main.py`
-- `backend/app/config.py`
-- `backend/app/database.py`
-- `backend/app/api/routers/health.py`
+**Artifacts produced:**
+- `backend/app/main.py` ✓ — FastAPI app + socketio ASGIApp mount at `/ws`
+- `backend/app/config.py` ✓ — Pydantic `Settings` (all env vars, CORS parser, properties)
+- `backend/app/database.py` ✓ — async SQLAlchemy engine, `AsyncSessionLocal`, `Base`, `get_db`
+- `backend/app/api/routers/health.py` ✓ — GET /api/health (DB ping, status, version)
+- `backend/app/models/__init__.py` ✓ — exports `Base` for Alembic autodiscovery
 
 ---
 
