@@ -41,14 +41,25 @@
 
 ---
 
-### [ ] STEP-03 — Frontend Setup (React 18 + Vite + Tailwind + Zustand + TanStack Query)
-**BRD:** Section 9.1, Section 5.1 | **Depends:** STEP-01
+### [DONE] STEP-03 — Frontend Setup (React 18 + Vite + Tailwind + Zustand + TanStack Query)
+**Date:** 2026-05-11 | **BRD:** Section 9.1, Section 5.1 | **Depends:** STEP-01
 
-**Artifacts to produce:**
-- `frontend/src/main.tsx`
-- `frontend/src/App.tsx`
-- `frontend/src/store/index.ts`
-- `frontend/src/routes/` — 5 placeholder pages
+**Artifacts produced:**
+- `frontend/src/index.css` ✓ — Tailwind base/components/utilities
+- `frontend/src/main.tsx` ✓ — React root: QueryClientProvider + BrowserRouter + StrictMode
+- `frontend/src/App.tsx` ✓ — NavBar + Routes to 5 pages (/, /client, /contact-centre, /agent-trace, /admin)
+- `frontend/src/routes/AdvisorWorkspace.tsx` ✓ — placeholder
+- `frontend/src/routes/ClientPortal.tsx` ✓ — placeholder
+- `frontend/src/routes/ContactCentre.tsx` ✓ — placeholder
+- `frontend/src/routes/AgentTrace.tsx` ✓ — placeholder
+- `frontend/src/routes/AdminConfig.tsx` ✓ — placeholder
+- `frontend/src/store/index.ts` ✓ — re-exports all 4 store hooks
+- `frontend/src/store/workspaceStore.ts` ✓ — Zustand (selectedClient, drawer, badges, socket)
+- `frontend/src/store/chatStore.ts` ✓ — Zustand (messages, typingIndicator, sessionId)
+- `frontend/src/store/ccStore.ts` ✓ — Zustand (selectedClient, filterText, socketStatus)
+- `frontend/src/store/traceStore.ts` ✓ — Zustand (nodeStates, edgeQueue, messageLog, selectedAgent)
+- `npm install` completed (344 packages) ✓
+- `tsc --noEmit` passes with zero errors ✓
 
 ---
 
