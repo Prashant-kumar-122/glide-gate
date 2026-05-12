@@ -106,8 +106,17 @@
 
 ---
 
-### [ ] STEP-07 — Document Intelligence Agent
-**BRD:** Section 6.1, FR-06, FR-08, FR-09, Section 5.1.10–5.1.11 | **Depends:** STEP-04, STEP-05
+### [DONE] STEP-07 — Document Intelligence Agent
+**Date:** 2026-05-12 | **BRD:** Section 6.1, FR-06, FR-08, FR-09, Section 5.1.10–5.1.11 | **Depends:** STEP-04, STEP-05
+
+**Artifacts produced:**
+- `backend/app/agents/document_intelligence/document_classifier.py` ✓ — Rule-based `DocumentClassifier` (21 document types across 6 categories), `ClassificationResult` Pydantic model, confidence scoring
+- `backend/app/agents/document_intelligence/ocr_extractor.py` ✓ — Simulated `OcrExtractor` with category-keyed field templates, `OcrResult` / `OcrField` Pydantic models, 100–600ms randomised latency
+- `backend/app/agents/document_intelligence/ai_completeness_validator.py` ✓ — `AICompletenessValidator`: Anthropic SDK call with editable prompts → `FindingResult[]` (pass/warn/fail); heuristic fallback for no-API runs; `ValidationResult` model
+- `backend/app/agents/document_intelligence/version_diff_detector.py` ✓ — `VersionDiffDetector`: difflib-based `DiffResult` with added/modified/removed/unchanged sections, similarity ratio, human-readable summary; supports text or field-dict inputs
+- `backend/app/agents/document_intelligence/document_intelligence_agent.py` ✓ — `DocumentIntelligenceAgent`: CLASSIFY_DOCUMENT, EXTRACT_OCR, VALIDATE_DOCUMENT, COMPUTE_DIFF handlers
+- `backend/app/agents/document_intelligence/__init__.py` ✓ — re-exports all public types
+- `configs/agents/document_intelligence.config.json` ✓ — classification thresholds, OCR params, validation LLM settings, diff thresholds, all 6 default validation prompts
 
 ### [ ] STEP-08 — Product Onboarding, Collaboration, Contact Centre & Notification Agents
 **BRD:** Section 6.1, FR-05, Section 7.3–7.4, Section 8.1 stages 5–8 | **Depends:** STEP-04–07
