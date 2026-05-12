@@ -1,0 +1,18 @@
+{
+  "agent_id": "collaboration",
+  "display_name": "Collaboration Agent",
+  "description": "Manages multi-party collaboration rooms per onboarding case, enabling advisors, compliance officers, and CC representatives to share comments and annotations.",
+  "storage": {
+    "backend": "in_memory",
+    "note": "Replaced by DB-backed storage in STEP-12+"
+  },
+  "visibility_levels": ["internal", "client_visible", "compliance_only"],
+  "participant_roles": ["advisor", "compliance_officer", "contact_centre_rep", "client"],
+  "comment_config": {
+    "max_length": 2000,
+    "allow_document_references": true,
+    "allow_thread_replies": true
+  },
+  "auto_room_creation": true,
+  "supported_task_types": ["create_collaboration_room", "add_comment"]
+}

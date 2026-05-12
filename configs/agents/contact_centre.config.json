@@ -1,0 +1,28 @@
+{
+  "agent_id": "contact_centre",
+  "display_name": "Contact Centre Agent",
+  "description": "Provides real-time onboarding status summaries and AI-enhanced call guides for contact centre representatives.",
+  "llm": {
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 300,
+    "temperature": 0.4,
+    "system_prompt_key": "contact_centre/call_summary"
+  },
+  "summariser": {
+    "stage_labels": {
+      "INTAKE": "initial information collection",
+      "KYC": "identity and compliance verification",
+      "PARALLEL_PRODUCTS": "product account setup",
+      "REVIEW": "final review",
+      "COMPLETE": "onboarding complete",
+      "ESCALATED": "compliance escalation — awaiting human review"
+    },
+    "kyc_labels": {
+      "PENDING": "identity check in progress",
+      "PASSED": "identity verified",
+      "FAILED": "identity check failed",
+      "ESCALATED": "flagged for manual compliance review"
+    }
+  },
+  "supported_task_types": ["summarise_call", "get_client_status"]
+}

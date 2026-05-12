@@ -118,8 +118,25 @@
 - `backend/app/agents/document_intelligence/__init__.py` ✓ — re-exports all public types
 - `configs/agents/document_intelligence.config.json` ✓ — classification thresholds, OCR params, validation LLM settings, diff thresholds, all 6 default validation prompts
 
-### [ ] STEP-08 — Product Onboarding, Collaboration, Contact Centre & Notification Agents
-**BRD:** Section 6.1, FR-05, Section 7.3–7.4, Section 8.1 stages 5–8 | **Depends:** STEP-04–07
+### [DONE] STEP-08 — Product Onboarding, Collaboration, Contact Centre & Notification Agents
+**Date:** 2026-05-12 | **BRD:** Section 6.1, FR-05, Section 7.3–7.4, Section 8.1 stages 5–8 | **Depends:** STEP-04–07
+
+**Artifacts produced:**
+- `backend/app/agents/product_onboarding/suitability_assessor.py` ✓ — `SuitabilityAssessor` (weighted 40/30/20/10 scoring), `SuitabilityOutcome` Pydantic model, risk/income/age/horizon checks
+- `backend/app/agents/product_onboarding/product_onboarding_agent.py` ✓ — `ProductOnboardingAgent`: ONBOARD_PRODUCT + ASSESS_SUITABILITY handlers; parameterised by product_code; per-product step sequences with simulated latency; signals ADVANCE_STAGE + SEND_NOTIFICATION on completion
+- `backend/app/agents/product_onboarding/__init__.py` ✓ — re-exports public types
+- `backend/app/agents/collaboration/collaboration_agent.py` ✓ — `CollaborationAgent`: CREATE_COLLABORATION_ROOM + ADD_COMMENT handlers; in-memory `CollaborationRoom` (DB-backed in STEP-12+); visibility levels, participant roles
+- `backend/app/agents/collaboration/__init__.py` ✓ — re-exports CollaborationAgent
+- `backend/app/agents/contact_centre/status_summariser.py` ✓ — `StatusSummariser`: rule-based `CallSummary` generation (stage/KYC/documents/products/escalation); no LLM dependency
+- `backend/app/agents/contact_centre/contact_centre_agent.py` ✓ — `ContactCentreAgent`: SUMMARISE_CALL + GET_CLIENT_STATUS handlers; AI-enhanced summaries via Anthropic SDK with heuristic fallback
+- `backend/app/agents/contact_centre/__init__.py` ✓ — re-exports all public types
+- `backend/app/agents/notification/notification_templates.py` ✓ — 11 `NotificationTemplate` instances across email/in-app channels; `Template.safe_substitute` rendering; `get_template()` / `list_templates()` helpers
+- `backend/app/agents/notification/notification_agent.py` ✓ — `NotificationAgent`: SEND_NOTIFICATION + SEND_ESCALATION_ALERT handlers; simulated dispatch (50–300ms latency); `is_simulated=True` in all records; full dispatch log
+- `backend/app/agents/notification/__init__.py` ✓ — re-exports public types
+- `configs/agents/product_onboarding.config.json` ✓ — product steps, suitability weights/thresholds, step latency ranges
+- `configs/agents/collaboration.config.json` ✓ — visibility levels, participant roles, comment config
+- `configs/agents/contact_centre.config.json` ✓ — LLM params, stage/KYC label maps
+- `configs/agents/notification.config.json` ✓ — 11 template names, channel routing, dispatch config
 
 ---
 
