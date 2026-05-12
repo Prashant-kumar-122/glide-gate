@@ -65,8 +65,20 @@
 
 ## Phase 2 — Agent Design
 
-### [ ] STEP-04 — Orchestrator Agent + A2A Framework
-**BRD:** Section 6.1, Section 6.2, FR-03 | **Depends:** STEP-02
+### [DONE] STEP-04 — Orchestrator Agent + A2A Framework
+**Date:** 2026-05-12 | **BRD:** Section 6.1, Section 6.2, FR-03 | **Depends:** STEP-02
+
+**Artifacts produced:**
+- `backend/app/agents/base/a2a_types.py` ✓ — AgentID, TaskType, OnboardingStage, TaskPacket, TaskResponse, OnboardingState, ProductTrackState
+- `backend/app/agents/base/base_agent.py` ✓ — abstract BaseAgent with timed_process, attach_bus, send_task
+- `backend/app/agents/base/agent_event_bus.py` ✓ — asyncio.Queue-based A2A bus, register/subscribe/publish/dispatch_loop, Redis-ready stub
+- `backend/app/agents/base/__init__.py` ✓ — re-exports all public types
+- `backend/app/agents/orchestrator/workflow_state_machine.py` ✓ — WorkflowStateMachine FSM (INTAKE → KYC → PARALLEL_PRODUCTS → REVIEW → COMPLETE | ESCALATED) with InvalidTransitionError, restore(), on_transition callbacks
+- `backend/app/agents/orchestrator/orchestrator_agent.py` ✓ — OrchestratorAgent: START_ONBOARDING, RESUME_ONBOARDING, ADVANCE_STAGE, ESCALATE, HEALTH_CHECK handlers; _route_to_stage per-product fan-out
+- `backend/app/agents/orchestrator/__init__.py` ✓ — re-exports OrchestratorAgent, WorkflowStateMachine, InvalidTransitionError
+- `configs/agents/orchestrator.config.json` ✓ — FSM transition table, task routing map, thresholds
+
+---
 
 ### [ ] STEP-05 — Customer Service Agent
 **BRD:** Section 6.1, Section 8.1 stages 1–2, FR-02, FR-12 | **Depends:** STEP-04
