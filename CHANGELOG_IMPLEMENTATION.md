@@ -80,8 +80,18 @@
 
 ---
 
-### [ ] STEP-05 — Customer Service Agent
-**BRD:** Section 6.1, Section 8.1 stages 1–2, FR-02, FR-12 | **Depends:** STEP-04
+### [DONE] STEP-05 — Customer Service Agent
+**Date:** 2026-05-12 | **BRD:** Section 6.1, Section 8.1 stages 1–2, FR-02, FR-12 | **Depends:** STEP-04
+
+**Artifacts produced:**
+- `backend/app/agents/customer_service/conversation_memory.py` ✓ — per-case rolling Message list, `to_anthropic()` formatter
+- `backend/app/agents/customer_service/intent_classifier.py` ✓ — rule-based IntentClassifier (PROVIDE_INFO / ASK_QUESTION / CONFIRM / DECLINE / REQUEST_HELP)
+- `backend/app/agents/customer_service/data_collection_orchestrator.py` ✓ — 26-field questionnaire across 8 sections, show_if evaluator, typed value extractor, CollectionStatus
+- `backend/app/agents/customer_service/customer_service_agent.py` ✓ — CustomerServiceAgent: COLLECT_CLIENT_DATA + CONTINUE_CONVERSATION handlers, Anthropic SDK integration with template fallback, signals ADVANCE_STAGE → KYC on completion
+- `backend/app/agents/customer_service/__init__.py` ✓ — re-exports CustomerServiceAgent
+- `configs/agents/customer_service.config.json` ✓ — LLM params, section order, show_if rule reference
+
+---
 
 ### [ ] STEP-06 — KYC & Compliance Agent
 **BRD:** Section 6.1, FR-04, FR-13, FR-14, FR-15 | **Depends:** STEP-04, STEP-05
