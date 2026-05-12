@@ -1,0 +1,68 @@
+{
+  "agent_id": "kyc_compliance",
+  "risk_scoring": {
+    "weights": {
+      "identity": 0.4,
+      "aml": 0.4,
+      "profile": 0.2
+    },
+    "band_thresholds": {
+      "LOW": [0, 30],
+      "MEDIUM": [31, 60],
+      "HIGH": [61, 80],
+      "VERY_HIGH": [81, 100]
+    }
+  },
+  "escalation_threshold_band": "HIGH",
+  "simulated_verification": {
+    "latency_min_ms": 200,
+    "latency_max_ms": 800,
+    "authentic_rate": 0.96,
+    "pep_rate": 0.03
+  },
+  "high_risk_nationalities": [
+    "iran", "north korea", "syria", "cuba", "venezuela",
+    "myanmar", "belarus", "russia"
+  ],
+  "default_checkpoint_rules": [
+    {
+      "rule_id": "HIGH_RISK_SCORE",
+      "description": "Escalate cases with HIGH or VERY_HIGH composite risk score",
+      "action": "ESCALATE"
+    },
+    {
+      "rule_id": "SANCTIONS_MATCH",
+      "description": "Escalate any sanctions list match",
+      "action": "ESCALATE"
+    },
+    {
+      "rule_id": "PEP_MATCH",
+      "description": "Enhanced DD for politically exposed persons",
+      "action": "ENHANCED_DD",
+      "required_documents": ["source_of_wealth_declaration", "pep_attestation"]
+    },
+    {
+      "rule_id": "LARGE_MANAGED_PORTFOLIO",
+      "description": "Enhanced DD for Managed Portfolio initial investment > $1M",
+      "product_type": "managed_portfolio",
+      "account_value_band": "LARGE",
+      "action": "ENHANCED_DD",
+      "required_documents": ["source_of_wealth_declaration", "bank_statement"]
+    },
+    {
+      "rule_id": "HIGH_RISK_NATIONALITY",
+      "description": "Additional documents for high-risk nationality",
+      "action": "REQUIRE_DOCUMENTS",
+      "required_documents": [
+        "certified_id",
+        "proof_of_address",
+        "source_of_wealth_declaration"
+      ]
+    }
+  ],
+  "evidence_packet": {
+    "pii_minimisation": true,
+    "income_bands": ["< 50k", "50k–100k", "100k–250k", "250k–500k", "500k–1M", "> 1M"],
+    "wealth_bands": ["< 100k", "100k–500k", "500k–1M", "1M–5M", "5M–10M", "> 10M"]
+  }
+}

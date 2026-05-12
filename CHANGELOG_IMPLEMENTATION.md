@@ -93,8 +93,18 @@
 
 ---
 
-### [ ] STEP-06 — KYC & Compliance Agent
-**BRD:** Section 6.1, FR-04, FR-13, FR-14, FR-15 | **Depends:** STEP-04, STEP-05
+### [DONE] STEP-06 — KYC & Compliance Agent
+**Date:** 2026-05-12 | **BRD:** Section 6.1, FR-04, FR-13, FR-14, FR-15 | **Depends:** STEP-04, STEP-05
+
+**Artifacts produced:**
+- `backend/app/agents/kyc_compliance/risk_scorer.py` ✓ — `RiskScorer` (identity×0.4 + AML×0.4 + profile×0.2), `RiskScore` Pydantic model, 4 risk bands (LOW/MEDIUM/HIGH/VERY_HIGH)
+- `backend/app/agents/kyc_compliance/evidence_packet_builder.py` ✓ — `EvidencePacketBuilder`, `EvidencePacket`, `EvidenceItem` with PII-minimised profile summary and risk-relevant flagging
+- `backend/app/agents/kyc_compliance/checkpoint_rule_engine.py` ✓ — `CheckpointRuleEngine` with 5 default rules across 4 dimensions (product_type, risk_level, account_value_band, jurisdiction), extensible via `add_rule`/`remove_rule`
+- `backend/app/agents/kyc_compliance/kyc_compliance_agent.py` ✓ — `KYCComplianceAgent`: RUN_KYC_CHECK + VERIFY_IDENTITY handlers, simulated MCP identity verification (deterministic seed for demo), signals ESCALATE or ADVANCE_STAGE to orchestrator
+- `backend/app/agents/kyc_compliance/__init__.py` ✓ — re-exports all public types
+- `configs/agents/kyc_compliance.config.json` ✓ — weights, band thresholds, simulation params, default rule catalogue
+
+---
 
 ### [ ] STEP-07 — Document Intelligence Agent
 **BRD:** Section 6.1, FR-06, FR-08, FR-09, Section 5.1.10–5.1.11 | **Depends:** STEP-04, STEP-05
