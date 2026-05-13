@@ -243,8 +243,20 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `backend/app/websocket/__init__.py` ✓ — re-exports `SocketEvent`, `sio`, `emit_to_case`, `room_size`, `socket_emitter`
 - `backend/app/main.py` ✓ — updated to import `sio` from `socket_server` (removed inline AsyncServer construction)
 
-### [ ] STEP-16 — MCP Connectors (Simulated)
-**BRD:** Section 5.3, Section 6.3, FR-04, FR-06, Section 13.1 | **Depends:** STEP-10, STEP-12, STEP-13
+### [DONE] STEP-16 — MCP Connectors (Simulated)
+**Date:** 2026-05-13 | **BRD:** Section 5.3, Section 6.3, FR-04, FR-06, Section 13.1 | **Depends:** STEP-10, STEP-12, STEP-13
+
+**Artifacts produced:**
+- `backend/app/mcp/mcp_connector.py` ✓ — `MCPConnector` abstract base, `MCPToolDefinition` Pydantic model, `MCPRegistry` (register/get/list/invoke), module-level `mcp_registry` singleton
+- `backend/app/mcp/mcp_logger.py` ✓ — `MCPLogger.log()` persists every invocation to `mcp_tool_calls` with `is_simulated=True`; graceful failure so logging never breaks callers
+- `backend/app/mcp/connectors/identity_verification/simulator.py` ✓ — deterministic-seed simulators for `verify_identity` (confidence + flags), `check_sanctions` (sanctions-fragment matching, UN/OFAC/EU/HMT lists), `score_aml_risk` (4 weighted factors: PEP 0.35, country 0.30, SoW 0.20, occupation 0.15 → LOW/MEDIUM/HIGH/VERY_HIGH)
+- `backend/app/mcp/connectors/identity_verification/connector.py` ✓ — `IdentityVerificationConnector`: 100–800ms random latency, MCPLogger wired, `identity_verification_connector` singleton
+- `backend/app/mcp/connectors/document_management/simulator.py` ✓ — in-memory `_DOCUMENT_STORE`; simulators for `upload_document` (UUID + S3-style URL + SHA-256 checksum), `retrieve_document`, `get_document_status`, `extract_ocr` (6-category field templates + bounding boxes)
+- `backend/app/mcp/connectors/document_management/connector.py` ✓ — `DocumentManagementConnector`: 100–800ms random latency, MCPLogger wired, `document_management_connector` singleton
+- `backend/app/mcp/connectors/identity_verification/__init__.py` ✓ — re-exports connector + simulator functions
+- `backend/app/mcp/connectors/document_management/__init__.py` ✓ — re-exports connector + simulator functions
+- `backend/app/mcp/connectors/__init__.py` ✓ — re-exports both connector singletons
+- `backend/app/mcp/__init__.py` ✓ — imports and registers both connectors into `mcp_registry` at import time; 7 tools across 2 connectors confirmed
 
 ### [ ] STEP-17 — Agent Orchestration Service (Wire All 8 Agents)
 **BRD:** Section 8.1, FR-03, FR-12 | **Depends:** STEP-04–08, STEP-13, STEP-15, STEP-16
