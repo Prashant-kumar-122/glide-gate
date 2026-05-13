@@ -2,7 +2,7 @@
 
 ## Context
 
-GlideGate is a wealth management client onboarding platform built as a hackathon submission. The BRD defines a multi-agent AI system (Client Agentic Development Framework — CADF) that reduces onboarding from 14–21 days to 2–3 days using 8 coordinated AI agents, A2A communication, MCP integrations, and a full onboarding workspace UI. The workspace at `c:\Users\Wissen\Projects\glide-gate` contains only `GlideGate_BRD.docx` — no code exists yet.
+GlideGate is a wealth management client onboarding platform built as a hackathon submission. The BRD defines a multi-agent AI system (Client Agentic Development Framework — CADF) that reduces onboarding from 14–21 days to 2–3 days using 8 coordinated AI agents, A2A communication, MCP integrations, and a full onboarding workspace UI. The workspace at `./` contains only `GlideGate_BRD.docx` — no code exists yet.
 
 **Outcome:** A runnable full-stack demo covering all 11 hackathon success criteria with a CHANGELOG-driven, stateless execution model where every step produces concrete, auditable artifacts.
 
