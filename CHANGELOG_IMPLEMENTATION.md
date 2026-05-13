@@ -142,17 +142,62 @@
 
 ## Phase 2.5 — Database Design & Schema
 
-### [ ] STEP-09 — Core Tables DDL (10 Tables)
-**BRD:** Section 15.2.1 | **Depends:** STEP-01
+### [DONE] STEP-09 — Core Tables DDL (10 Tables)
+**Date:** 2026-05-13 | **BRD:** Section 15.2.1 | **Depends:** STEP-01
 
-### [ ] STEP-10 — Agent/Event Tables DDL (4 Tables)
-**BRD:** Section 15.2.2, FR-03, FR-14 | **Depends:** STEP-09
+**Artifacts produced:**
+- `db/schema/001_clients.sql` ✓ — clients, client_profiles, client_addresses (3 tables)
+- `db/schema/002_onboarding_cases.sql` ✓ — onboarding_cases, products, case_products, case_product_steps (4 tables)
+- `db/schema/003_documents.sql` ✓ — documents with 6-state lifecycle ENUM (1 table)
+- `db/schema/004_kyc_human_reviews.sql` ✓ — kyc_checks, human_reviews (2 tables)
 
-### [ ] STEP-11 — Communication/Summary & Questionnaire Tables DDL (11 Tables)
-**BRD:** Section 15.2.3–15.2.4, Section 15.3 | **Depends:** STEP-09, STEP-10
+All tables: UUID PKs, JSONB flexible columns, FK constraints with named keys, CHECK constraints on all enums, lookup indexes on status/created_at columns.
 
-### [ ] STEP-12 — SQLAlchemy Models, Alembic Migration & Seed Data
-**BRD:** Section 15.2.5, Section 15.3 | **Depends:** STEP-09–11
+---
+
+### [DONE] STEP-10 — Agent/Event Tables DDL (4 Tables)
+**Date:** 2026-05-13 | **BRD:** Section 15.2.2, FR-03, FR-14 | **Depends:** STEP-09
+
+**Artifacts produced:**
+- `db/schema/005_agents.sql` ✓ — agents (1 table)
+- `db/schema/006_agent_tasks.sql` ✓ — agent_tasks (1 table; persists TaskPacket + response)
+- `db/schema/007_event_logs.sql` ✓ — event_logs (1 table; append-only, no updated_at)
+- `db/schema/008_mcp_tool_calls.sql` ✓ — mcp_tool_calls with `is_simulated BOOLEAN DEFAULT TRUE` (1 table)
+
+---
+
+### [DONE] STEP-11 — Communication/Summary & Questionnaire Tables DDL (11 Tables)
+**Date:** 2026-05-13 | **BRD:** Section 15.2.3–15.2.4, Section 15.3 | **Depends:** STEP-09, STEP-10
+
+**Artifacts produced:**
+- `db/schema/009_communications.sql` ✓ — notifications, case_summaries, collaboration_rooms, collaboration_participants, collaboration_comments, conversation_messages (6 tables)
+- `db/schema/010_questionnaire.sql` ✓ — onboarding_questionnaires, onboarding_questions, onboarding_question_rules, onboarding_answers, onboarding_question_sessions (5 tables)
+
+Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
+
+---
+
+### [DONE] STEP-12 — SQLAlchemy Models, Alembic Migration & Seed Data
+**Date:** 2026-05-13 | **BRD:** Section 15.2.5, Section 15.3 | **Depends:** STEP-09–11
+
+**Artifacts produced:**
+- `backend/app/models/clients.py` ✓ — Client, ClientProfile, ClientAddress ORM models
+- `backend/app/models/cases.py` ✓ — OnboardingCase, Product, CaseProduct, CaseProductStep
+- `backend/app/models/documents.py` ✓ — Document (self-referential parent_doc_id for versioning)
+- `backend/app/models/kyc_reviews.py` ✓ — KYCCheck, HumanReview
+- `backend/app/models/agents.py` ✓ — Agent, AgentTask, EventLog, MCPToolCall
+- `backend/app/models/communications.py` ✓ — Notification, CaseSummary, CollaborationRoom, CollaborationParticipant, CollaborationComment, ConversationMessage
+- `backend/app/models/questionnaire.py` ✓ — OnboardingQuestionnaire, OnboardingQuestion, OnboardingQuestionRule, OnboardingAnswer, OnboardingQuestionSession
+- `backend/app/models/__init__.py` ✓ — imports all 25 models for Alembic autodiscovery
+- `backend/alembic/versions/0001_initial.py` ✓ — authoritative migration: 25 tables, all FKs, indexes, CHECK constraints
+- `db/seeds/seed_constants.py` ✓ — shared UUID constants
+- `db/seeds/01_products.py` ✓ — 2 products (cash_account, retirement_account)
+- `db/seeds/02_agents.py` ✓ — 8 agents matching AgentID enum
+- `db/seeds/03_questionnaire.py` ✓ — 30 questions across 12 sections with 3 conditional show_if rules
+- `db/seeds/04_client_aarav_mehta.py` ✓ — client, profile, address
+- `db/seeds/05_sample_case.py` ✓ — 2-product onboarding case, 12 product steps, questionnaire session
+- `db/seeds/06_sample_events.py` ✓ — 23 event log entries covering full happy-path journey
+- `db/seeds/seed.py` ✓ — master runner (importlib-based, digit-prefix safe)
 
 ---
 
