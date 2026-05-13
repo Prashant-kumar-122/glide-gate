@@ -231,7 +231,7 @@ class CustomerServiceAgent(BaseAgent):
     # ── Response generators ───────────────────────────────────────────────────
 
     async def _greeting(self, case_id: UUID, products: list[str]) -> str:
-        names = {"managed_portfolio": "Managed Portfolio", "retirement_account": "Retirement Account"}
+        names = {"cash_account": "Cash Account", "retirement_account": "Retirement Account"}
         product_str = " and ".join(names.get(p, p) for p in products) if products else "your account"
         result = await self._llm(
             f"Generate a warm 2-sentence greeting for a new client applying for: {product_str}. "

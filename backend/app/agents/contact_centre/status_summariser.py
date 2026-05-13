@@ -131,6 +131,6 @@ class StatusSummariser:
 
 def _format_product(product_code: str) -> str:
     return {
-        "managed_portfolio": "Managed Portfolio",
+        "cash_account": "Cash Account",
         "retirement_account": "Retirement Account",
     }.get(product_code, product_code.replace("_", " ").title())

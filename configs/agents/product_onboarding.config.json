@@ -2,13 +2,11 @@
   "agent_id": "product_onboarding",
   "display_name": "Product Onboarding Agent",
   "description": "Executes step-by-step product account setup for each selected product, parameterised by product_code. Runs in parallel instances via asyncio.gather.",
-  "supported_products": ["managed_portfolio", "retirement_account"],
+  "supported_products": ["cash_account", "retirement_account"],
   "product_steps": {
-    "managed_portfolio": [
+    "cash_account": [
       "suitability_assessment",
-      "risk_profiling",
-      "portfolio_construction",
-      "mandate_setup",
+      "account_funding_setup",
       "account_provisioning",
       "welcome_kit"
     ],
@@ -37,11 +35,11 @@
       "aggressive": 5
     },
     "product_min_risk": {
-      "managed_portfolio": 3,
+      "cash_account": 1,
       "retirement_account": 1
     },
     "product_min_income": {
-      "managed_portfolio": 50000,
+      "cash_account": 0,
       "retirement_account": 0
     }
   },

@@ -282,7 +282,7 @@ DDL for `notifications`, `case_summaries`, `onboarding_questionnaires`, `onboard
 SQLAlchemy 2.0 ORM models mirroring all 25 tables (mapped dataclasses style). Alembic initial migration generated from models. Seed scripts (Python): 2 products, 8 agents, all 12 questionnaire sections with `show_if` conditional rules, client Aarav Mehta, a sample 2-product onboarding case, event logs covering the full journey.
 
 **Conditional show_if rules:**
-- Managed Portfolio suitability: `{ "field": "selected_products", "operator": "contains", "value": "managed_portfolio" }`
+- Cash Account suitability: `{ "field": "selected_products", "operator": "contains", "value": "cash_account" }`
 - Retirement Account questions: `{ "field": "selected_products", "operator": "contains", "value": "retirement_account" }`
 - Source of wealth: `{ "field": "annual_income", "operator": "gt", "value": 250000 }`
 
@@ -526,7 +526,7 @@ Versioned prompt files for each agent (system + task-specific). Default validati
 - `prompts/customer_service/system.txt`, `data_collection.txt`
 - `prompts/kyc_compliance/system.txt`, `risk_assessment.txt`
 - `prompts/document_intelligence/system.txt`, `completeness_validation.txt`
-- `prompts/product_onboarding/managed_portfolio.txt`, `retirement_account.txt`
+- `prompts/product_onboarding/cash_account.txt`, `retirement_account.txt`
 - `prompts/contact_centre/call_summary.txt`
 - `prompts/validation_defaults/identity.json`, `financial.json`, `legal.json`, `insurance.json`, `compliance.json`, `entity.json`
 
