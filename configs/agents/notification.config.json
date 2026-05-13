@@ -1,0 +1,31 @@
+{
+  "agent_id": "notification",
+  "display_name": "Notification Agent",
+  "description": "Handles simulated dispatch of all outbound notifications (email, SMS, in-app) from templates. All dispatches logged with is_simulated=true.",
+  "dispatch": {
+    "mode": "simulated",
+    "latency_ms": [50, 300],
+    "is_simulated": true
+  },
+  "channels": ["email", "sms", "in_app"],
+  "templates": [
+    "onboarding_started",
+    "kyc_passed",
+    "kyc_failed",
+    "kyc_escalated",
+    "document_requested",
+    "document_approved",
+    "document_needs_revision",
+    "product_track_update",
+    "onboarding_complete",
+    "escalation_alert",
+    "human_review_decided"
+  ],
+  "priority_routing": {
+    "CRITICAL": "email",
+    "HIGH": "email",
+    "NORMAL": "email",
+    "LOW": "in_app"
+  },
+  "supported_task_types": ["send_notification", "send_escalation_alert"]
+}

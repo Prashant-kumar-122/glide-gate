@@ -3,8 +3,7 @@ name = "glide-gate-backend"
 version = "0.1.0"
 description = "GlideGate CADF — AI-powered wealth management onboarding backend"
 authors = ["GlideGate Team"]
-readme = "README.md"
-packages = [{ include = "app" }]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"

@@ -1,0 +1,42 @@
+{
+  "agent_id": "customer_service",
+  "max_messages": 40,
+  "max_conversation_turns": 50,
+  "completion_signal_stage": "KYC",
+  "sections_in_order": [
+    "personal_details",
+    "address",
+    "employment",
+    "financial_profile",
+    "investment_experience",
+    "kyc_identity",
+    "managed_portfolio",
+    "retirement_account"
+  ],
+  "llm": {
+    "model": "claude-sonnet-4-6",
+    "max_tokens": 256,
+    "temperature": 0.7
+  },
+  "intent_thresholds": {
+    "confirm_max_words": 6,
+    "decline_max_words": 8
+  },
+  "show_if_rules": {
+    "source_of_wealth_detail": {
+      "field": "annual_income",
+      "operator": "gt",
+      "value": 250000
+    },
+    "managed_portfolio_section": {
+      "field": "selected_products",
+      "operator": "contains",
+      "value": "managed_portfolio"
+    },
+    "retirement_account_section": {
+      "field": "selected_products",
+      "operator": "contains",
+      "value": "retirement_account"
+    }
+  }
+}

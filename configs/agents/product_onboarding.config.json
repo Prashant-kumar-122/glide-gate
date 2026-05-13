@@ -1,0 +1,65 @@
+{
+  "agent_id": "product_onboarding",
+  "display_name": "Product Onboarding Agent",
+  "description": "Executes step-by-step product account setup for each selected product, parameterised by product_code. Runs in parallel instances via asyncio.gather.",
+  "supported_products": ["managed_portfolio", "retirement_account"],
+  "product_steps": {
+    "managed_portfolio": [
+      "suitability_assessment",
+      "risk_profiling",
+      "portfolio_construction",
+      "mandate_setup",
+      "account_provisioning",
+      "welcome_kit"
+    ],
+    "retirement_account": [
+      "suitability_assessment",
+      "contribution_limits_check",
+      "beneficiary_designation",
+      "investment_selection",
+      "account_provisioning",
+      "welcome_kit"
+    ]
+  },
+  "suitability": {
+    "min_suitability_score": 0.5,
+    "weights": {
+      "risk_alignment": 0.4,
+      "income_adequacy": 0.3,
+      "age_appropriateness": 0.2,
+      "investment_horizon": 0.1
+    },
+    "risk_capacity_map": {
+      "conservative": 1,
+      "moderately_conservative": 2,
+      "balanced": 3,
+      "moderately_aggressive": 4,
+      "aggressive": 5
+    },
+    "product_min_risk": {
+      "managed_portfolio": 3,
+      "retirement_account": 1
+    },
+    "product_min_income": {
+      "managed_portfolio": 50000,
+      "retirement_account": 0
+    }
+  },
+  "step_latency_ms": {
+    "suitability_assessment": [200, 600],
+    "risk_profiling": [300, 800],
+    "portfolio_construction": [500, 1200],
+    "mandate_setup": [200, 500],
+    "contribution_limits_check": [100, 300],
+    "beneficiary_designation": [150, 400],
+    "investment_selection": [400, 900],
+    "account_provisioning": [300, 700],
+    "welcome_kit": [100, 250]
+  },
+  "signals": {
+    "on_complete": "ADVANCE_STAGE",
+    "on_unsuitable": "ADVANCE_STAGE",
+    "on_failed": "ADVANCE_STAGE",
+    "notify_on_update": true
+  }
+}

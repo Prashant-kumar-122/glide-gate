@@ -65,20 +65,78 @@
 
 ## Phase 2 — Agent Design
 
-### [ ] STEP-04 — Orchestrator Agent + A2A Framework
-**BRD:** Section 6.1, Section 6.2, FR-03 | **Depends:** STEP-02
+### [DONE] STEP-04 — Orchestrator Agent + A2A Framework
+**Date:** 2026-05-12 | **BRD:** Section 6.1, Section 6.2, FR-03 | **Depends:** STEP-02
 
-### [ ] STEP-05 — Customer Service Agent
-**BRD:** Section 6.1, Section 8.1 stages 1–2, FR-02, FR-12 | **Depends:** STEP-04
+**Artifacts produced:**
+- `backend/app/agents/base/a2a_types.py` ✓ — AgentID, TaskType, OnboardingStage, TaskPacket, TaskResponse, OnboardingState, ProductTrackState
+- `backend/app/agents/base/base_agent.py` ✓ — abstract BaseAgent with timed_process, attach_bus, send_task
+- `backend/app/agents/base/agent_event_bus.py` ✓ — asyncio.Queue-based A2A bus, register/subscribe/publish/dispatch_loop, Redis-ready stub
+- `backend/app/agents/base/__init__.py` ✓ — re-exports all public types
+- `backend/app/agents/orchestrator/workflow_state_machine.py` ✓ — WorkflowStateMachine FSM (INTAKE → KYC → PARALLEL_PRODUCTS → REVIEW → COMPLETE | ESCALATED) with InvalidTransitionError, restore(), on_transition callbacks
+- `backend/app/agents/orchestrator/orchestrator_agent.py` ✓ — OrchestratorAgent: START_ONBOARDING, RESUME_ONBOARDING, ADVANCE_STAGE, ESCALATE, HEALTH_CHECK handlers; _route_to_stage per-product fan-out
+- `backend/app/agents/orchestrator/__init__.py` ✓ — re-exports OrchestratorAgent, WorkflowStateMachine, InvalidTransitionError
+- `configs/agents/orchestrator.config.json` ✓ — FSM transition table, task routing map, thresholds
 
-### [ ] STEP-06 — KYC & Compliance Agent
-**BRD:** Section 6.1, FR-04, FR-13, FR-14, FR-15 | **Depends:** STEP-04, STEP-05
+---
 
-### [ ] STEP-07 — Document Intelligence Agent
-**BRD:** Section 6.1, FR-06, FR-08, FR-09, Section 5.1.10–5.1.11 | **Depends:** STEP-04, STEP-05
+### [DONE] STEP-05 — Customer Service Agent
+**Date:** 2026-05-12 | **BRD:** Section 6.1, Section 8.1 stages 1–2, FR-02, FR-12 | **Depends:** STEP-04
 
-### [ ] STEP-08 — Product Onboarding, Collaboration, Contact Centre & Notification Agents
-**BRD:** Section 6.1, FR-05, Section 7.3–7.4, Section 8.1 stages 5–8 | **Depends:** STEP-04–07
+**Artifacts produced:**
+- `backend/app/agents/customer_service/conversation_memory.py` ✓ — per-case rolling Message list, `to_anthropic()` formatter
+- `backend/app/agents/customer_service/intent_classifier.py` ✓ — rule-based IntentClassifier (PROVIDE_INFO / ASK_QUESTION / CONFIRM / DECLINE / REQUEST_HELP)
+- `backend/app/agents/customer_service/data_collection_orchestrator.py` ✓ — 26-field questionnaire across 8 sections, show_if evaluator, typed value extractor, CollectionStatus
+- `backend/app/agents/customer_service/customer_service_agent.py` ✓ — CustomerServiceAgent: COLLECT_CLIENT_DATA + CONTINUE_CONVERSATION handlers, Anthropic SDK integration with template fallback, signals ADVANCE_STAGE → KYC on completion
+- `backend/app/agents/customer_service/__init__.py` ✓ — re-exports CustomerServiceAgent
+- `configs/agents/customer_service.config.json` ✓ — LLM params, section order, show_if rule reference
+
+---
+
+### [DONE] STEP-06 — KYC & Compliance Agent
+**Date:** 2026-05-12 | **BRD:** Section 6.1, FR-04, FR-13, FR-14, FR-15 | **Depends:** STEP-04, STEP-05
+
+**Artifacts produced:**
+- `backend/app/agents/kyc_compliance/risk_scorer.py` ✓ — `RiskScorer` (identity×0.4 + AML×0.4 + profile×0.2), `RiskScore` Pydantic model, 4 risk bands (LOW/MEDIUM/HIGH/VERY_HIGH)
+- `backend/app/agents/kyc_compliance/evidence_packet_builder.py` ✓ — `EvidencePacketBuilder`, `EvidencePacket`, `EvidenceItem` with PII-minimised profile summary and risk-relevant flagging
+- `backend/app/agents/kyc_compliance/checkpoint_rule_engine.py` ✓ — `CheckpointRuleEngine` with 5 default rules across 4 dimensions (product_type, risk_level, account_value_band, jurisdiction), extensible via `add_rule`/`remove_rule`
+- `backend/app/agents/kyc_compliance/kyc_compliance_agent.py` ✓ — `KYCComplianceAgent`: RUN_KYC_CHECK + VERIFY_IDENTITY handlers, simulated MCP identity verification (deterministic seed for demo), signals ESCALATE or ADVANCE_STAGE to orchestrator
+- `backend/app/agents/kyc_compliance/__init__.py` ✓ — re-exports all public types
+- `configs/agents/kyc_compliance.config.json` ✓ — weights, band thresholds, simulation params, default rule catalogue
+
+---
+
+### [DONE] STEP-07 — Document Intelligence Agent
+**Date:** 2026-05-12 | **BRD:** Section 6.1, FR-06, FR-08, FR-09, Section 5.1.10–5.1.11 | **Depends:** STEP-04, STEP-05
+
+**Artifacts produced:**
+- `backend/app/agents/document_intelligence/document_classifier.py` ✓ — Rule-based `DocumentClassifier` (21 document types across 6 categories), `ClassificationResult` Pydantic model, confidence scoring
+- `backend/app/agents/document_intelligence/ocr_extractor.py` ✓ — Simulated `OcrExtractor` with category-keyed field templates, `OcrResult` / `OcrField` Pydantic models, 100–600ms randomised latency
+- `backend/app/agents/document_intelligence/ai_completeness_validator.py` ✓ — `AICompletenessValidator`: Anthropic SDK call with editable prompts → `FindingResult[]` (pass/warn/fail); heuristic fallback for no-API runs; `ValidationResult` model
+- `backend/app/agents/document_intelligence/version_diff_detector.py` ✓ — `VersionDiffDetector`: difflib-based `DiffResult` with added/modified/removed/unchanged sections, similarity ratio, human-readable summary; supports text or field-dict inputs
+- `backend/app/agents/document_intelligence/document_intelligence_agent.py` ✓ — `DocumentIntelligenceAgent`: CLASSIFY_DOCUMENT, EXTRACT_OCR, VALIDATE_DOCUMENT, COMPUTE_DIFF handlers
+- `backend/app/agents/document_intelligence/__init__.py` ✓ — re-exports all public types
+- `configs/agents/document_intelligence.config.json` ✓ — classification thresholds, OCR params, validation LLM settings, diff thresholds, all 6 default validation prompts
+
+### [DONE] STEP-08 — Product Onboarding, Collaboration, Contact Centre & Notification Agents
+**Date:** 2026-05-12 | **BRD:** Section 6.1, FR-05, Section 7.3–7.4, Section 8.1 stages 5–8 | **Depends:** STEP-04–07
+
+**Artifacts produced:**
+- `backend/app/agents/product_onboarding/suitability_assessor.py` ✓ — `SuitabilityAssessor` (weighted 40/30/20/10 scoring), `SuitabilityOutcome` Pydantic model, risk/income/age/horizon checks
+- `backend/app/agents/product_onboarding/product_onboarding_agent.py` ✓ — `ProductOnboardingAgent`: ONBOARD_PRODUCT + ASSESS_SUITABILITY handlers; parameterised by product_code; per-product step sequences with simulated latency; signals ADVANCE_STAGE + SEND_NOTIFICATION on completion
+- `backend/app/agents/product_onboarding/__init__.py` ✓ — re-exports public types
+- `backend/app/agents/collaboration/collaboration_agent.py` ✓ — `CollaborationAgent`: CREATE_COLLABORATION_ROOM + ADD_COMMENT handlers; in-memory `CollaborationRoom` (DB-backed in STEP-12+); visibility levels, participant roles
+- `backend/app/agents/collaboration/__init__.py` ✓ — re-exports CollaborationAgent
+- `backend/app/agents/contact_centre/status_summariser.py` ✓ — `StatusSummariser`: rule-based `CallSummary` generation (stage/KYC/documents/products/escalation); no LLM dependency
+- `backend/app/agents/contact_centre/contact_centre_agent.py` ✓ — `ContactCentreAgent`: SUMMARISE_CALL + GET_CLIENT_STATUS handlers; AI-enhanced summaries via Anthropic SDK with heuristic fallback
+- `backend/app/agents/contact_centre/__init__.py` ✓ — re-exports all public types
+- `backend/app/agents/notification/notification_templates.py` ✓ — 11 `NotificationTemplate` instances across email/in-app channels; `Template.safe_substitute` rendering; `get_template()` / `list_templates()` helpers
+- `backend/app/agents/notification/notification_agent.py` ✓ — `NotificationAgent`: SEND_NOTIFICATION + SEND_ESCALATION_ALERT handlers; simulated dispatch (50–300ms latency); `is_simulated=True` in all records; full dispatch log
+- `backend/app/agents/notification/__init__.py` ✓ — re-exports public types
+- `configs/agents/product_onboarding.config.json` ✓ — product steps, suitability weights/thresholds, step latency ranges
+- `configs/agents/collaboration.config.json` ✓ — visibility levels, participant roles, comment config
+- `configs/agents/contact_centre.config.json` ✓ — LLM params, stage/KYC label maps
+- `configs/agents/notification.config.json` ✓ — 11 template names, channel routing, dispatch config
 
 ---
 

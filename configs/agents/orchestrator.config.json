@@ -1,0 +1,30 @@
+{
+  "agent_id": "orchestrator",
+  "version": "1.0.0",
+  "description": "Central workflow controller — owns the onboarding FSM and routes tasks between all 8 agents",
+  "fsm": {
+    "initial_stage": "INTAKE",
+    "stages": ["INTAKE", "KYC", "PARALLEL_PRODUCTS", "REVIEW", "COMPLETE", "ESCALATED"],
+    "transitions": {
+      "INTAKE": ["KYC"],
+      "KYC": ["PARALLEL_PRODUCTS", "ESCALATED"],
+      "PARALLEL_PRODUCTS": ["REVIEW", "COMPLETE", "ESCALATED"],
+      "REVIEW": ["COMPLETE", "ESCALATED", "KYC"],
+      "COMPLETE": [],
+      "ESCALATED": ["REVIEW", "KYC", "COMPLETE"]
+    }
+  },
+  "task_routing": {
+    "INTAKE": "customer_service",
+    "KYC": "kyc_compliance",
+    "PARALLEL_PRODUCTS": "product_onboarding",
+    "REVIEW": "collaboration",
+    "COMPLETE": "notification",
+    "ESCALATED": "notification"
+  },
+  "thresholds": {
+    "kyc_risk_auto_escalate": 0.8,
+    "task_ttl_seconds": 300,
+    "max_parallel_products": 5
+  }
+}
