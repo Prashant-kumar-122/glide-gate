@@ -203,8 +203,14 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 3 — Backend & Integration
 
-### [ ] STEP-13 — Context Store Service & Shared OnboardingState
-**BRD:** FR-12, Paused Journey Resumption | **Depends:** STEP-04, STEP-12
+### [DONE] STEP-13 — Context Store Service & Shared OnboardingState
+**Date:** 2026-05-13 | **BRD:** FR-12, Paused Journey Resumption | **Depends:** STEP-04, STEP-12
+
+**Artifacts produced:**
+- `backend/app/services/context_store/onboarding_state_schema.py` ✓ — `ContextSnapshot` (point-in-time immutable copy), `OptimisticLockError`; re-exports `OnboardingState` from a2a_types
+- `backend/app/services/context_store/state_repository.py` ✓ — `StateRepository` with async `load()`, `persist()`, `exists()` targeting `onboarding_cases.shared_context` JSONB; also updates `current_stage` on every persist
+- `backend/app/services/context_store/context_store_service.py` ✓ — `ContextStoreService` singleton (`context_store`): in-memory dict cache + per-case `asyncio.Lock`; `initialise()`, `get()` (cache-then-DB), `update()` with optimistic locking (version check + increment + persist), `lock()` async context manager, `snapshot()`, `restore()` (bumps version), `evict()`
+- `backend/app/services/context_store/__init__.py` ✓ — re-exports all public symbols
 
 ### [ ] STEP-14 — REST API Layer (FastAPI Routers)
 **BRD:** Section 9.1, FR-01, FR-05, FR-07 | **Depends:** STEP-02, STEP-12, STEP-13
