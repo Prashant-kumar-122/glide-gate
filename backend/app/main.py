@@ -11,6 +11,7 @@ from app.api.routers import health
 from app.api.routers import clients, cases, documents, conversations, reviews, agents, audit
 from app.api.routers.admin import llm_config, validation_prompts
 from app.websocket.socket_server import sio  # noqa: F401 — imported for side-effect (event registration)
+from app.services.orchestration.agent_orchestration_service import orchestration_service
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -59,8 +60,10 @@ async def on_startup() -> None:
         f"demo_mode={settings.DEMO_MODE} "
         f"llm={settings.PRIMARY_LLM_PROVIDER}/{settings.PRIMARY_LLM_MODEL}"
     )
+    await orchestration_service.start()
 
 
 @app.on_event("shutdown")
 async def on_shutdown() -> None:
+    await orchestration_service.stop()
     logger.info("GlideGate API shutting down")

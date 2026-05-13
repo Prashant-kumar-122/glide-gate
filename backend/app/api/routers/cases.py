@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -16,6 +17,7 @@ from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.cases import CaseProduct, OnboardingCase, Product
 from app.models.documents import Document
+from app.services.orchestration.agent_orchestration_service import orchestration_service
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -147,6 +149,17 @@ async def initiate_case(
     await db.commit()
 
     refreshed = await _get_case_or_404(case.id, db)
+
+    # Kick off agent workflow asynchronously — the HTTP response is returned
+    # immediately; the orchestrator runs in the background via asyncio.Task.
+    asyncio.create_task(
+        orchestration_service.start_onboarding(
+            case_id=refreshed.id,
+            client_id=refreshed.client_id,
+            selected_products=refreshed.selected_products,
+        )
+    )
+
     return CaseSummaryOut(
         id=refreshed.id,
         client_id=refreshed.client_id,
@@ -220,10 +233,9 @@ async def resume_case(
     _user: dict = Depends(require_role("Advisor", "Admin")),
 ) -> ResumeResponse:
     case = await _get_case_or_404(case_id, db)
-    # Agent orchestration wired in STEP-17; this endpoint accepts the request
-    # and the orchestration service will be invoked from there.
+    asyncio.create_task(orchestration_service.resume_onboarding(case_id=case.id))
     return ResumeResponse(
         case_id=case.id,
-        message="Resume request accepted — orchestration will be triggered by AgentOrchestrationService",
+        message="Resume request accepted — AgentOrchestrationService is re-routing the workflow",
         stage=case.current_stage,
     )

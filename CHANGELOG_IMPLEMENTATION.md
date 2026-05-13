@@ -258,8 +258,18 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `backend/app/mcp/connectors/__init__.py` ✓ — re-exports both connector singletons
 - `backend/app/mcp/__init__.py` ✓ — imports and registers both connectors into `mcp_registry` at import time; 7 tools across 2 connectors confirmed
 
-### [ ] STEP-17 — Agent Orchestration Service (Wire All 8 Agents)
-**BRD:** Section 8.1, FR-03, FR-12 | **Depends:** STEP-04–08, STEP-13, STEP-15, STEP-16
+### [DONE] STEP-17 — Agent Orchestration Service (Wire All 8 Agents)
+**Date:** 2026-05-13 | **BRD:** Section 8.1, FR-03, FR-12 | **Depends:** STEP-04–08, STEP-13, STEP-15, STEP-16
+
+**Artifacts produced:**
+- `backend/app/services/orchestration/agent_registry.py` ✓ — `AgentRegistry` dict-backed registry; `register`, `get`, `all`, `agent_ids`
+- `backend/app/services/orchestration/parallel_product_launcher.py` ✓ — `ParallelProductLauncher`: custom asyncio dispatch loop that batches ONBOARD_PRODUCT tasks from the bus queue, groups by case_id, and runs one `ProductOnboardingAgent` per product via `asyncio.gather`; `launch_for_case` for direct invocation; emits `PROGRESS_UPDATE` socket events on start and completion
+- `backend/app/services/orchestration/agent_orchestration_service.py` ✓ — `AgentOrchestrationService` singleton (`orchestration_service`): boots all 8 agents, registers 7 on the bus dispatch loop + 1 placeholder for the ProductOnboarding queue; `start()`/`stop()` lifecycle; `start_onboarding(case_id, client_id, selected_products)` — initialises ContextStore + emits socket event + publishes START_ONBOARDING; `resume_onboarding(case_id)` — loads state + publishes RESUME_ONBOARDING; `active_cases` and `registry` introspection properties
+- `backend/app/services/orchestration/__init__.py` ✓ — re-exports all public symbols
+- `backend/app/main.py` ✓ — updated: `on_startup` calls `orchestration_service.start()`; `on_shutdown` calls `orchestration_service.stop()`
+- `backend/app/api/routers/cases.py` ✓ — `POST /cases` fires `asyncio.create_task(orchestration_service.start_onboarding(...))` after DB commit; `POST /cases/{id}/resume` fires `asyncio.create_task(orchestration_service.resume_onboarding(...))` — both return immediately (202 pattern)
+
+### [ ] STEP-18 — Document Upload & Storage Service
 
 ### [ ] STEP-18 — Document Upload & Storage Service
 **BRD:** FR-06, FR-07, FR-09, Section 5.1.7–5.1.8 | **Depends:** STEP-09, STEP-13, STEP-15, STEP-16
