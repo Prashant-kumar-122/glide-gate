@@ -59,13 +59,13 @@ _DEFAULT_RULES: list[CheckpointRule] = [
         reason_template="Politically Exposed Person (PEP) identified",
     ),
     CheckpointRule(
-        rule_id="LARGE_MANAGED_PORTFOLIO",
-        description="Enhanced DD for Managed Portfolio initial investment > $1M",
-        product_type="managed_portfolio",
+        rule_id="LARGE_CASH_ACCOUNT",
+        description="Enhanced DD for Cash Account initial deposit > $1M",
+        product_type="cash_account",
         account_value_band="LARGE",
         action="ENHANCED_DD",
         required_documents=["source_of_wealth_declaration", "bank_statement"],
-        reason_template="Initial Managed Portfolio investment exceeds $1,000,000",
+        reason_template="Initial Cash Account deposit exceeds $1,000,000",
     ),
     CheckpointRule(
         rule_id="HIGH_RISK_NATIONALITY",
@@ -114,8 +114,8 @@ class CheckpointRuleEngine:
         nationality = (client_data.get("nationality") or "").lower()
         is_high_risk_nationality = nationality in _HIGH_RISK_NATIONALITIES
 
-        mp_initial = float(client_data.get("mp_initial_investment") or 0)
-        account_band = "LARGE" if mp_initial > 1_000_000 else "NORMAL"
+        ca_initial = float(client_data.get("ca_initial_deposit") or 0)
+        account_band = "LARGE" if ca_initial > 1_000_000 else "NORMAL"
 
         decisions: list[CheckpointDecision] = []
         all_docs: set[str] = set()
@@ -179,8 +179,8 @@ class CheckpointRuleEngine:
             return sanctions_match
         if rid == "PEP_MATCH":
             return pep_match
-        if rid == "LARGE_MANAGED_PORTFOLIO":
-            return "managed_portfolio" in selected_products and account_band == "LARGE"
+        if rid == "LARGE_CASH_ACCOUNT":
+            return "cash_account" in selected_products and account_band == "LARGE"
         if rid == "HIGH_RISK_NATIONALITY":
             return is_high_risk_nationality
 

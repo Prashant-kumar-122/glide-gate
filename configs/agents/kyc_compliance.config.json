@@ -42,9 +42,9 @@
       "required_documents": ["source_of_wealth_declaration", "pep_attestation"]
     },
     {
-      "rule_id": "LARGE_MANAGED_PORTFOLIO",
-      "description": "Enhanced DD for Managed Portfolio initial investment > $1M",
-      "product_type": "managed_portfolio",
+      "rule_id": "LARGE_CASH_ACCOUNT",
+      "description": "Enhanced DD for Cash Account initial deposit > $1M",
+      "product_type": "cash_account",
       "account_value_band": "LARGE",
       "action": "ENHANCED_DD",
       "required_documents": ["source_of_wealth_declaration", "bank_statement"]

@@ -23,17 +23,17 @@ _RISK_CAPACITY_MAP: dict[str, int] = {
 }
 
 _PRODUCT_MIN_RISK: dict[str, int] = {
-    "managed_portfolio": 3,
+    "cash_account": 1,
     "retirement_account": 1,
 }
 
 _PRODUCT_MIN_AGE: dict[str, int] = {
-    "managed_portfolio": 18,
+    "cash_account": 18,
     "retirement_account": 18,
 }
 
 _PRODUCT_MIN_INCOME: dict[str, float] = {
-    "managed_portfolio": 50_000.0,
+    "cash_account": 0.0,
     "retirement_account": 0.0,
 }
 
@@ -114,8 +114,8 @@ class SuitabilityAssessor:
 
         # ── Investment horizon ────────────────────────────────────────────────
         horizon = (client_data.get("investment_horizon") or "medium_term").lower()
-        if product_code == "managed_portfolio":
-            ideal_horizons = {"medium_term", "long_term"}
+        if product_code == "cash_account":
+            ideal_horizons = {"short_term", "medium_term", "long_term"}
         else:  # retirement_account
             ideal_horizons = {"long_term"}
 

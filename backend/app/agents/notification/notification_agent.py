@@ -11,7 +11,7 @@ from app.agents.base.base_agent import BaseAgent
 from app.agents.notification.notification_templates import get_template, list_templates
 
 _PRODUCT_NAMES: dict[str, str] = {
-    "managed_portfolio": "Managed Portfolio",
+    "cash_account": "Cash Account",
     "retirement_account": "Retirement Account",
 }
 

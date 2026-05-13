@@ -10,7 +10,7 @@
     "financial_profile",
     "investment_experience",
     "kyc_identity",
-    "managed_portfolio",
+    "cash_account",
     "retirement_account"
   ],
   "llm": {
@@ -28,10 +28,10 @@
       "operator": "gt",
       "value": 250000
     },
-    "managed_portfolio_section": {
+    "cash_account_section": {
       "field": "selected_products",
       "operator": "contains",
-      "value": "managed_portfolio"
+      "value": "cash_account"
     },
     "retirement_account_section": {
       "field": "selected_products",

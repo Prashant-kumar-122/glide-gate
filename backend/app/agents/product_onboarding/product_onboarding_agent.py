@@ -15,11 +15,9 @@ from app.agents.base.base_agent import BaseAgent
 from app.agents.product_onboarding.suitability_assessor import SuitabilityAssessor
 
 _PRODUCT_STEPS: dict[str, list[str]] = {
-    "managed_portfolio": [
+    "cash_account": [
         "suitability_assessment",
-        "risk_profiling",
-        "portfolio_construction",
-        "mandate_setup",
+        "account_funding_setup",
         "account_provisioning",
         "welcome_kit",
     ],

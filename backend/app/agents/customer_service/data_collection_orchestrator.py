@@ -162,26 +162,24 @@ _FIELDS: list[QuestionnaireField] = [
         question="What is your Tax Identification Number (TIN)?",
         field_type="text", section="kyc_identity",
     ),
-    # Section 7 — Managed Portfolio suitability (show_if: product selected)
+    # Section 7 — Cash Account (show_if: product selected)
     QuestionnaireField(
-        field_id="mp_investment_horizon", label="Investment Horizon",
-        question="For your Managed Portfolio, what is your investment time horizon?",
-        field_type="choice",
-        options=["Short-term (< 3 years)", "Medium-term (3–7 years)", "Long-term (7+ years)"],
-        section="managed_portfolio",
-        show_if={"field": "selected_products", "operator": "contains", "value": "managed_portfolio"},
+        field_id="ca_initial_deposit", label="Initial Deposit Amount (USD)",
+        question="What initial amount would you like to deposit into your Cash Account?",
+        field_type="number", section="cash_account",
+        show_if={"field": "selected_products", "operator": "contains", "value": "cash_account"},
     ),
     QuestionnaireField(
-        field_id="mp_initial_investment", label="Initial Investment Amount (USD)",
-        question="What initial amount would you like to invest in the Managed Portfolio?",
-        field_type="number", section="managed_portfolio",
-        show_if={"field": "selected_products", "operator": "contains", "value": "managed_portfolio"},
+        field_id="ca_account_purpose", label="Account Purpose",
+        question="What is the primary purpose of your Cash Account? (e.g., emergency fund, short-term savings, everyday spending)",
+        field_type="text", section="cash_account",
+        show_if={"field": "selected_products", "operator": "contains", "value": "cash_account"},
     ),
     QuestionnaireField(
-        field_id="mp_benchmark_preference", label="Benchmark Preference",
-        question="Do you have a preferred benchmark or investment strategy for the Managed Portfolio?",
-        field_type="text", section="managed_portfolio", required=False,
-        show_if={"field": "selected_products", "operator": "contains", "value": "managed_portfolio"},
+        field_id="ca_expected_monthly_activity", label="Expected Monthly Activity (USD)",
+        question="What is your approximate expected monthly transaction volume for this Cash Account?",
+        field_type="number", section="cash_account", required=False,
+        show_if={"field": "selected_products", "operator": "contains", "value": "cash_account"},
     ),
     # Section 8 — Retirement Account (show_if: product selected)
     QuestionnaireField(
@@ -213,7 +211,7 @@ _SECTION_ORDER = [
     "financial_profile",
     "investment_experience",
     "kyc_identity",
-    "managed_portfolio",
+    "cash_account",
     "retirement_account",
 ]
 
