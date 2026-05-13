@@ -212,8 +212,26 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `backend/app/services/context_store/context_store_service.py` ✓ — `ContextStoreService` singleton (`context_store`): in-memory dict cache + per-case `asyncio.Lock`; `initialise()`, `get()` (cache-then-DB), `update()` with optimistic locking (version check + increment + persist), `lock()` async context manager, `snapshot()`, `restore()` (bumps version), `evict()`
 - `backend/app/services/context_store/__init__.py` ✓ — re-exports all public symbols
 
-### [ ] STEP-14 — REST API Layer (FastAPI Routers)
-**BRD:** Section 9.1, FR-01, FR-05, FR-07 | **Depends:** STEP-02, STEP-12, STEP-13
+### [DONE] STEP-14 — REST API Layer (FastAPI Routers)
+**Date:** 2026-05-13 | **BRD:** Section 9.1, FR-01, FR-05, FR-07 | **Depends:** STEP-02, STEP-12, STEP-13
+
+**Artifacts produced:**
+- `backend/app/api/dependencies/auth.py` ✓ — JWT verify dependency (`get_current_user`); demo-mode passthrough returns DEMO_USER
+- `backend/app/api/dependencies/role_guard.py` ✓ — `require_role(*roles)` dependency factory; 403 on role mismatch
+- `backend/app/api/error_handlers.py` ✓ — `NotFoundError`, `ConflictError`, `UnprocessableError`, `ServiceUnavailableError`; `register_error_handlers(app)` wired into main.py
+- `backend/app/api/routers/clients.py` ✓ — POST /clients, GET /clients/{id}, PATCH /clients/{id}
+- `backend/app/api/routers/cases.py` ✓ — POST /cases (initiate), GET /cases/{id}, GET /cases/{id}/summary, POST /cases/{id}/resume (202 stub for STEP-17)
+- `backend/app/api/routers/documents.py` ✓ — POST /cases/{id}/documents (UploadFile), GET /cases/{id}/documents, GET /documents/{id}, POST /documents/{id}/validate (202 stub for STEP-28), GET /documents/{id}/diff
+- `backend/app/api/routers/conversations.py` ✓ — POST /cases/{id}/message (SSE StreamingResponse placeholder for STEP-27), GET /cases/{id}/messages
+- `backend/app/api/routers/reviews.py` ✓ — GET /reviews, GET /reviews/{id}, GET /reviews/{id}/evidence, POST /reviews/{id}/decide
+- `backend/app/api/routers/agents.py` ✓ — GET /agents, GET /agents/{agent_id}, GET /agents/trace/{case_id}
+- `backend/app/api/routers/audit.py` ✓ — GET /audit/logs (paginated, filtered), GET /audit/logs.csv (StreamingResponse CSV export)
+- `backend/app/api/routers/admin/llm_config.py` ✓ — GET/PUT/DELETE /admin/llm-config (in-memory overrides; DB-backed in STEP-24)
+- `backend/app/api/routers/admin/validation_prompts.py` ✓ — GET/PUT/DELETE /admin/validation-prompts/{category} (in-memory; DB-backed in STEP-28)
+- `backend/app/main.py` ✓ — updated to register all 10 routers + error handlers (35 routes total)
+- **Bug fix (STEP-12 carry-over):** renamed `metadata` → `extra_metadata` (with `mapped_column("metadata", ...)`) across all 14 ORM models and all seed files to resolve SQLAlchemy 2.0 reserved-name conflict
+
+**Notes:** Orchestration stubs (resume, validate, SSE) return 202 Accepted — full wiring happens in STEP-17 (AgentOrchestrationService) and STEP-27/STEP-28.
 
 ### [ ] STEP-15 — WebSocket Layer (python-socketio)
 **BRD:** FR-11, Section 5.1.9, FR-13 | **Depends:** STEP-02, STEP-04, STEP-13

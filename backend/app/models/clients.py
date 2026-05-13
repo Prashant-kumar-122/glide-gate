@@ -43,7 +43,7 @@ class Client(Base):
     investment_experience: Mapped[str | None] = mapped_column(String(20))
     investment_horizon: Mapped[str | None] = mapped_column(String(20))
     kyc_status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

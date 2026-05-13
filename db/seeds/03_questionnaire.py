@@ -93,7 +93,7 @@ async def seed(session: AsyncSession) -> None:
         version=1,
         is_active=True,
         sections=SECTIONS,
-        metadata={"brd_ref": "Section 15.3"},
+        extra_metadata={"brd_ref": "Section 15.3"},
     )
     session.add(questionnaire)
     print(f"  [seed] questionnaire '{questionnaire.name}'")

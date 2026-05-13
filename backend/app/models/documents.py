@@ -38,7 +38,7 @@ class Document(Base):
     parent_doc_id: Mapped[UUID | None] = mapped_column(ForeignKey("documents.id"))
     uploaded_by: Mapped[str | None] = mapped_column(String(50))
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     uploaded_at: Mapped[datetime | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
+from app.api.dependencies.role_guard import require_role
+from app.api.error_handlers import NotFoundError
+
+router = APIRouter(prefix="/admin/validation-prompts", tags=["admin"])
+
+VALID_CATEGORIES = {"identity", "financial", "legal", "insurance", "compliance", "entity"}
+
+# In-memory store of prompt overrides (DB-backed in STEP-24/STEP-28)
+_prompt_overrides: dict[str, dict[str, Any]] = {}
+
+# Path to the defaults bundled with the agent config
+_DEFAULTS_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "prompts" / "validation_defaults"
+
+
+def _load_default(category: str) -> dict[str, Any]:
+    path = _DEFAULTS_DIR / f"{category}.json"
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    # Fallback if file not yet created (filled in STEP-25)
+    return {
+        "category": category,
+        "goal": f"Validate completeness and authenticity of {category} documents",
+        "factors": [],
+    }
+
+
+# ── Request / Response models ─────────────────────────────────────────────────
+
+class ValidationPromptOut(BaseModel):
+    category: str
+    goal: str
+    factors: list[str]
+    is_overridden: bool
+
+
+class ValidationPromptUpdate(BaseModel):
+    goal: str
+    factors: list[str]
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@router.get("", response_model=list[ValidationPromptOut])
+async def list_validation_prompts(
+    _user: dict = Depends(require_role("Admin")),
+) -> list[ValidationPromptOut]:
+    results = []
+    for cat in sorted(VALID_CATEGORIES):
+        base = _load_default(cat)
+        override = _prompt_overrides.get(cat)
+        effective = override if override else base
+        results.append(ValidationPromptOut(
+            category=cat,
+            goal=effective.get("goal", ""),
+            factors=effective.get("factors", []),
+            is_overridden=cat in _prompt_overrides,
+        ))
+    return results
+
+
+@router.get("/{category}", response_model=ValidationPromptOut)
+async def get_validation_prompt(
+    category: str,
+    _user: dict = Depends(require_role("Admin")),
+) -> ValidationPromptOut:
+    if category not in VALID_CATEGORIES:
+        raise NotFoundError("ValidationPrompt", category)
+    base = _load_default(category)
+    override = _prompt_overrides.get(category)
+    effective = override if override else base
+    return ValidationPromptOut(
+        category=category,
+        goal=effective.get("goal", ""),
+        factors=effective.get("factors", []),
+        is_overridden=category in _prompt_overrides,
+    )
+
+
+@router.put("/{category}", response_model=ValidationPromptOut)
+async def update_validation_prompt(
+    category: str,
+    body: ValidationPromptUpdate,
+    _user: dict = Depends(require_role("Admin")),
+) -> ValidationPromptOut:
+    if category not in VALID_CATEGORIES:
+        raise NotFoundError("ValidationPrompt", category)
+    _prompt_overrides[category] = {"goal": body.goal, "factors": body.factors}
+    return ValidationPromptOut(
+        category=category,
+        goal=body.goal,
+        factors=body.factors,
+        is_overridden=True,
+    )
+
+
+@router.delete("/{category}", response_model=ValidationPromptOut)
+async def reset_validation_prompt(
+    category: str,
+    _user: dict = Depends(require_role("Admin")),
+) -> ValidationPromptOut:
+    if category not in VALID_CATEGORIES:
+        raise NotFoundError("ValidationPrompt", category)
+    _prompt_overrides.pop(category, None)
+    base = _load_default(category)
+    return ValidationPromptOut(
+        category=category,
+        goal=base.get("goal", ""),
+        factors=base.get("factors", []),
+        is_overridden=False,
+    )
