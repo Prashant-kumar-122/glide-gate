@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -15,6 +14,7 @@ from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import NotFoundError, UnprocessableError
 from app.database import get_db
 from app.models.documents import Document
+from app.services.document.document_upload_service import document_upload_service
 
 router = APIRouter(tags=["documents"])
 
@@ -120,20 +120,8 @@ async def upload_document(
         )
 
     raw = await file.read()
-    file_size = len(raw)
-
     tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
 
-    version = 1
-    if parent_doc_id:
-        parent_result = await db.execute(
-            select(Document.version, Document.client_id).where(Document.id == parent_doc_id)
-        )
-        parent_row = parent_result.one_or_none()
-        if parent_row:
-            version = parent_row.version + 1
-
-    # Fetch client_id from the case
     from app.models.cases import OnboardingCase
     case_result = await db.execute(
         select(OnboardingCase.client_id).where(OnboardingCase.id == case_id)
@@ -141,28 +129,22 @@ async def upload_document(
     client_id_row = case_result.scalar_one_or_none()
     if client_id_row is None:
         raise NotFoundError("OnboardingCase", str(case_id))
-    client_id = client_id_row
 
-    doc = Document(
+    doc = await document_upload_service.upload(
         case_id=case_id,
-        client_id=client_id,
+        client_id=client_id_row,
+        file_bytes=raw,
+        filename=file.filename or "upload",
+        mime_type=file.content_type or "application/octet-stream",
         document_type=document_type,
         category=category,
-        status="RECEIVED",
-        original_filename=file.filename,
-        file_size_bytes=file_size,
-        mime_type=file.content_type,
-        version=version,
+        tags=tag_list,
         parent_doc_id=parent_doc_id,
         uploaded_by=user.get("role", "unknown"),
-        tags=tag_list,
-        uploaded_at=datetime.utcnow(),
+        db=db,
     )
-    db.add(doc)
     await db.commit()
     await db.refresh(doc)
-
-    # Document Intelligence Agent triggered in STEP-18 via asyncio.create_task
     return DocumentOut.model_validate(doc)
 
 

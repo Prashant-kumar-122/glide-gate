@@ -269,10 +269,16 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `backend/app/main.py` ✓ — updated: `on_startup` calls `orchestration_service.start()`; `on_shutdown` calls `orchestration_service.stop()`
 - `backend/app/api/routers/cases.py` ✓ — `POST /cases` fires `asyncio.create_task(orchestration_service.start_onboarding(...))` after DB commit; `POST /cases/{id}/resume` fires `asyncio.create_task(orchestration_service.resume_onboarding(...))` — both return immediately (202 pattern)
 
-### [ ] STEP-18 — Document Upload & Storage Service
+### [DONE] STEP-18 — Document Upload & Storage Service
+**Date:** 2026-05-13 | **BRD:** FR-06, FR-07, FR-09, Section 5.1.7–5.1.8 | **Depends:** STEP-09, STEP-13, STEP-15, STEP-16
 
-### [ ] STEP-18 — Document Upload & Storage Service
-**BRD:** FR-06, FR-07, FR-09, Section 5.1.7–5.1.8 | **Depends:** STEP-09, STEP-13, STEP-15, STEP-16
+**Artifacts produced:**
+- `backend/app/services/document/document_storage_adapter.py` ✓ — `DocumentStorageAdapter` ABC; `LocalStorageAdapter` (stores to `DOCUMENT_STORAGE_PATH/{case_id}/{doc_id}/{filename}`, SHA-256 checksum); `S3StorageAdapter` stub (raises `NotImplementedError`); `StorageAdapterFactory.get()` picks backend from settings; module-level `storage_adapter` singleton
+- `backend/app/services/document/document_version_manager.py` ✓ — `DocumentVersionManager`: `next_version(parent_doc_id, db)` returns 1 for new uploads or `parent.version + 1` for resubmissions; `get_version_chain(doc_id, db)` walks `parent_doc_id` chain to root then returns all versions ordered by version number; module-level `document_version_manager` singleton
+- `backend/app/services/document/document_status_service.py` ✓ — `DocumentStatusService`: enforces `_ALLOWED_TRANSITIONS` state machine (6-state lifecycle); `update_status(doc_id, new_status, db)` validates transition, persists, emits `DOCUMENT_STATUS_CHANGED` socket event with badge count; `get_upload_badge_count(case_id, db)` counts RECEIVED + UNDER_REVIEW docs; module-level `document_status_service` singleton
+- `backend/app/services/document/document_upload_service.py` ✓ — `DocumentUploadService.upload()`: (1) `_preprocess_file()` dispatches on three explicit MIME groups — images (`_IMAGE_MIMES`): Pillow EXIF strip + orientation fix; PDFs (`_PDF_MIMES`): pass-through; Word docs (`_WORD_MIMES`): pass-through; unknown MIME raises `ValueError` (defence-in-depth behind router's `ALLOWED_MIME_TYPES` gate); (2) persist to `storage_adapter`; (3) `document_version_manager.next_version()`; (4) create `Document` ORM record with `storage_path` + `checksum_sha256`; (5) `asyncio.create_task(_trigger_document_intelligence(...))` — fires `CLASSIFY_DOCUMENT` + `EXTRACT_OCR` tasks to DIA bus queue; (6) emit `DOCUMENT_UPLOADED` with badge count payload; module-level `document_upload_service` singleton
+- `backend/app/services/document/__init__.py` ✓ — re-exports all 4 public service classes and singletons
+- `backend/app/api/routers/documents.py` ✓ — `POST /cases/{case_id}/documents` updated: reads file bytes, resolves `client_id` from case, delegates to `document_upload_service.upload()`, then commits and returns `DocumentOut`
 
 ---
 
