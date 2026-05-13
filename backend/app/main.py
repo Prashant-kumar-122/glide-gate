@@ -10,14 +10,7 @@ from app.api.error_handlers import register_error_handlers
 from app.api.routers import health
 from app.api.routers import clients, cases, documents, conversations, reviews, agents, audit
 from app.api.routers.admin import llm_config, validation_prompts
-
-# ── Socket.IO ─────────────────────────────────────────────────────────────────
-sio = socketio.AsyncServer(
-    async_mode="asgi",
-    cors_allowed_origins=settings.SOCKETIO_CORS_ORIGINS,
-    logger=False,
-    engineio_logger=False,
-)
+from app.websocket.socket_server import sio  # noqa: F401 — imported for side-effect (event registration)
 
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(

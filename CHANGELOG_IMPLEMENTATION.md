@@ -233,8 +233,15 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 **Notes:** Orchestration stubs (resume, validate, SSE) return 202 Accepted — full wiring happens in STEP-17 (AgentOrchestrationService) and STEP-27/STEP-28.
 
-### [ ] STEP-15 — WebSocket Layer (python-socketio)
-**BRD:** FR-11, Section 5.1.9, FR-13 | **Depends:** STEP-02, STEP-04, STEP-13
+### [DONE] STEP-15 — WebSocket Layer (python-socketio)
+**Date:** 2026-05-13 | **BRD:** FR-11, Section 5.1.9, FR-13 | **Depends:** STEP-02, STEP-04, STEP-13
+
+**Artifacts produced:**
+- `backend/app/websocket/socket_events.py` ✓ — `SocketEvent` StrEnum: 12 typed event constants (AGENT_MESSAGE, TASK_ASSIGNED, TASK_COMPLETE, DOCUMENT_STATUS_CHANGED, DOCUMENT_UPLOADED, KYC_RESULT, ESCALATION_TRIGGERED, REVIEW_DECIDED, PRODUCT_TRACK_UPDATE, NOTIFICATION_SENT, CASE_STAGE_CHANGED, PROGRESS_UPDATE) + JOIN/LEAVE_CASE_ROOM + ERROR
+- `backend/app/websocket/socket_server.py` ✓ — `sio` singleton AsyncServer; `connect`/`disconnect`/`join_case_room`/`leave_case_room` event handlers; `emit_to_case(case_id, event, data)` targeting `case:{id}` rooms; `room_size()` helper; `_case_rooms` dict tracks per-case sids
+- `backend/app/websocket/socket_emitter.py` ✓ — `SocketEmitter` class with typed async helper per event; module-level `socket_emitter` singleton for agents/services to import
+- `backend/app/websocket/__init__.py` ✓ — re-exports `SocketEvent`, `sio`, `emit_to_case`, `room_size`, `socket_emitter`
+- `backend/app/main.py` ✓ — updated to import `sio` from `socket_server` (removed inline AsyncServer construction)
 
 ### [ ] STEP-16 — MCP Connectors (Simulated)
 **BRD:** Section 5.3, Section 6.3, FR-04, FR-06, Section 13.1 | **Depends:** STEP-10, STEP-12, STEP-13
