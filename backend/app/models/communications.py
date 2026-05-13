@@ -30,7 +30,7 @@ class Notification(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
     is_simulated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     sent_at: Mapped[datetime | None] = mapped_column()
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -50,7 +50,7 @@ class CaseSummary(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     model_used: Mapped[str | None] = mapped_column(String(100))
     generated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="case_summaries")
@@ -66,7 +66,7 @@ class CollaborationRoom(Base):
     case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
     room_name: Mapped[str | None] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="OPEN")
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -87,7 +87,7 @@ class CollaborationParticipant(Base):
     role: Mapped[str] = mapped_column(String(50), nullable=False)
     joined_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     left_at: Mapped[datetime | None] = mapped_column()
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     room: Mapped[CollaborationRoom] = relationship("CollaborationRoom", back_populates="participants")
@@ -108,7 +108,7 @@ class CollaborationComment(Base):
     visibility: Mapped[str] = mapped_column(String(30), nullable=False, default="team")
     document_id: Mapped[UUID | None] = mapped_column(ForeignKey("documents.id"))
     parent_id: Mapped[UUID | None] = mapped_column(ForeignKey("collaboration_comments.id"))
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -130,7 +130,7 @@ class ConversationMessage(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     tokens_used: Mapped[int | None] = mapped_column(Integer)
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="conversation_messages")

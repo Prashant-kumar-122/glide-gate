@@ -57,7 +57,7 @@ async def seed(session: AsyncSession) -> None:
         },
         assigned_advisor_id=UUID("f0000000-0001-0001-0001-000000000001"),
         sla_deadline=sla,
-        metadata={"demo_case": True, "scenario": "scenario_a"},
+        extra_metadata={"demo_case": True, "scenario": "scenario_a"},
     )
     session.add(case)
     print(f"  [seed] onboarding case {CASE_ID}")
@@ -70,7 +70,7 @@ async def seed(session: AsyncSession) -> None:
         product_code="cash_account",
         status="PENDING",
         suitability_outcome={},
-        metadata={},
+        extra_metadata={},
     )
     session.add(cp_cash)
     print("  [seed] case_product cash_account")
@@ -91,7 +91,7 @@ async def seed(session: AsyncSession) -> None:
         product_code="retirement_account",
         status="PENDING",
         suitability_outcome={},
-        metadata={},
+        extra_metadata={},
     )
     session.add(cp_retirement)
     print("  [seed] case_product retirement_account")

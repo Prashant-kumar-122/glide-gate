@@ -203,23 +203,82 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 3 — Backend & Integration
 
-### [ ] STEP-13 — Context Store Service & Shared OnboardingState
-**BRD:** FR-12, Paused Journey Resumption | **Depends:** STEP-04, STEP-12
+### [DONE] STEP-13 — Context Store Service & Shared OnboardingState
+**Date:** 2026-05-13 | **BRD:** FR-12, Paused Journey Resumption | **Depends:** STEP-04, STEP-12
 
-### [ ] STEP-14 — REST API Layer (FastAPI Routers)
-**BRD:** Section 9.1, FR-01, FR-05, FR-07 | **Depends:** STEP-02, STEP-12, STEP-13
+**Artifacts produced:**
+- `backend/app/services/context_store/onboarding_state_schema.py` ✓ — `ContextSnapshot` (point-in-time immutable copy), `OptimisticLockError`; re-exports `OnboardingState` from a2a_types
+- `backend/app/services/context_store/state_repository.py` ✓ — `StateRepository` with async `load()`, `persist()`, `exists()` targeting `onboarding_cases.shared_context` JSONB; also updates `current_stage` on every persist
+- `backend/app/services/context_store/context_store_service.py` ✓ — `ContextStoreService` singleton (`context_store`): in-memory dict cache + per-case `asyncio.Lock`; `initialise()`, `get()` (cache-then-DB), `update()` with optimistic locking (version check + increment + persist), `lock()` async context manager, `snapshot()`, `restore()` (bumps version), `evict()`
+- `backend/app/services/context_store/__init__.py` ✓ — re-exports all public symbols
 
-### [ ] STEP-15 — WebSocket Layer (python-socketio)
-**BRD:** FR-11, Section 5.1.9, FR-13 | **Depends:** STEP-02, STEP-04, STEP-13
+### [DONE] STEP-14 — REST API Layer (FastAPI Routers)
+**Date:** 2026-05-13 | **BRD:** Section 9.1, FR-01, FR-05, FR-07 | **Depends:** STEP-02, STEP-12, STEP-13
 
-### [ ] STEP-16 — MCP Connectors (Simulated)
-**BRD:** Section 5.3, Section 6.3, FR-04, FR-06, Section 13.1 | **Depends:** STEP-10, STEP-12, STEP-13
+**Artifacts produced:**
+- `backend/app/api/dependencies/auth.py` ✓ — JWT verify dependency (`get_current_user`); demo-mode passthrough returns DEMO_USER
+- `backend/app/api/dependencies/role_guard.py` ✓ — `require_role(*roles)` dependency factory; 403 on role mismatch
+- `backend/app/api/error_handlers.py` ✓ — `NotFoundError`, `ConflictError`, `UnprocessableError`, `ServiceUnavailableError`; `register_error_handlers(app)` wired into main.py
+- `backend/app/api/routers/clients.py` ✓ — POST /clients, GET /clients/{id}, PATCH /clients/{id}
+- `backend/app/api/routers/cases.py` ✓ — POST /cases (initiate), GET /cases/{id}, GET /cases/{id}/summary, POST /cases/{id}/resume (202 stub for STEP-17)
+- `backend/app/api/routers/documents.py` ✓ — POST /cases/{id}/documents (UploadFile), GET /cases/{id}/documents, GET /documents/{id}, POST /documents/{id}/validate (202 stub for STEP-28), GET /documents/{id}/diff
+- `backend/app/api/routers/conversations.py` ✓ — POST /cases/{id}/message (SSE StreamingResponse placeholder for STEP-27), GET /cases/{id}/messages
+- `backend/app/api/routers/reviews.py` ✓ — GET /reviews, GET /reviews/{id}, GET /reviews/{id}/evidence, POST /reviews/{id}/decide
+- `backend/app/api/routers/agents.py` ✓ — GET /agents, GET /agents/{agent_id}, GET /agents/trace/{case_id}
+- `backend/app/api/routers/audit.py` ✓ — GET /audit/logs (paginated, filtered), GET /audit/logs.csv (StreamingResponse CSV export)
+- `backend/app/api/routers/admin/llm_config.py` ✓ — GET/PUT/DELETE /admin/llm-config (in-memory overrides; DB-backed in STEP-24)
+- `backend/app/api/routers/admin/validation_prompts.py` ✓ — GET/PUT/DELETE /admin/validation-prompts/{category} (in-memory; DB-backed in STEP-28)
+- `backend/app/main.py` ✓ — updated to register all 10 routers + error handlers (35 routes total)
+- **Bug fix (STEP-12 carry-over):** renamed `metadata` → `extra_metadata` (with `mapped_column("metadata", ...)`) across all 14 ORM models and all seed files to resolve SQLAlchemy 2.0 reserved-name conflict
 
-### [ ] STEP-17 — Agent Orchestration Service (Wire All 8 Agents)
-**BRD:** Section 8.1, FR-03, FR-12 | **Depends:** STEP-04–08, STEP-13, STEP-15, STEP-16
+**Notes:** Orchestration stubs (resume, validate, SSE) return 202 Accepted — full wiring happens in STEP-17 (AgentOrchestrationService) and STEP-27/STEP-28.
 
-### [ ] STEP-18 — Document Upload & Storage Service
-**BRD:** FR-06, FR-07, FR-09, Section 5.1.7–5.1.8 | **Depends:** STEP-09, STEP-13, STEP-15, STEP-16
+### [DONE] STEP-15 — WebSocket Layer (python-socketio)
+**Date:** 2026-05-13 | **BRD:** FR-11, Section 5.1.9, FR-13 | **Depends:** STEP-02, STEP-04, STEP-13
+
+**Artifacts produced:**
+- `backend/app/websocket/socket_events.py` ✓ — `SocketEvent` StrEnum: 12 typed event constants (AGENT_MESSAGE, TASK_ASSIGNED, TASK_COMPLETE, DOCUMENT_STATUS_CHANGED, DOCUMENT_UPLOADED, KYC_RESULT, ESCALATION_TRIGGERED, REVIEW_DECIDED, PRODUCT_TRACK_UPDATE, NOTIFICATION_SENT, CASE_STAGE_CHANGED, PROGRESS_UPDATE) + JOIN/LEAVE_CASE_ROOM + ERROR
+- `backend/app/websocket/socket_server.py` ✓ — `sio` singleton AsyncServer; `connect`/`disconnect`/`join_case_room`/`leave_case_room` event handlers; `emit_to_case(case_id, event, data)` targeting `case:{id}` rooms; `room_size()` helper; `_case_rooms` dict tracks per-case sids
+- `backend/app/websocket/socket_emitter.py` ✓ — `SocketEmitter` class with typed async helper per event; module-level `socket_emitter` singleton for agents/services to import
+- `backend/app/websocket/__init__.py` ✓ — re-exports `SocketEvent`, `sio`, `emit_to_case`, `room_size`, `socket_emitter`
+- `backend/app/main.py` ✓ — updated to import `sio` from `socket_server` (removed inline AsyncServer construction)
+
+### [DONE] STEP-16 — MCP Connectors (Simulated)
+**Date:** 2026-05-13 | **BRD:** Section 5.3, Section 6.3, FR-04, FR-06, Section 13.1 | **Depends:** STEP-10, STEP-12, STEP-13
+
+**Artifacts produced:**
+- `backend/app/mcp/mcp_connector.py` ✓ — `MCPConnector` abstract base, `MCPToolDefinition` Pydantic model, `MCPRegistry` (register/get/list/invoke), module-level `mcp_registry` singleton
+- `backend/app/mcp/mcp_logger.py` ✓ — `MCPLogger.log()` persists every invocation to `mcp_tool_calls` with `is_simulated=True`; graceful failure so logging never breaks callers
+- `backend/app/mcp/connectors/identity_verification/simulator.py` ✓ — deterministic-seed simulators for `verify_identity` (confidence + flags), `check_sanctions` (sanctions-fragment matching, UN/OFAC/EU/HMT lists), `score_aml_risk` (4 weighted factors: PEP 0.35, country 0.30, SoW 0.20, occupation 0.15 → LOW/MEDIUM/HIGH/VERY_HIGH)
+- `backend/app/mcp/connectors/identity_verification/connector.py` ✓ — `IdentityVerificationConnector`: 100–800ms random latency, MCPLogger wired, `identity_verification_connector` singleton
+- `backend/app/mcp/connectors/document_management/simulator.py` ✓ — in-memory `_DOCUMENT_STORE`; simulators for `upload_document` (UUID + S3-style URL + SHA-256 checksum), `retrieve_document`, `get_document_status`, `extract_ocr` (6-category field templates + bounding boxes)
+- `backend/app/mcp/connectors/document_management/connector.py` ✓ — `DocumentManagementConnector`: 100–800ms random latency, MCPLogger wired, `document_management_connector` singleton
+- `backend/app/mcp/connectors/identity_verification/__init__.py` ✓ — re-exports connector + simulator functions
+- `backend/app/mcp/connectors/document_management/__init__.py` ✓ — re-exports connector + simulator functions
+- `backend/app/mcp/connectors/__init__.py` ✓ — re-exports both connector singletons
+- `backend/app/mcp/__init__.py` ✓ — imports and registers both connectors into `mcp_registry` at import time; 7 tools across 2 connectors confirmed
+
+### [DONE] STEP-17 — Agent Orchestration Service (Wire All 8 Agents)
+**Date:** 2026-05-13 | **BRD:** Section 8.1, FR-03, FR-12 | **Depends:** STEP-04–08, STEP-13, STEP-15, STEP-16
+
+**Artifacts produced:**
+- `backend/app/services/orchestration/agent_registry.py` ✓ — `AgentRegistry` dict-backed registry; `register`, `get`, `all`, `agent_ids`
+- `backend/app/services/orchestration/parallel_product_launcher.py` ✓ — `ParallelProductLauncher`: custom asyncio dispatch loop that batches ONBOARD_PRODUCT tasks from the bus queue, groups by case_id, and runs one `ProductOnboardingAgent` per product via `asyncio.gather`; `launch_for_case` for direct invocation; emits `PROGRESS_UPDATE` socket events on start and completion
+- `backend/app/services/orchestration/agent_orchestration_service.py` ✓ — `AgentOrchestrationService` singleton (`orchestration_service`): boots all 8 agents, registers 7 on the bus dispatch loop + 1 placeholder for the ProductOnboarding queue; `start()`/`stop()` lifecycle; `start_onboarding(case_id, client_id, selected_products)` — initialises ContextStore + emits socket event + publishes START_ONBOARDING; `resume_onboarding(case_id)` — loads state + publishes RESUME_ONBOARDING; `active_cases` and `registry` introspection properties
+- `backend/app/services/orchestration/__init__.py` ✓ — re-exports all public symbols
+- `backend/app/main.py` ✓ — updated: `on_startup` calls `orchestration_service.start()`; `on_shutdown` calls `orchestration_service.stop()`
+- `backend/app/api/routers/cases.py` ✓ — `POST /cases` fires `asyncio.create_task(orchestration_service.start_onboarding(...))` after DB commit; `POST /cases/{id}/resume` fires `asyncio.create_task(orchestration_service.resume_onboarding(...))` — both return immediately (202 pattern)
+
+### [DONE] STEP-18 — Document Upload & Storage Service
+**Date:** 2026-05-13 | **BRD:** FR-06, FR-07, FR-09, Section 5.1.7–5.1.8 | **Depends:** STEP-09, STEP-13, STEP-15, STEP-16
+
+**Artifacts produced:**
+- `backend/app/services/document/document_storage_adapter.py` ✓ — `DocumentStorageAdapter` ABC; `LocalStorageAdapter` (stores to `DOCUMENT_STORAGE_PATH/{case_id}/{doc_id}/{filename}`, SHA-256 checksum); `S3StorageAdapter` stub (raises `NotImplementedError`); `StorageAdapterFactory.get()` picks backend from settings; module-level `storage_adapter` singleton
+- `backend/app/services/document/document_version_manager.py` ✓ — `DocumentVersionManager`: `next_version(parent_doc_id, db)` returns 1 for new uploads or `parent.version + 1` for resubmissions; `get_version_chain(doc_id, db)` walks `parent_doc_id` chain to root then returns all versions ordered by version number; module-level `document_version_manager` singleton
+- `backend/app/services/document/document_status_service.py` ✓ — `DocumentStatusService`: enforces `_ALLOWED_TRANSITIONS` state machine (6-state lifecycle); `update_status(doc_id, new_status, db)` validates transition, persists, emits `DOCUMENT_STATUS_CHANGED` socket event with badge count; `get_upload_badge_count(case_id, db)` counts RECEIVED + UNDER_REVIEW docs; module-level `document_status_service` singleton
+- `backend/app/services/document/document_upload_service.py` ✓ — `DocumentUploadService.upload()`: (1) `_preprocess_file()` dispatches on three explicit MIME groups — images (`_IMAGE_MIMES`): Pillow EXIF strip + orientation fix; PDFs (`_PDF_MIMES`): pass-through; Word docs (`_WORD_MIMES`): pass-through; unknown MIME raises `ValueError` (defence-in-depth behind router's `ALLOWED_MIME_TYPES` gate); (2) persist to `storage_adapter`; (3) `document_version_manager.next_version()`; (4) create `Document` ORM record with `storage_path` + `checksum_sha256`; (5) `asyncio.create_task(_trigger_document_intelligence(...))` — fires `CLASSIFY_DOCUMENT` + `EXTRACT_OCR` tasks to DIA bus queue; (6) emit `DOCUMENT_UPLOADED` with badge count payload; module-level `document_upload_service` singleton
+- `backend/app/services/document/__init__.py` ✓ — re-exports all 4 public service classes and singletons
+- `backend/app/api/routers/documents.py` ✓ — `POST /cases/{case_id}/documents` updated: reads file bytes, resolves `client_id` from case, delegates to `document_upload_service.upload()`, then commits and returns `DocumentOut`
 
 ---
 

@@ -37,7 +37,7 @@ async def seed(session: AsyncSession) -> None:
         investment_experience="moderate",
         investment_horizon="long",
         kyc_status="PENDING",
-        metadata={
+        extra_metadata={
             "demo_client": True,
             "scenario": ["scenario_a", "scenario_b"],
         },

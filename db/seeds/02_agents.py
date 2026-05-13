@@ -20,7 +20,7 @@ AGENTS = [
         "capabilities": ["workflow_control", "stage_transitions", "agent_routing", "escalation_management"],
         "llm_provider": None,
         "llm_model": None,
-        "metadata": {"brd_ref": "Section 6.1, FR-03"},
+        "extra_metadata": {"brd_ref": "Section 6.1, FR-03"},
     },
     {
         "id": "b0000000-0002-0002-0002-000000000002",
@@ -32,7 +32,7 @@ AGENTS = [
         "capabilities": ["conversation_management", "data_collection", "intent_classification", "questionnaire_sequencing"],
         "llm_provider": "anthropic",
         "llm_model": "claude-sonnet-4-6",
-        "metadata": {"brd_ref": "Section 8.1 stages 1–2, FR-02, FR-12"},
+        "extra_metadata": {"brd_ref": "Section 8.1 stages 1–2, FR-02, FR-12"},
     },
     {
         "id": "b0000000-0003-0003-0003-000000000003",
@@ -44,7 +44,7 @@ AGENTS = [
         "capabilities": ["risk_scoring", "identity_verification", "aml_screening", "sanctions_check", "evidence_assembly"],
         "llm_provider": None,
         "llm_model": None,
-        "metadata": {"brd_ref": "FR-04, FR-13, FR-14, FR-15"},
+        "extra_metadata": {"brd_ref": "FR-04, FR-13, FR-14, FR-15"},
     },
     {
         "id": "b0000000-0004-0004-0004-000000000004",
@@ -56,7 +56,7 @@ AGENTS = [
         "capabilities": ["ocr_extraction", "document_classification", "ai_validation", "version_diff"],
         "llm_provider": "anthropic",
         "llm_model": "claude-sonnet-4-6",
-        "metadata": {"brd_ref": "FR-06, FR-08, FR-09, Section 5.1.10–5.1.11"},
+        "extra_metadata": {"brd_ref": "FR-06, FR-08, FR-09, Section 5.1.10–5.1.11"},
     },
     {
         "id": "b0000000-0005-0005-0005-000000000005",
@@ -68,7 +68,7 @@ AGENTS = [
         "capabilities": ["suitability_assessment", "account_setup", "product_step_execution"],
         "llm_provider": None,
         "llm_model": None,
-        "metadata": {"brd_ref": "FR-05, Section 8.1 stages 5–8"},
+        "extra_metadata": {"brd_ref": "FR-05, Section 8.1 stages 5–8"},
     },
     {
         "id": "b0000000-0006-0006-0006-000000000006",
@@ -80,7 +80,7 @@ AGENTS = [
         "capabilities": ["room_management", "comment_threading", "visibility_control", "participant_management"],
         "llm_provider": None,
         "llm_model": None,
-        "metadata": {"brd_ref": "Section 7.4"},
+        "extra_metadata": {"brd_ref": "Section 7.4"},
     },
     {
         "id": "b0000000-0007-0007-0007-000000000007",
@@ -92,7 +92,7 @@ AGENTS = [
         "capabilities": ["call_summarisation", "status_reporting", "recommended_actions"],
         "llm_provider": "anthropic",
         "llm_model": "claude-sonnet-4-6",
-        "metadata": {"brd_ref": "Section 7.3, FR-05, Criterion #6"},
+        "extra_metadata": {"brd_ref": "Section 7.3, FR-05, Criterion #6"},
     },
     {
         "id": "b0000000-0008-0008-0008-000000000008",
@@ -104,7 +104,7 @@ AGENTS = [
         "capabilities": ["email_dispatch", "sms_dispatch", "in_app_notification", "template_rendering"],
         "llm_provider": None,
         "llm_model": None,
-        "metadata": {"brd_ref": "Section 8.1 stage 8"},
+        "extra_metadata": {"brd_ref": "Section 8.1 stage 8"},
     },
 ]
 

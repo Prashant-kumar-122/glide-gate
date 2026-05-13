@@ -20,7 +20,7 @@ class OnboardingQuestionnaire(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     sections: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -50,7 +50,7 @@ class OnboardingQuestion(Base):
     show_if: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -90,7 +90,7 @@ class OnboardingAnswer(Base):
     question_key: Mapped[str] = mapped_column(String(100), nullable=False)
     answer_value: Mapped[Any] = mapped_column(JSONB)
     answered_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -119,7 +119,7 @@ class OnboardingQuestionSession(Base):
     paused_at: Mapped[datetime | None] = mapped_column()
     resumed_at: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
