@@ -318,8 +318,17 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `frontend/src/routes/AdvisorWorkspace.tsx` ✓ — 3-column layout: ClientRailNav | DocumentWorkspacePanel | DocumentDetailDrawer; useWorkspaceSocket wired on active caseId; empty state prompt when no client selected
 - `tsc --noEmit` passes with zero errors ✓
 
-### [ ] STEP-21 — Client Portal View
-**BRD:** Section 5.1.6–5.1.7, Section 5.2.2, FR-02 | **Depends:** STEP-14, STEP-15, STEP-19
+### [DONE] STEP-21 — Client Portal View
+**Date:** 2026-05-14 | **BRD:** Section 5.1.6–5.1.7, Section 5.2.2, FR-02 | **Depends:** STEP-14, STEP-15, STEP-19
+
+**Artifacts produced:**
+- `frontend/src/hooks/useClientDocuments.ts` ✓ — thin wrappers: `useClientDocuments`, `useClientProgress`, `useClientUpload` delegating to existing TanStack Query hooks
+- `frontend/src/hooks/useClientChat.ts` ✓ — `useChatHistory(caseId)` (staleTime: Infinity, gcTime: 0 for clean case switching); `useSendMessage(caseId)` mutation with full SSE streaming (fetch + ReadableStream, `data: chunk` parsing, `[DONE]` sentinel, graceful fallback for non-event-stream responses); both wired to `useChatStore`
+- `frontend/src/features/client/ClientProgressBar.tsx` ✓ — client-friendly progress card; stage→label map (Getting Started/Identity Verification/Account Setup/Final Review/All Done!); dynamic colour scheme (blue/green/amber) per stage; document approved/total counter
+- `frontend/src/features/client/ConversationalChat.tsx` ✓ — user/assistant `MessageBubble` components; animated 3-dot `TypingIndicator`; streaming ghost bubble (`streamingText` state shows in-flight SSE content); Enter-to-send (Shift+Enter for newline); auto-scroll to bottom on every message update
+- `frontend/src/features/client/DocumentUploadCard.tsx` ✓ — per-category card with description, existing doc list with `StatusBadge` + version indicator; drag-and-drop + click upload zone; MIME allowlist guard; uploading spinner + new-version label when docs already exist
+- `frontend/src/features/client/ClientDocumentHub.tsx` ✓ — 2-column grid of 6 `DocumentUploadCard` instances; approved/total summary header; loading skeleton; null guard for caseId
+- `frontend/src/routes/ClientPortal.tsx` ✓ — replaces placeholder; 440px fixed chat rail (progress bar + ConversationalChat) + flex-1 document panel; auto-selects first case; case-selector dropdown when multiple cases exist; hydrates chatStore from server history on case change; `useWorkspaceSocket` for real-time document/progress updates; `tsc --noEmit` passes with zero errors ✓
 
 ### [ ] STEP-22 — Contact Centre Dashboard
 **BRD:** Section 7.3, FR-05 | **Depends:** STEP-14, STEP-15, STEP-19
