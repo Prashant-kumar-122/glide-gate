@@ -96,6 +96,15 @@ export interface DiffResult {
   computed_at: string
 }
 
+export interface CallSummary {
+  case_id: string
+  summary: string
+  key_points: string[]
+  recommended_actions: string[]
+  stage_label: string
+  generated_at: string
+}
+
 export interface CollaborationComment {
   id: string
   author_name: string

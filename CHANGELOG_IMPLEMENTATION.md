@@ -330,8 +330,20 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `frontend/src/features/client/ClientDocumentHub.tsx` ✓ — 2-column grid of 6 `DocumentUploadCard` instances; approved/total summary header; loading skeleton; null guard for caseId
 - `frontend/src/routes/ClientPortal.tsx` ✓ — replaces placeholder; 440px fixed chat rail (progress bar + ConversationalChat) + flex-1 document panel; auto-selects first case; case-selector dropdown when multiple cases exist; hydrates chatStore from server history on case change; `useWorkspaceSocket` for real-time document/progress updates; `tsc --noEmit` passes with zero errors ✓
 
-### [ ] STEP-22 — Contact Centre Dashboard
-**BRD:** Section 7.3, FR-05 | **Depends:** STEP-14, STEP-15, STEP-19
+### [DONE] STEP-22 — Contact Centre Dashboard
+**Date:** 2026-05-14 | **BRD:** Section 7.3, FR-05, Hackathon Criterion #6 | **Depends:** STEP-14, STEP-15, STEP-19
+
+**Artifacts produced:**
+- `frontend/src/lib/socket.ts` ✓ — shared `getSocket()` singleton; eliminates duplicate socket connections when multiple hooks coexist; `useWorkspaceSocket` updated to import from here
+- `frontend/src/lib/api.ts` ✓ — `CallSummary` interface added (summary, key_points[], recommended_actions[], stage_label, generated_at)
+- `frontend/src/hooks/useAllCases.ts` ✓ — `useAllCases()` (60s refetchInterval for live CC dashboard), `useClientDetail(caseId)` → `CaseSummary`
+- `frontend/src/hooks/useCallSummary.ts` ✓ — `useCallSummary(caseId)` → `CallSummary`; `retry: false` so missing backend endpoint degrades gracefully; exports `ccQk` for cache invalidation
+- `frontend/src/features/contact-centre/ProductTrackSummary.tsx` ✓ — compact inline product track rows (icon + label + ProgressBar + %) for CC context
+- `frontend/src/features/contact-centre/CallSummaryCard.tsx` ✓ — AI call summary card with key_points and recommended_actions lists; loading skeleton; graceful "not yet available" empty state with refresh button
+- `frontend/src/features/contact-centre/CCActionBar.tsx` ✓ — Log Call / Send Email / Open Case buttons; conditional Escalate / Mark Resolved toggle based on `summary.escalated`
+- `frontend/src/features/contact-centre/ClientStatusTable.tsx` ✓ — real-time searchable client list (filter by name/stage/product); stage badge + ProgressBar per row; escalation and complete icons; Zustand `ccStore` for selection and filter text
+- `frontend/src/features/contact-centre/ClientDetailPanel.tsx` ✓ — client header (avatar, name, case ID, stage badge); stats row (overall %, docs approved/total, escalation flag); CCActionBar; ProductTrackSummary; CallSummaryCard; loading skeleton and empty-state prompt
+- `frontend/src/routes/ContactCentre.tsx` ✓ — 2-panel layout (320px client list + flex detail); CC-specific socket hook (ref-based callback avoids stale closure); top bar with live/reconnecting indicator and case count; `tsc --noEmit` passes with zero errors ✓
 
 ### [ ] STEP-23 — Agent Trace Canvas & Admin Config View
 **BRD:** FR-11, Section 5.1.12–5.1.14 | **Depends:** STEP-14, STEP-15, STEP-19

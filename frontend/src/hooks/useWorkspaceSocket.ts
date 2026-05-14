@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
+import { getSocket } from '@/lib/socket'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import {
   applyDocumentStatusUpdate,
@@ -25,14 +25,6 @@ const EVENTS = {
   TASK_COMPLETE: 'task_complete',
 } as const
 
-let _socket: Socket | null = null
-
-function getSocket(): Socket {
-  if (!_socket) {
-    _socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] })
-  }
-  return _socket
-}
 
 export function useWorkspaceSocket(caseId: string | null) {
   const qc = useQueryClient()
