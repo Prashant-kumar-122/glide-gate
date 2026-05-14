@@ -16,6 +16,7 @@ from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.cases import CaseProduct, OnboardingCase, Product
+from app.models.clients import Client
 from app.models.documents import Document
 from app.services.orchestration.agent_orchestration_service import orchestration_service
 
@@ -84,6 +85,17 @@ class CaseProgressOut(BaseModel):
     kyc_status: str | None
 
 
+class CaseListOut(BaseModel):
+    id: UUID
+    client_id: UUID
+    client_name: str
+    status: str
+    current_stage: str
+    selected_products: list[str]
+    created_at: datetime
+    updated_at: datetime
+
+
 class ResumeResponse(BaseModel):
     case_id: UUID
     message: str
@@ -109,6 +121,32 @@ def _case_products_to_tracks(case: OnboardingCase) -> list[ProductTrackOut]:
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+@router.get("", response_model=list[CaseListOut])
+async def list_cases(
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> list[CaseListOut]:
+    result = await db.execute(
+        select(OnboardingCase, Client)
+        .join(Client, OnboardingCase.client_id == Client.id)
+        .order_by(OnboardingCase.updated_at.desc())
+    )
+    rows = result.all()
+    return [
+        CaseListOut(
+            id=case.id,
+            client_id=case.client_id,
+            client_name=f"{client.first_name} {client.last_name}",
+            status=case.status,
+            current_stage=case.current_stage,
+            selected_products=case.selected_products,
+            created_at=case.created_at,
+            updated_at=case.updated_at,
+        )
+        for case, client in rows
+    ]
+
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=CaseSummaryOut)
 async def initiate_case(
