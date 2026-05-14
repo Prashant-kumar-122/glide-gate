@@ -345,8 +345,27 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `frontend/src/features/contact-centre/ClientDetailPanel.tsx` ✓ — client header (avatar, name, case ID, stage badge); stats row (overall %, docs approved/total, escalation flag); CCActionBar; ProductTrackSummary; CallSummaryCard; loading skeleton and empty-state prompt
 - `frontend/src/routes/ContactCentre.tsx` ✓ — 2-panel layout (320px client list + flex detail); CC-specific socket hook (ref-based callback avoids stale closure); top bar with live/reconnecting indicator and case count; `tsc --noEmit` passes with zero errors ✓
 
-### [ ] STEP-23 — Agent Trace Canvas & Admin Config View
-**BRD:** FR-11, Section 5.1.12–5.1.14 | **Depends:** STEP-14, STEP-15, STEP-19
+### [DONE] STEP-23 — Agent Trace Canvas & Admin Config View
+**Date:** 2026-05-14 | **BRD:** FR-11, Section 5.1.12–5.1.14, Hackathon Criterion #10 | **Depends:** STEP-14, STEP-15, STEP-19
+
+**Artifacts produced:**
+- `frontend/src/lib/api.ts` ✓ — `AgentOut`, `AgentTaskOut`, `AgentTraceOut`, `LLMConfig`, `ValidationPrompt` interfaces added
+- `frontend/src/hooks/useAgentTrace.ts` ✓ — `useAgents()`, `useAgentTrace(caseId)` with `agentQk` query keys; 15s refetchInterval for live trace data
+- `frontend/src/hooks/useLLMConfig.ts` ✓ — `useLLMConfig()` with placeholder defaults; `useUpdateLLMConfig()` mutation wired to PUT /admin/llm-config
+- `frontend/src/hooks/useValidationPrompts.ts` ✓ — `useValidationPrompts()` parallel fetches all 6 categories (graceful fallback to defaults); `useUpdateValidationPrompt()` mutation
+- `frontend/src/features/agent-trace/agentPositions.ts` ✓ — `AGENT_IDS` (8), `AGENT_LABELS`, `AGENT_POSITIONS` layout (3-row hierarchy), `STATIC_EDGES` (9 structural connections)
+- `frontend/src/features/agent-trace/AgentNode.tsx` ✓ — Custom React Flow node: icon per agent type (Lucide), state-driven colour (idle grey → active blue → escalated amber → complete green), animated status dot, state badge; uses `AgentNodeData` type
+- `frontend/src/features/agent-trace/AgentDetailPopover.tsx` ✓ — Right-panel agent detail: node state badge, description from trace data, recent task list with status icons and duration_ms
+- `frontend/src/features/agent-trace/MessageLog.tsx` ✓ — Scrollable A2A message log from `traceStore.messageLog`: from→to arrows, status colour badges, time display; empty state prompt
+- `frontend/src/features/agent-trace/useAgentTraceSocket.ts` ✓ — Socket hook: joins case room, handles `agent_message` (enqueue edge + active node), `task_assigned`, `task_complete` (complete/idle node), `escalation_triggered` (escalated node), `case_stage_changed`; leaves room on caseId change with full store reset
+- `frontend/src/features/agent-trace/AgentTraceCanvas.tsx` ✓ — Full React Flow canvas: 8 agent nodes at fixed positions, `NODE_TYPES` registration, static edges (grey/smoothstep) + animated in-flight edges (blue/animated, auto-expire after 2s via `window.setTimeout`), case selector dropdown, state legend, MiniMap with colour-coded nodes, `AgentDetailPopover` + `MessageLog` in right panel (320px); `@xyflow/react/dist/style.css` imported
+- `frontend/src/features/admin/LLMProviderConfig.tsx` ✓ — Provider selector (4 providers: Anthropic, OpenAI, Google, Local) with preset model lists + custom model text input; saves to PUT /admin/llm-config
+- `frontend/src/features/admin/DeterministicControls.tsx` ✓ — Sliders + inputs for all 7 controls (temperature, top_p, frequency_penalty, presence_penalty, seed, max_retries, cache_ttl); tooltip descriptions via hover; saves to PUT /admin/llm-config
+- `frontend/src/features/admin/ValidationPromptEditor.tsx` ✓ — Per-category vertical tab (6 categories); goal textarea + factors list with add (Enter key) / remove (×); saves per-category to PUT /admin/validation-prompts/{category}
+- `frontend/src/features/admin/CheckpointRulesEditor.tsx` ✓ — Table of 5 default checkpoint rules (4 dimensions: product_type, risk_level, account_value_band, jurisdiction); inline add-rule form; local state with note that DB persistence is wired in STEP-30
+- `frontend/src/routes/AgentTrace.tsx` ✓ — Full-height layout: header bar + `AgentTraceCanvas` filling remaining viewport height
+- `frontend/src/routes/AdminConfig.tsx` ✓ — Vertical tab nav (LLM Provider | Deterministic Controls | Validation Prompts | Checkpoint Rules) + scrollable content pane
+- `tsc --noEmit` passes with zero errors ✓
 
 ---
 

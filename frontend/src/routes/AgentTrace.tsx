@@ -1,14 +1,18 @@
+import AgentTraceCanvas from '@/features/agent-trace/AgentTraceCanvas'
+
 export default function AgentTrace() {
   return (
-    <div className="flex h-full items-center justify-center p-12">
-      <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-gray-900">Agent Trace Canvas</h1>
-        <p className="mt-2 text-gray-500">
-          React Flow canvas · 8 agent nodes · Animated A2A edges · Real-time message log
-        </p>
-        <span className="mt-4 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-          Implemented in STEP-23 / STEP-35
-        </span>
+    <div className="flex h-[calc(100vh-48px)] flex-col">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+        <div>
+          <h1 className="text-sm font-semibold text-gray-900">Agent Trace Canvas</h1>
+          <p className="text-[11px] text-gray-400">
+            Live A2A message flow · 8 agent nodes · Real-time state machine
+          </p>
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <AgentTraceCanvas />
       </div>
     </div>
   )

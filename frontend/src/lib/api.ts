@@ -113,3 +113,46 @@ export interface CollaborationComment {
   visibility: 'ALL' | 'ADVISOR_ONLY' | 'CLIENT_VISIBLE'
   created_at: string
 }
+
+export interface AgentOut {
+  id: string
+  agent_type: string
+  name: string
+  status: string
+  description?: string
+  last_active?: string
+}
+
+export interface AgentTaskOut {
+  id: string
+  from_agent: string
+  to_agent: string
+  task_type: string
+  status: string
+  duration_ms?: number
+  created_at: string
+  case_id?: string
+}
+
+export interface AgentTraceOut {
+  agents: AgentOut[]
+  tasks: AgentTaskOut[]
+}
+
+export interface LLMConfig {
+  provider: 'anthropic' | 'openai' | 'google' | 'local'
+  model: string
+  temperature: number
+  top_p: number
+  seed: number | null
+  frequency_penalty: number
+  presence_penalty: number
+  max_retries: number
+  cache_ttl: number
+}
+
+export interface ValidationPrompt {
+  category: string
+  goal: string
+  factors: string[]
+}
