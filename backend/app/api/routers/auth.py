@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import get_current_user
@@ -30,7 +30,7 @@ def _validate_password(v: str) -> str:
 
 
 class SignupRequest(BaseModel):
-    email: EmailStr
+    email: str
     first_name: str
     last_name: str
     password: str
@@ -50,12 +50,12 @@ class SignupRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 
 class ProfileUpdateRequest(BaseModel):
-    email: EmailStr | None = None
+    email: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     password: str | None = None

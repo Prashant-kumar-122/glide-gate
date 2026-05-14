@@ -391,8 +391,24 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 4.5 — Auth (Frontend)
 
-### [ ] STEP-23A — Auth UI (Frontend)
-**BRD:** Section 5.1, Section 5.2, FR-01 | **Depends:** STEP-18A, STEP-19, STEP-03
+### [DONE] STEP-23A — Auth UI (Frontend)
+**Date:** 2026-05-14 | **BRD:** Section 5.1, Section 5.2, FR-01 | **Depends:** STEP-18A, STEP-19, STEP-03
+
+**Artifacts produced:**
+- `frontend/src/store/authStore.ts` ✓ — Zustand `AuthState` with `persist` middleware → `localStorage` key `gg_auth`; `AuthUser` interface; `setAuth` / `clearAuth` actions
+- `frontend/src/store/index.ts` ✓ — `useAuthStore` + `AuthUser` re-exported
+- `frontend/src/lib/api.ts` ✓ — `UserOut`, `TokenResponse` interfaces added; request interceptor attaches `Authorization: Bearer <token>`; response interceptor clears auth + redirects to `/login` on 401
+- `frontend/src/hooks/useAuth.ts` ✓ — `useSignup()`, `useLogin()` (both call `setAuth` + navigate to role default route on success), `useProfile()` (enabled when authenticated), `useUpdateProfile()` (patches query cache + refreshes store)
+- `frontend/src/components/ProtectedRoute.tsx` ✓ — redirects unauthenticated users to `/login`; redirects wrong-role users to their default route
+- `frontend/src/features/auth/LoginForm.tsx` ✓ — email + password form; `useLogin` mutation; error display
+- `frontend/src/features/auth/SignupForm.tsx` ✓ — first/last name + email + password + confirm; `useSignup` mutation; error display
+- `frontend/src/features/auth/ProfileCard.tsx` ✓ — read-only info rows (all roles); edit mode restricted to `client` role; `ConfirmationModal` gate before password change; `useUpdateProfile` mutation
+- `frontend/src/features/auth/UserMenu.tsx` ✓ — click-outside-dismissible dropdown in NavBar right; shows full name + role; links to `/profile`; Sign Out clears store + navigates to `/login`
+- `frontend/src/routes/Login.tsx` ✓ — branding header + `LoginForm`; redirects already-authenticated users to their default route
+- `frontend/src/routes/Signup.tsx` ✓ — branding header + `SignupForm`; redirects already-authenticated users
+- `frontend/src/routes/Profile.tsx` ✓ — `ProfileCard` page at `/profile`
+- `frontend/src/App.tsx` ✓ — all routes wrapped with `ProtectedRoute` (correct `allowedRoles`); NavBar filters links by role; `<UserMenu />` mounted on right side; `/login` + `/signup` public; catch-all → `/login`
+- `tsc --noEmit` passes with zero errors ✓
 
 ---
 

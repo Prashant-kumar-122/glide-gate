@@ -1,9 +1,47 @@
 import axios from 'axios'
 import type { DocumentStatus } from '@/design-system/tokens'
+import { useAuthStore } from '@/store/authStore'
 
 export const api = axios.create({ baseURL: '/api' })
 
-// ── Domain types ─────────────────────────────────────────────────────────────
+// ── Axios interceptors ────────────────────────────────────────────────────────
+
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err?.response?.status === 401) {
+      useAuthStore.getState().clearAuth()
+      window.location.href = '/login'
+    }
+    return Promise.reject(err)
+  }
+)
+
+// ── Auth types ────────────────────────────────────────────────────────────────
+
+export interface UserOut {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  role: 'client' | 'advisor' | 'admin'
+}
+
+export interface TokenResponse {
+  access_token: string
+  token_type: string
+  user: UserOut
+}
+
+// ── Domain types ──────────────────────────────────────────────────────────────
 
 export interface ClientOut {
   id: string
