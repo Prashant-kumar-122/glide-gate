@@ -1,15 +1,48 @@
-export default function AdvisorWorkspace() {
+import { useWorkspaceStore } from '@/store/workspaceStore'
+import { useWorkspaceSocket } from '@/hooks/useWorkspaceSocket'
+import ClientRailNav from '@/features/advisor/ClientRailNav'
+import DocumentWorkspacePanel from '@/features/advisor/DocumentWorkspacePanel'
+import DocumentDetailDrawer from '@/features/advisor/DocumentDetailDrawer'
+import { LayoutDashboard } from 'lucide-react'
+
+function EmptyState() {
   return (
-    <div className="flex h-full items-center justify-center p-12">
-      <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-gray-900">Advisor Workspace</h1>
-        <p className="mt-2 text-gray-500">
-          Multi-client navigator · Document workspace · AI validation · Version diff
-        </p>
-        <span className="mt-4 inline-block rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
-          Implemented in STEP-20
-        </span>
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-12 text-center">
+      <div className="rounded-full bg-blue-50 p-5">
+        <LayoutDashboard className="h-8 w-8 text-blue-400" />
       </div>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-800">Select a client</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Choose a client from the left panel to view their onboarding workspace.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+export default function AdvisorWorkspace() {
+  const { selectedCaseId, isDrawerOpen } = useWorkspaceStore()
+
+  // Wire real-time socket updates for the active case
+  useWorkspaceSocket(selectedCaseId)
+
+  return (
+    <div className="flex h-[calc(100vh-48px)]">
+      {/* Left rail — client list */}
+      <ClientRailNav />
+
+      {/* Main workspace panel */}
+      {selectedCaseId ? (
+        <DocumentWorkspacePanel caseId={selectedCaseId} />
+      ) : (
+        <EmptyState />
+      )}
+
+      {/* Right drawer — document detail (conditionally rendered) */}
+      {selectedCaseId && isDrawerOpen && (
+        <DocumentDetailDrawer caseId={selectedCaseId} />
+      )}
     </div>
   )
 }

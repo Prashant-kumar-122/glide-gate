@@ -300,8 +300,23 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `frontend/src/components/UploadButton.tsx` ✓ — drag-and-drop + click; MIME type allowlist guard; disabled + dragging states
 - `tsc --noEmit` passes with zero errors ✓
 
-### [ ] STEP-20 — Advisor Workspace View (All 16 Features)
-**BRD:** Section 5.1, FR-07–10 | **Depends:** STEP-14, STEP-15, STEP-19
+### [DONE] STEP-20 — Advisor Workspace View (All 16 Features)
+**Date:** 2026-05-14 | **BRD:** Section 5.1, FR-07–10 | **Depends:** STEP-14, STEP-15, STEP-19
+
+**Artifacts produced:**
+- `frontend/src/lib/api.ts` ✓ — axios instance + domain types: ClientOut, CaseOut, CaseSummary, ProductTrack, DocumentOut, FindingResult, ValidationResult, DiffResult, DiffSection, CollaborationComment
+- `frontend/src/hooks/useDocuments.ts` ✓ — TanStack Query hooks: useCases, useCaseDetail, useCaseProgress, useDocuments, useDocument, useDiffResult, useValidateDocument, useUploadDocument, useUpdateDocumentStatus; cache-patch helpers: applyDocumentStatusUpdate, applyDocumentUploaded, applyValidationResult
+- `frontend/src/hooks/useWorkspaceSocket.ts` ✓ — module-level socket.io singleton; joins/leaves case rooms on caseId change; handles DOCUMENT_STATUS_CHANGED, DOCUMENT_UPLOADED, PRODUCT_TRACK_UPDATE, PROGRESS_UPDATE, CASE_STAGE_CHANGED, KYC_RESULT, TASK_COMPLETE; patches TanStack Query cache in-place; increments Zustand badge counts
+- `frontend/src/store/workspaceStore.ts` ✓ — updated: added `selectedCaseId`; `setSelectedClient(clientId, caseId)` replaces old single-arg form; selecting a new client resets drawer + active document
+- `frontend/src/features/advisor/ClientRailNav.tsx` ✓ — left rail: useCases list; per-case progress bars (stage→% map); upload badge count chips; socket connection indicator (Wifi/WifiOff); loading skeleton; empty-state and error states
+- `frontend/src/features/advisor/AIValidationPanel.tsx` ✓ — findings list with pass/warn/fail verdict icons and colour-coded cards; overall verdict badge; "Run AI Check" button wired to useValidateDocument mutation; running spinner; timestamp display
+- `frontend/src/features/advisor/VersionDiffPanel.tsx` ✓ — similarity ratio ring; added/modified/removed sections with before/after inline comparison; unchanged sections hidden; computed_at timestamp
+- `frontend/src/features/advisor/StatusEditor.tsx` ✓ — mirrors backend 6-state ALLOWED_TRANSITIONS; renders only valid next-state buttons; ConfirmationModal gate before committing; isUpdating loading state
+- `frontend/src/features/advisor/ParallelProductTracks.tsx` ✓ — 2-column grid; per-product ProgressBar + steps counter; status icon (CheckCircle/AlertTriangle/Loader/Package); dynamic color variant by status; skeleton loader; empty state
+- `frontend/src/features/advisor/DocumentDetailDrawer.tsx` ✓ — 4-tab drawer (Overview, AI Validation, Version Diff, Comments); document meta panel; download link; StatusEditor embedded in Overview tab; AI/Diff tab indicator chips when results exist; CommentThread with mock data (collaboration API wired in later step)
+- `frontend/src/features/advisor/DocumentWorkspacePanel.tsx` ✓ — case progress header with overall % and escalation badge; ParallelProductTracks section; 6 CategoryCard sections (identity/financial/legal/insurance/compliance/entity) with DocumentRow list + per-category UploadButton; "Action needed" badge on NEEDS_REVISION categories
+- `frontend/src/routes/AdvisorWorkspace.tsx` ✓ — 3-column layout: ClientRailNav | DocumentWorkspacePanel | DocumentDetailDrawer; useWorkspaceSocket wired on active caseId; empty state prompt when no client selected
+- `tsc --noEmit` passes with zero errors ✓
 
 ### [ ] STEP-21 — Client Portal View
 **BRD:** Section 5.1.6–5.1.7, Section 5.2.2, FR-02 | **Depends:** STEP-14, STEP-15, STEP-19
