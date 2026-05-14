@@ -284,8 +284,21 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 4 — Frontend / UI
 
-### [ ] STEP-19 — Design System & Shared UI Components
-**BRD:** Section 5.1.15, Section 5.1.3, Section 5.1.16 | **Depends:** STEP-03
+### [DONE] STEP-19 — Design System & Shared UI Components
+**Date:** 2026-05-14 | **BRD:** Section 5.1.15, Section 5.1.3, Section 5.1.16 | **Depends:** STEP-03
+
+**Artifacts produced:**
+- `frontend/src/design-system/tokens.ts` ✓ — `DocumentStatus` (6), `TeamRole` (5), `VisibilityLevel`; `DOC_STATUS_COLORS` (bg/text/ring/dot per status), `DOC_STATUS_LABEL`, `ROLE_COLORS`, `ROLE_LABEL`, `PROGRESS_COLOR`
+- `frontend/src/components/StatusBadge.tsx` ✓ — pill badge with dot and ring; sm/md sizes; driven by tokens
+- `frontend/src/components/RoleBadge.tsx` ✓ — compact role pill; sm/md sizes
+- `frontend/src/components/ProgressBar.tsx` ✓ — animated width transition; sm/md/lg heights; auto-green at 100%; ARIA progressbar role
+- `frontend/src/components/DocumentRow.tsx` ✓ — Zustand-connected (active doc + drawer); status icon, version, date, AI/DIFF chips, StatusBadge
+- `frontend/src/components/CategoryCard.tsx` ✓ — collapsible accordion; ProgressBar header; approved/total counter
+- `frontend/src/components/CommentThread.tsx` ✓ — threaded comments with RoleBadge; visibility selector (ALL/ADVISOR_ONLY/CLIENT_VISIBLE); textarea + send
+- `frontend/src/components/VisibilityToggle.tsx` ✓ — segmented 3-way toggle (All / Advisor / Client)
+- `frontend/src/components/ConfirmationModal.tsx` ✓ — portal overlay; danger/warning/default variants; ESC key + backdrop close; loading state
+- `frontend/src/components/UploadButton.tsx` ✓ — drag-and-drop + click; MIME type allowlist guard; disabled + dragging states
+- `tsc --noEmit` passes with zero errors ✓
 
 ### [ ] STEP-20 — Advisor Workspace View (All 16 Features)
 **BRD:** Section 5.1, FR-07–10 | **Depends:** STEP-14, STEP-15, STEP-19
