@@ -41,6 +41,7 @@ SEED_FILES = [
     ("04 — Client: Aarav Mehta",  "04_client_aarav_mehta.py"),
     ("05 — Sample Case",          "05_sample_case.py"),
     ("06 — Sample Events",        "06_sample_events.py"),
+    ("07 — Auth Users",           "07_users.py"),
 ]
 
 

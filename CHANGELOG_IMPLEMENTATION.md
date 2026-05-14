@@ -284,8 +284,21 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 3.5 — Auth (Backend)
 
-### [ ] STEP-18A — Auth System (Backend)
-**BRD:** Section 9.1, FR-01, Section 10.2 | **Depends:** STEP-12, STEP-14
+### [DONE] STEP-18A — Auth System (Backend)
+**Date:** 2026-05-14 | **BRD:** Section 9.1, FR-01, Section 10.2 | **Depends:** STEP-12, STEP-14
+
+**Artifacts produced:**
+- `db/schema/011_users.sql` ✓ — users table DDL (UUID PK, unique email, role CHECK constraint, 3 indexes)
+- `backend/alembic/versions/0002_users.py` ✓ — migration (down_revision = "0001_initial"; creates users table + 3 indexes)
+- `backend/app/models/users.py` ✓ — `User` SQLAlchemy ORM model (email, first/last_name, password_hash, role, is_active, timestamps, full_name property)
+- `backend/app/models/__init__.py` ✓ — `User` import added for Alembic autodiscovery
+- `backend/app/services/auth/auth_service.py` ✓ — `hash_password`, `verify_password`, `create_access_token` (JWT: sub/email/role/name/exp); `AuthService` with `signup`, `login`, `get_profile`, `update_profile`; module-level `auth_service` singleton
+- `backend/app/services/auth/__init__.py` ✓ — re-exports `auth_service` and helpers
+- `backend/app/api/routers/auth.py` ✓ — 4 endpoints (POST /auth/signup, POST /auth/login, GET /auth/me, PATCH /auth/me); Pydantic schemas: `SignupRequest` (password strength + match validation), `LoginRequest`, `ProfileUpdateRequest`, `UserOut`, `TokenResponse`
+- `backend/app/api/dependencies/auth.py` ✓ — `DEMO_USER["role"]` updated `"Advisor"` → `"advisor"` (lowercase convention)
+- `backend/app/main.py` ✓ — `auth.router` registered with `_prefix`
+- `db/seeds/07_users.py` ✓ — 3 seed users with bcrypt-hashed passwords (admin / advisor / client)
+- `db/seeds/seed.py` ✓ — `07_users.py` added to `SEED_FILES` list
 
 ---
 
