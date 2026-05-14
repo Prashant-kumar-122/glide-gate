@@ -282,6 +282,13 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ---
 
+## Phase 3.5 — Auth (Backend)
+
+### [ ] STEP-18A — Auth System (Backend)
+**BRD:** Section 9.1, FR-01, Section 10.2 | **Depends:** STEP-12, STEP-14
+
+---
+
 ## Phase 4 — Frontend / UI
 
 ### [DONE] STEP-19 — Design System & Shared UI Components
@@ -366,6 +373,13 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `frontend/src/routes/AgentTrace.tsx` ✓ — Full-height layout: header bar + `AgentTraceCanvas` filling remaining viewport height
 - `frontend/src/routes/AdminConfig.tsx` ✓ — Vertical tab nav (LLM Provider | Deterministic Controls | Validation Prompts | Checkpoint Rules) + scrollable content pane
 - `tsc --noEmit` passes with zero errors ✓
+
+---
+
+## Phase 4.5 — Auth (Frontend)
+
+### [ ] STEP-23A — Auth UI (Frontend)
+**BRD:** Section 5.1, Section 5.2, FR-01 | **Depends:** STEP-18A, STEP-19, STEP-03
 
 ---
 
