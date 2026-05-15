@@ -603,8 +603,33 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 `tsc --noEmit` passes with zero errors ✓
 
-### [ ] STEP-30 — Configurable Checkpoint Rules (FR-15)
-**BRD:** FR-15, Section 10.2 | **Depends:** STEP-06, STEP-12, STEP-14, STEP-29
+### [DONE] STEP-30 — Configurable Checkpoint Rules (FR-15)
+**Date:** 2026-05-15 | **BRD:** FR-15, Section 10.2 | **Depends:** STEP-06, STEP-12, STEP-14, STEP-29
+
+**Artifacts produced / modified:**
+
+`backend/app/services/compliance/checkpoint_rule_repository.py` ✓ — In-memory singleton repository initialised with the 5 default rules from `CheckpointRuleEngine`; `get_all()`, `get()`, `add()`, `update()`, `remove()` (blocked for built-in rule IDs), `reset()`, `is_builtin()`, `make_rule_id()`; `_BUILTIN_IDS` frozenset guards against deleting system rules
+
+`backend/app/api/routers/admin/checkpoint_rules.py` ✓ — 5 admin-only endpoints:
+- `GET  /admin/checkpoint-rules` → `list[CheckpointRuleOut]`
+- `POST /admin/checkpoint-rules` (201) → `CheckpointRuleOut`; auto-generates `rule_id` if omitted
+- `PUT  /admin/checkpoint-rules/{rule_id}` → `CheckpointRuleOut`
+- `DELETE /admin/checkpoint-rules/{rule_id}` → `{"deleted": rule_id}`; returns 422 for built-in rule attempts
+- `POST /admin/checkpoint-rules/reset` → `list[CheckpointRuleOut]`; restores all 5 defaults
+
+`backend/app/agents/kyc_compliance/kyc_compliance_agent.py` ✓ — Removed stored `_rule_engine` instance; `_handle_run_kyc()` now builds a fresh `CheckpointRuleEngine(rules=rule_repo.get_all())` on each KYC run so admin-configured rules take effect immediately without restart
+
+`backend/app/main.py` ✓ — `checkpoint_rules.router` registered with `_prefix`
+
+`backend/app/services/compliance/__init__.py` ✓ — `checkpoint_rule_repository` module re-exported
+
+`frontend/src/lib/api.ts` ✓ — `CheckpointRuleOut` and `CreateCheckpointRuleRequest` interfaces added
+
+`frontend/src/hooks/useCheckpointRules.ts` ✓ — TanStack Query hooks: `useCheckpointRules()`, `useCreateCheckpointRule()`, `useDeleteCheckpointRule()`, `useResetCheckpointRules()`; all mutations invalidate `checkpointQk.all` on success
+
+`frontend/src/features/admin/CheckpointRulesEditor.tsx` ✓ — Fully rewritten: removed amber "local state only" banner; table now shows description, action chip, dimension chips (Risk/Product/Band/Jurisdiction), Source (Built-in shield / Custom); delete button disabled for built-in rules; add-rule form exposes all 4 dimension fields (risk_level dropdown, product_type text, account_value_band dropdown, jurisdiction text) + action + required docs (comma-separated); Reset to defaults button with confirm dialog; loading/error states throughout; `tsc --noEmit` passes with zero errors ✓
+
+### [ ] STEP-31 — Append-Only Audit Event Log
 
 ### [ ] STEP-31 — Append-Only Audit Event Log
 **BRD:** FR-14, Section 10.2 | **Depends:** STEP-10, STEP-12, STEP-14

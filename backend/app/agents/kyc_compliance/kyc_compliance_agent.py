@@ -16,6 +16,7 @@ from app.agents.base.base_agent import BaseAgent
 from app.agents.kyc_compliance.checkpoint_rule_engine import CheckpointRuleEngine
 from app.agents.kyc_compliance.evidence_packet_builder import EvidencePacketBuilder
 from app.agents.kyc_compliance.risk_scorer import RiskScorer
+import app.services.compliance.checkpoint_rule_repository as rule_repo
 
 _HIGH_RISK_NATIONALITIES = {
     "iran", "north korea", "syria", "cuba", "venezuela",
@@ -41,7 +42,6 @@ class KYCComplianceAgent(BaseAgent):
         super().__init__(config)
         self._scorer = RiskScorer()
         self._evidence_builder = EvidencePacketBuilder()
-        self._rule_engine = CheckpointRuleEngine()
 
     async def process(self, task: TaskPacket) -> TaskResponse:
         handlers = {
@@ -70,7 +70,8 @@ class KYCComplianceAgent(BaseAgent):
 
         verification = await self._simulate_identity_verification(client_data)
         risk_score = self._scorer.compute(client_data, verification)
-        checkpoint = self._rule_engine.evaluate(
+        # Build engine fresh each call so admin-configured rules take effect immediately
+        checkpoint = CheckpointRuleEngine(rules=rule_repo.get_all()).evaluate(
             risk_score=risk_score.model_dump(),
             client_data=client_data,
             verification_result=verification,

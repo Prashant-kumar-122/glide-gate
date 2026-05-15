@@ -264,3 +264,28 @@ export interface AdvisorOut {
   last_name: string
   role: string
 }
+
+export interface CheckpointRuleOut {
+  rule_id: string
+  description: string
+  product_type: string | null
+  risk_level: string | null
+  account_value_band: string | null
+  jurisdiction: string | null
+  action: 'ESCALATE' | 'ENHANCED_DD' | 'REQUIRE_DOCUMENTS'
+  required_documents: string[]
+  reason_template: string
+  is_builtin: boolean
+}
+
+export interface CreateCheckpointRuleRequest {
+  rule_id?: string
+  description: string
+  product_type?: string | null
+  risk_level?: string | null
+  account_value_band?: string | null
+  jurisdiction?: string | null
+  action: 'ESCALATE' | 'ENHANCED_DD' | 'REQUIRE_DOCUMENTS'
+  required_documents?: string[]
+  reason_template?: string
+}
