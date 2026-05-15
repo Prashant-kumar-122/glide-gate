@@ -89,7 +89,7 @@ export default function AIValidationPanel({
         </div>
       )}
 
-      {result && (
+      {result && Object.keys(result).length > 0 && (
         <>
           {/* Overall verdict */}
           <div className="flex items-center gap-2">
