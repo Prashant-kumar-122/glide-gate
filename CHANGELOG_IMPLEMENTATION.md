@@ -501,8 +501,20 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `prompts/validation_defaults/compliance.json` ✓ — 6 validation factors
 - `prompts/validation_defaults/entity.json` ✓ — 5 validation factors
 
-### [ ] STEP-26 — Skills Framework (6 Shared Skills)
-**BRD:** Section 6.4 | **Depends:** STEP-24, STEP-25, STEP-04–08
+### [DONE] STEP-26 — Skills Framework (6 Shared Skills)
+**Date:** 2026-05-15 | **BRD:** Section 6.4, Hackathon Criterion #7 | **Depends:** STEP-24, STEP-25, STEP-04–08
+
+**Artifacts produced:**
+- `backend/app/agents/skills/base_skill.py` ✓ — `BaseSkill` ABC: `invoke(agent_id, case_id, client_id, **kwargs)` times execution + appends `SKILL_INVOKED` record to `event_logs` (graceful-fail on DB error); `_execute(**kwargs)` abstract
+- `backend/app/agents/skills/information_extraction_skill.py` ✓ — `InformationExtractionSkill`: LLM extracts requested fields from unstructured text → `{extracted: {field: value}, provider, model}`
+- `backend/app/agents/skills/decision_reasoning_skill.py` ✓ — `DecisionReasoningSkill`: LLM chain-of-thought over context + options → `{decision, reasoning, confidence, key_factors}`
+- `backend/app/agents/skills/status_summarisation_skill.py` ✓ — `StatusSummarisationSkill`: rule-based stage→label/progress mapping + optional LLM enhancement → `{stage_label, completion_percent, summary, key_points, recommended_actions}`
+- `backend/app/agents/skills/clarification_skill.py` ✓ — `ClarificationSkill`: LLM generates up to 5 prioritised clarification questions for missing/ambiguous fields → `{questions: [{field, question, rationale}]}`
+- `backend/app/agents/skills/escalation_skill.py` ✓ — `EscalationSkill`: heuristic fast-path (score ≥ threshold → always escalate) + LLM narrative when profile available → `{should_escalate, severity, reason, risk_factors, recommended_action}`
+- `backend/app/agents/skills/product_suitability_skill.py` ✓ — `ProductSuitabilitySkill`: LLM assesses product vs client profile with heuristic fallback (risk-tolerance index comparison) → `{suitable, score, reasoning, concerns, conditions}`
+- `backend/app/agents/skills/__init__.py` ✓ — re-exports all 6 skill classes + module-level singletons (`information_extraction`, `decision_reasoning`, `status_summarisation`, `clarification`, `escalation`, `product_suitability`)
+
+---
 
 ### [ ] STEP-27 — Streaming Conversational Interface (SSE Backend)
 **BRD:** FR-02, Section 9.1 | **Depends:** STEP-14, STEP-24, STEP-05, STEP-13
