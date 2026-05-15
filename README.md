@@ -81,7 +81,7 @@ cd backend
 poetry install
 
 # Start the dev server (hot-reload enabled)
-poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+poetry run uvicorn app.main:socket_app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at:
@@ -115,7 +115,7 @@ Open two terminals:
 
 **Terminal 1 — Backend**
 ```bash
-cd backend && poetry run uvicorn app.main:app --reload --port 8000
+cd backend && poetry run uvicorn app.main:socket_app --reload --port 8000
 ```
 
 **Terminal 2 — Frontend**
