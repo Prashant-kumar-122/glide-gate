@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-import json
 from datetime import datetime
 from uuid import UUID
 
@@ -16,6 +14,7 @@ from app.api.error_handlers import NotFoundError
 from app.database import get_db
 from app.models.cases import OnboardingCase
 from app.models.communications import ConversationMessage
+from app.services.conversation.conversation_coordinator import conversation_coordinator
 
 router = APIRouter(prefix="/cases", tags=["conversations"])
 
@@ -45,29 +44,6 @@ class CallSummaryOut(BaseModel):
     generated_at: str
 
 
-# ── SSE helpers ───────────────────────────────────────────────────────────────
-
-def _sse_event(data: dict) -> str:
-    return f"data: {json.dumps(data)}\n\n"
-
-
-async def _placeholder_stream(case_id: UUID, user_message: str):
-    """Placeholder SSE generator — replaced by ConversationCoordinator in STEP-27."""
-    yield _sse_event({"type": "start", "case_id": str(case_id)})
-    await asyncio.sleep(0)
-
-    placeholder = (
-        "Thank you for your message. The conversational AI interface will be "
-        "fully wired in STEP-27 (Streaming Conversational Interface). "
-        "Your case is currently being processed."
-    )
-    for word in placeholder.split():
-        yield _sse_event({"type": "token", "token": word + " "})
-        await asyncio.sleep(0.02)
-
-    yield _sse_event({"type": "end", "case_id": str(case_id)})
-
-
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.post("/{case_id}/message")
@@ -77,7 +53,6 @@ async def send_message(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ) -> StreamingResponse:
-    # Fetch client_id from the case (also verifies the case exists)
     case_row = await db.execute(
         select(OnboardingCase.client_id).where(OnboardingCase.id == case_id)
     )
@@ -85,23 +60,29 @@ async def send_message(
     if client_id is None:
         raise NotFoundError("OnboardingCase", str(case_id))
 
-    # Persist the user message
-    msg = ConversationMessage(
-        case_id=case_id,
-        client_id=client_id,
-        role="user",
-        content=body.message,
-        metadata={
-            "session_id": body.session_id,
-            "sender_id": user.get("sub"),
-            "sender_role": user.get("role", "Client"),
-        },
+    # Persist user message before streaming so the coordinator can load full history
+    db.add(
+        ConversationMessage(
+            case_id=case_id,
+            client_id=client_id,
+            role="user",
+            content=body.message,
+            extra_metadata={
+                "session_id": body.session_id,
+                "sender_id": user.get("sub"),
+                "sender_role": user.get("role", "client"),
+            },
+        )
     )
-    db.add(msg)
     await db.commit()
 
     return StreamingResponse(
-        _placeholder_stream(case_id, body.message),
+        conversation_coordinator.handle_message(
+            case_id=case_id,
+            client_id=client_id,
+            user_message=body.message,
+            session_id=body.session_id,
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

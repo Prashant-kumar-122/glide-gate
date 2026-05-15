@@ -516,8 +516,17 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ---
 
-### [ ] STEP-27 — Streaming Conversational Interface (SSE Backend)
-**BRD:** FR-02, Section 9.1 | **Depends:** STEP-14, STEP-24, STEP-05, STEP-13
+### [DONE] STEP-27 — Streaming Conversational Interface (SSE Backend)
+**Date:** 2026-05-15 | **BRD:** FR-02, Section 9.1, NFR < 3s | **Integration:** REAL (Anthropic streaming) | **Depends:** STEP-14, STEP-24, STEP-05, STEP-13
+
+**Artifacts produced:**
+- `backend/app/services/conversation/session_manager.py` ✓ — `ConversationSession` owns a per-case `DataCollectionOrchestrator` + `ConversationMemory` + `collection_complete` / `_advance_sent` flags; `SessionManager` singleton (get_or_create, get, evict)
+- `backend/app/services/conversation/streaming_response_service.py` ✓ — `StreamingResponseService.stream_reply()`: async generator that calls `llm_fallback_chain.stream()` and yields SSE-formatted strings (`start → token... → end`); `stream_text()` typewriter fallback for pre-computed text; `CSA_SYSTEM_PROMPT` constant; `streaming_response_service` singleton
+- `backend/app/services/conversation/conversation_coordinator.py` ✓ — `ConversationCoordinator.handle_message()` async generator: (1) resolves/creates session seeded with `selected_products` + prior `client_data` from `ContextStoreService`; (2) extracts field value from user message via DCO + fires `asyncio.create_task` to persist to ContextStore; (3) loads DB message history excluding the current user turn (already committed by router); (4) augments user message with `[CONTEXT: next field / completion]` guidance note for LLM steering; (5) delegates to `streaming_response_service.stream_reply()`, yielding all SSE chunks; (6) post-streaming: persists assistant message to `conversation_messages` + signals `ADVANCE_STAGE → KYC` to OrchestratorAgent when all fields are collected; `conversation_coordinator` singleton
+- `backend/app/services/conversation/__init__.py` ✓ — re-exports all 3 public singletons and classes
+- `backend/app/api/routers/conversations.py` ✓ — `POST /cases/{case_id}/message`: removed `_placeholder_stream`; user message persisted to DB before streaming; delegates to `conversation_coordinator.handle_message()` as `StreamingResponse` body; `metadata={}` → `extra_metadata={}` (STEP-14 ORM convention); unused `asyncio`/`json` imports removed
+
+---
 
 ### [ ] STEP-28 — AI Validation & Version Diff (End-to-End Wire)
 **BRD:** FR-08, FR-09, Section 5.1.10–5.1.11 | **Depends:** STEP-07, STEP-14, STEP-15, STEP-24, STEP-25, STEP-18
