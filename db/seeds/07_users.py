@@ -17,7 +17,8 @@ from app.services.auth.auth_service import hash_password
 
 ADMIN_USER_ID   = UUID("b0000000-0001-0001-0001-000000000001")
 ADVISOR_USER_ID = UUID("b0000000-0002-0002-0002-000000000002")
-CLIENT_USER_ID  = UUID("b0000000-0003-0003-0003-000000000003")
+# Must match the clients.id for Aarav Mehta so case lookups by user sub work
+CLIENT_USER_ID  = UUID("d0000000-0001-0001-0001-000000000001")
 
 _USERS = [
     {

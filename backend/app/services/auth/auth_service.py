@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.models.clients import Client
 from app.models.users import User
 
 
@@ -57,6 +58,20 @@ class AuthService:
         )
         db.add(user)
         await db.flush()
+
+        # Mirror into clients table — client_id == user.id so cases can be
+        # looked up directly by the authenticated user's sub claim.
+        client_exists = await db.execute(select(Client).where(Client.id == user.id))
+        if client_exists.scalar_one_or_none() is None:
+            client = Client(
+                id=user.id,
+                email=user.email,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            db.add(client)
+            await db.flush()
+
         token = create_access_token(user)
         return token, user
 

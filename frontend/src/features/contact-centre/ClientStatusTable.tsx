@@ -12,6 +12,15 @@ const STAGE_LABELS: Record<string, string> = {
   ESCALATED: 'Escalated',
 }
 
+function caseDisplayName(c: CaseOut): string {
+  if (c.case_name) return c.case_name
+  if (c.selected_products.length > 0)
+    return c.selected_products
+      .map((p) => p.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()))
+      .join(' & ')
+  return c.client_name ?? 'Case'
+}
+
 const STAGE_BADGE: Record<string, string> = {
   INTAKE: 'bg-gray-100 text-gray-600',
   KYC: 'bg-blue-100 text-blue-700',
@@ -46,6 +55,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
     if (!filterText) return true
     const q = filterText.toLowerCase()
     return (
+      caseDisplayName(c).toLowerCase().includes(q) ||
       (c.client_name ?? '').toLowerCase().includes(q) ||
       c.current_stage.toLowerCase().includes(q) ||
       c.selected_products.some((p) => p.toLowerCase().includes(q))
@@ -68,7 +78,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
         </div>
         {filterText && (
           <p className="mt-1.5 text-[11px] text-gray-400">
-            {filtered.length} of {cases.length} clients
+            {filtered.length} of {cases.length} cases
           </p>
         )}
       </div>
@@ -94,7 +104,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
         {!isLoading && !isError && filtered.length === 0 && (
           <div className="flex flex-col items-center py-16 text-center">
             <Search className="h-8 w-8 text-gray-200" />
-            <p className="mt-2 text-sm text-gray-400">No clients match your search</p>
+            <p className="mt-2 text-sm text-gray-400">No cases match your search</p>
           </div>
         )}
 
@@ -118,7 +128,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <p className="truncate text-sm font-semibold text-gray-900">
-                      {c.client_name ?? 'Client'}
+                      {caseDisplayName(c)}
                     </p>
                     {isEscalated && <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
                     {c.current_stage === 'COMPLETE' && (

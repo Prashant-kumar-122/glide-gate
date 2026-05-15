@@ -8,8 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import select
+
 from app.api.dependencies.auth import get_current_user
 from app.database import get_db
+from app.models.users import User
 from app.services.auth.auth_service import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -149,3 +152,14 @@ async def update_me(
             password=body.password,
         )
     return UserOut.model_validate(user)
+
+
+@router.get("/advisors", response_model=list[UserOut])
+async def list_advisors(
+    _current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[UserOut]:
+    result = await db.execute(
+        select(User).where(User.role == "advisor", User.is_active.is_(True)).order_by(User.first_name)
+    )
+    return [UserOut.model_validate(u) for u in result.scalars().all()]

@@ -55,6 +55,7 @@ export interface CaseOut {
   id: string
   client_id: string
   client_name?: string
+  case_name?: string
   current_stage: string
   status: string
   selected_products: string[]
@@ -193,4 +194,19 @@ export interface ValidationPrompt {
   category: string
   goal: string
   factors: string[]
+}
+
+export interface ProductOut {
+  id: string
+  product_code: string
+  name: string
+  description: string | null
+}
+
+export interface AdvisorOut {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  role: string
 }

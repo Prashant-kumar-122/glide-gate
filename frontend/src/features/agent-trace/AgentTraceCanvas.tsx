@@ -119,12 +119,22 @@ export default function AgentTraceCanvas() {
     [nodeStates],
   )
 
+  function caseDisplayName(c: { case_name?: string; selected_products: string[]; client_name?: string; id: string }) {
+    if (c.case_name) return c.case_name
+    if (c.selected_products.length > 0)
+      return c.selected_products
+        .map((p: string) => p.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()))
+        .join(' & ')
+    return c.client_name ?? c.id.slice(0, 8)
+  }
+
   const caseOptions = useMemo(
     () =>
       cases?.map((c) => ({
         id: c.id,
-        label: `${c.client_name ?? c.id.slice(0, 8)} — ${c.current_stage}`,
+        label: `${caseDisplayName(c)} — ${c.current_stage}`,
       })) ?? [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [cases],
   )
 

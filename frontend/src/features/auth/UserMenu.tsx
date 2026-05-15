@@ -1,11 +1,13 @@
 import { useRef, useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { User, ChevronDown, LogOut } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 
 export default function UserMenu() {
   const { user, clearAuth } = useAuthStore()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -22,6 +24,7 @@ export default function UserMenu() {
   if (!user) return null
 
   function handleSignOut() {
+    qc.clear()
     clearAuth()
     navigate('/login')
   }

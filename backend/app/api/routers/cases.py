@@ -26,9 +26,10 @@ router = APIRouter(prefix="/cases", tags=["cases"])
 # ── Request / Response models ─────────────────────────────────────────────────
 
 class InitiateCaseRequest(BaseModel):
-    client_id: UUID
+    client_id: UUID | None = None       # omitted by clients (auto-filled from JWT sub)
     selected_products: list[str]
     assigned_advisor_id: UUID | None = None
+    case_name: str | None = None        # stored in metadata
     metadata: dict[str, Any] = {}
 
 
@@ -89,6 +90,7 @@ class CaseListOut(BaseModel):
     id: UUID
     client_id: UUID
     client_name: str
+    case_name: str | None
     status: str
     current_stage: str
     selected_products: list[str]
@@ -100,6 +102,15 @@ class ResumeResponse(BaseModel):
     case_id: UUID
     message: str
     stage: str
+
+
+class ProductOut(BaseModel):
+    id: UUID
+    product_code: str
+    name: str
+    description: str | None
+
+    model_config = {"from_attributes": True}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -122,22 +133,38 @@ def _case_products_to_tracks(case: OnboardingCase) -> list[ProductTrackOut]:
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+@router.get("/products", response_model=list[ProductOut])
+async def list_products(
+    db: AsyncSession = Depends(get_db),
+    _current_user: dict = Depends(get_current_user),
+) -> list[ProductOut]:
+    result = await db.execute(select(Product).where(Product.is_active.is_(True)).order_by(Product.name))
+    return [ProductOut.model_validate(p) for p in result.scalars().all()]
+
+
 @router.get("", response_model=list[CaseListOut])
 async def list_cases(
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ) -> list[CaseListOut]:
-    result = await db.execute(
+    query = (
         select(OnboardingCase, Client)
         .join(Client, OnboardingCase.client_id == Client.id)
         .order_by(OnboardingCase.updated_at.desc())
     )
+
+    # Clients may only see their own cases
+    if current_user.get("role") == "client":
+        query = query.where(OnboardingCase.client_id == UUID(current_user["sub"]))
+
+    result = await db.execute(query)
     rows = result.all()
     return [
         CaseListOut(
             id=case.id,
             client_id=case.client_id,
             client_name=f"{client.first_name} {client.last_name}",
+            case_name=(case.extra_metadata or {}).get("case_name"),
             status=case.status,
             current_stage=case.current_stage,
             selected_products=case.selected_products,
@@ -152,8 +179,18 @@ async def list_cases(
 async def initiate_case(
     body: InitiateCaseRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin")),
+    current_user: dict = Depends(get_current_user),
 ) -> CaseSummaryOut:
+    role = current_user.get("role", "")
+
+    # Clients always create cases for themselves; advisors/admins must supply client_id
+    if role == "client":
+        client_id = UUID(current_user["sub"])
+    elif body.client_id is not None:
+        client_id = body.client_id
+    else:
+        raise ConflictError("client_id is required for advisor/admin case creation")
+
     if not body.selected_products:
         raise ConflictError("At least one product must be selected")
 
@@ -167,11 +204,15 @@ async def initiate_case(
     if unknown:
         raise ConflictError(f"Unknown product codes: {sorted(unknown)}")
 
+    metadata = dict(body.metadata)
+    if body.case_name:
+        metadata["case_name"] = body.case_name
+
     case = OnboardingCase(
-        client_id=body.client_id,
+        client_id=client_id,
         selected_products=body.selected_products,
         assigned_advisor_id=body.assigned_advisor_id,
-        metadata=body.metadata,
+        extra_metadata=metadata,
     )
     db.add(case)
     await db.flush()
@@ -211,13 +252,20 @@ async def initiate_case(
     )
 
 
+def _assert_case_access(case: OnboardingCase, current_user: dict) -> None:
+    if current_user.get("role") == "client" and str(case.client_id) != current_user["sub"]:
+        from app.api.error_handlers import NotFoundError
+        raise NotFoundError("OnboardingCase", str(case.id))
+
+
 @router.get("/{case_id}", response_model=CaseDetailOut)
 async def get_case(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ) -> CaseDetailOut:
     case = await _get_case_or_404(case_id, db)
+    _assert_case_access(case, current_user)
     return CaseDetailOut(
         id=case.id,
         client_id=case.client_id,
@@ -239,9 +287,10 @@ async def get_case(
 async def get_case_summary(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ) -> CaseProgressOut:
     case = await _get_case_or_404(case_id, db)
+    _assert_case_access(case, current_user)
 
     doc_result = await db.execute(
         select(Document.status).where(Document.case_id == case_id)

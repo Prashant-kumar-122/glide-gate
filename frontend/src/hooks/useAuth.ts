@@ -28,6 +28,7 @@ function toAuthUser(u: UserOut): AuthUser {
 export function useSignup() {
   const { setAuth } = useAuthStore()
   const navigate = useNavigate()
+  const qc = useQueryClient()
 
   return useMutation({
     mutationFn: async (data: {
@@ -41,6 +42,7 @@ export function useSignup() {
       return res.data
     },
     onSuccess: (data) => {
+      qc.clear()
       setAuth(data.access_token, toAuthUser(data.user))
       navigate('/client')
     },
@@ -50,6 +52,7 @@ export function useSignup() {
 export function useLogin() {
   const { setAuth } = useAuthStore()
   const navigate = useNavigate()
+  const qc = useQueryClient()
 
   return useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
@@ -58,6 +61,7 @@ export function useLogin() {
     },
     onSuccess: (data) => {
       const user = toAuthUser(data.user)
+      qc.clear()
       setAuth(data.access_token, user)
       const defaultRoute: Record<string, string> = {
         client: '/client',

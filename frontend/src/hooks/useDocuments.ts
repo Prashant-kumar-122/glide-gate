@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { DocumentOut, CaseSummary, DiffResult, ValidationResult, CaseOut } from '@/lib/api'
+import type { DocumentOut, CaseSummary, DiffResult, ValidationResult, CaseOut, ProductOut, AdvisorOut } from '@/lib/api'
 
 // ── Query keys ────────────────────────────────────────────────────────────────
 
 export const qk = {
   cases: ['cases'] as const,
+  products: ['products'] as const,
+  advisors: ['advisors'] as const,
   caseDetail: (id: string) => ['cases', id] as const,
   caseSummary: (id: string) => ['cases', id, 'summary'] as const,
   documents: (caseId: string) => ['cases', caseId, 'documents'] as const,
@@ -131,6 +133,36 @@ export function applyDocumentUploaded(
 ) {
   qc.invalidateQueries({ queryKey: qk.documents(caseId) })
   qc.invalidateQueries({ queryKey: qk.caseSummary(caseId) })
+}
+
+export function useProducts() {
+  return useQuery<ProductOut[]>({
+    queryKey: qk.products,
+    queryFn: () => api.get('/cases/products').then((r) => r.data),
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useAdvisors() {
+  return useQuery<AdvisorOut[]>({
+    queryKey: qk.advisors,
+    queryFn: () => api.get('/auth/advisors').then((r) => r.data),
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useInitiateCase() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: {
+      case_name: string
+      selected_products: string[]
+      assigned_advisor_id: string | null
+    }) => api.post('/cases', body).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.cases })
+    },
+  })
 }
 
 // Refresh validation result in the document cache

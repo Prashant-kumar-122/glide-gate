@@ -1,4 +1,4 @@
-import { Users, Wifi, WifiOff } from 'lucide-react'
+import { Briefcase, Wifi, WifiOff } from 'lucide-react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import ProgressBar from '@/components/ProgressBar'
 import { useCases } from '@/hooks/useDocuments'
@@ -32,6 +32,15 @@ interface CaseItemProps {
   onSelect: () => void
 }
 
+function caseDisplayName(c: CaseOut): string {
+  if (c.case_name) return c.case_name
+  if (c.selected_products.length > 0)
+    return c.selected_products
+      .map((p) => p.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()))
+      .join(' & ')
+  return c.client_name ?? 'Case'
+}
+
 function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
   const progress = stageToProgress(c.current_stage)
   const stageLabel = STAGE_LABELS[c.current_stage] ?? c.current_stage
@@ -49,7 +58,7 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className={['truncate text-sm font-semibold', isSelected ? 'text-white' : 'text-gray-900'].join(' ')}>
-            {c.client_name ?? 'Client'}
+            {caseDisplayName(c)}
           </p>
           <p className={['mt-0.5 text-xs', isSelected ? 'text-blue-200' : 'text-gray-400'].join(' ')}>
             {stageLabel}
@@ -96,8 +105,8 @@ export default function ClientRailNav() {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-semibold text-gray-700">Clients</span>
+          <Briefcase className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-semibold text-gray-700">Cases</span>
         </div>
         <span title={socketConnected ? 'Live' : 'Disconnected'}>
           {socketConnected ? (
