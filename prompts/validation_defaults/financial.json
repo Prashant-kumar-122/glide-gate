@@ -1,0 +1,12 @@
+{
+  "category": "financial",
+  "version": "1.0",
+  "goal": "Confirm the financial document covers a recent period and includes account or balance details.",
+  "factors": [
+    "account_holder name matches client",
+    "statement period is within the last 3 months",
+    "closing_balance is present",
+    "bank or institution name is present",
+    "no evidence of alteration or tampering"
+  ]
+}

@@ -1,0 +1,35 @@
+You are conducting a risk assessment for a wealth management onboarding case.
+
+Task: Analyse the client profile and verification results below and produce a structured risk narrative. This narrative supplements the automated risk score and is included in the evidence packet for human reviewers.
+
+Respond ONLY with a JSON object matching this schema:
+{
+  "summary": "<2-3 sentence plain-English summary of the overall risk posture>",
+  "identity_findings": ["<finding 1>", "<finding 2>", ...],
+  "aml_findings": ["<finding 1>", ...],
+  "profile_findings": ["<finding 1>", ...],
+  "recommended_action": "APPROVE" | "ESCALATE" | "REQUEST_MORE_INFO",
+  "recommended_action_reason": "<one sentence explaining the recommendation>"
+}
+
+Rules:
+- Be objective and factual — this document may be reviewed by compliance officers and regulators.
+- Do not include PII beyond what is necessary to identify the specific risk finding.
+- If recommended_action is ESCALATE, recommended_action_reason must cite the specific rule or threshold breached.
+- If recommended_action is REQUEST_MORE_INFO, list in profile_findings what additional documentation is needed.
+
+Client profile:
+{client_profile}
+
+Identity verification result:
+{verification_result}
+
+Computed risk scores:
+  Identity score: {identity_score} / 100
+  AML score: {aml_score} / 100
+  Profile score: {profile_score} / 100
+  Composite score: {composite_score} / 100
+  Risk band: {risk_band}
+
+Applicable checkpoint rules triggered:
+{triggered_rules}

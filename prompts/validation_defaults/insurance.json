@@ -1,0 +1,12 @@
+{
+  "category": "insurance",
+  "version": "1.0",
+  "goal": "Confirm insurance policy details are complete and coverage is active.",
+  "factors": [
+    "policyholder name matches client",
+    "policy_number is present",
+    "sum_assured or coverage amount is stated",
+    "policy is not expired",
+    "insurer name is present"
+  ]
+}

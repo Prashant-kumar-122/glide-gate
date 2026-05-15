@@ -1,0 +1,13 @@
+{
+  "category": "compliance",
+  "version": "1.0",
+  "goal": "Verify the compliance form is fully completed and signed.",
+  "factors": [
+    "client_name is present",
+    "tax_residency is declared",
+    "TIN or NRIC is provided",
+    "PEP declaration is answered",
+    "date_completed is present",
+    "signature or confirmation is noted"
+  ]
+}

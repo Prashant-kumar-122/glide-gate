@@ -49,7 +49,7 @@ export default function VersionDiffPanel({ diff, isLoading }: VersionDiffPanelPr
         </div>
       )}
 
-      {diff && (
+      {diff && Object.keys(diff).length > 0 && (
         <>
           <SimilarityRing ratio={diff.similarity_ratio} />
 

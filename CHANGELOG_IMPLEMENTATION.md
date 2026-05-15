@@ -464,20 +464,106 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 5 — AI / LLM Capabilities
 
-### [ ] STEP-24 — LLM Provider Abstraction Layer
-**BRD:** Section 5.1.12, FR-08 | **Depends:** STEP-02, STEP-05–08
+### [DONE] STEP-24 — LLM Provider Abstraction Layer
+**Date:** 2026-05-15 | **BRD:** Section 5.1.12, FR-08 | **Depends:** STEP-02, STEP-05–08
 
-### [ ] STEP-25 — Agent Prompt Library
-**BRD:** Section 6.4, Section 6.1, FR-08 | **Depends:** STEP-24, STEP-05–08
+**Artifacts produced:**
+- `backend/app/services/llm/llm_provider.py` ✓ — `LLMMessage`, `LLMRequest`, `LLMResponse`, `LLMStreamChunk` Pydantic models; `LLMProvider` abstract base class with `complete()`, `stream()`, `is_available()` interface
+- `backend/app/services/llm/providers/anthropic_provider.py` ✓ — `AnthropicProvider`: Anthropic SDK, prompt caching via ephemeral `cache_control` on system block, `stream()` via `client.messages.stream()` async context manager, `cached` flag from `cache_read_input_tokens`
+- `backend/app/services/llm/providers/openai_provider.py` ✓ — `OpenAIProvider`: `AsyncOpenAI`, `seed`/`frequency_penalty`/`presence_penalty` params, `stream=True` async iterator
+- `backend/app/services/llm/providers/google_provider.py` ✓ — `GoogleProvider`: `google-generativeai` SDK (sync wrapped in `run_in_executor`), `GenerationConfig` for temperature/top_p/max_output_tokens
+- `backend/app/services/llm/providers/local_model_provider.py` ✓ — `LocalModelProvider`: `httpx.AsyncClient` against OpenAI-compatible `/chat/completions`; SSE line parsing for streaming
+- `backend/app/services/llm/llm_provider_factory.py` ✓ — `LLMProviderFactory.create()` reads provider/model from settings + runtime overrides; `create_fallback_ordered()` returns primary-first list of available providers; module-level `llm_provider_factory` singleton
+- `backend/app/services/llm/llm_fallback_chain.py` ✓ — `LLMFallbackChain.complete()` / `.stream()`: rebuilds provider list from factory on each call (picks up admin overrides live), logs per-provider failures, raises only when all fail; module-level `llm_fallback_chain` singleton
+- `backend/app/services/llm/deterministic_controls_applier.py` ✓ — `DeterministicControlsApplier.apply()` stamps 5 deterministic params (temperature, top_p, seed, frequency_penalty, presence_penalty) from merged settings+overrides onto an `LLMRequest` copy; module-level `set_overrides()` / `clear_overrides()` / `get_all_overrides()` shared by factory and admin router; `controls_applier` singleton
+- `backend/app/services/llm/__init__.py` ✓ — re-exports all public symbols
+- `backend/app/services/llm/providers/__init__.py` ✓ — re-exports all 4 provider classes
+- `backend/app/api/routers/admin/llm_config.py` ✓ — updated to use `set_overrides()` / `clear_overrides()` / `get_all_overrides()` from `deterministic_controls_applier`; dropped local `_overrides` dict so admin UI changes immediately affect all LLM calls
 
-### [ ] STEP-26 — Skills Framework (6 Shared Skills)
-**BRD:** Section 6.4 | **Depends:** STEP-24, STEP-25, STEP-04–08
+### [DONE] STEP-25 — Agent Prompt Library
+**Date:** 2026-05-15 | **BRD:** Section 6.4, Section 6.1, FR-08 | **Depends:** STEP-24, STEP-05–08
 
-### [ ] STEP-27 — Streaming Conversational Interface (SSE Backend)
-**BRD:** FR-02, Section 9.1 | **Depends:** STEP-14, STEP-24, STEP-05, STEP-13
+**Artifacts produced:**
+- `prompts/orchestrator/system.txt` ✓ — workflow stages, routing rules, FSM responsibilities
+- `prompts/customer_service/system.txt` ✓ — conversational persona, 12-section sequencing, extraction rules
+- `prompts/customer_service/data_collection.txt` ✓ — structured data extraction task prompt with field normalisation rules and template variables
+- `prompts/kyc_compliance/system.txt` ✓ — risk scoring model (identity×0.4 + AML×0.4 + profile×0.2), band thresholds, driver lists
+- `prompts/kyc_compliance/risk_assessment.txt` ✓ — LLM risk narrative task prompt; JSON schema with APPROVE/ESCALATE/REQUEST_MORE_INFO recommendation
+- `prompts/document_intelligence/system.txt` ✓ — 6-category taxonomy, 4-step processing pipeline, FindingResult schema, classification confidence thresholds
+- `prompts/document_intelligence/completeness_validation.txt` ✓ — completeness validation task prompt with category-specific factor injection via template variables
+- `prompts/product_onboarding/cash_account.txt` ✓ — Cash Account suitability criteria, 7-step onboarding sequence, SuitabilityAssessor weight configuration
+- `prompts/product_onboarding/retirement_account.txt` ✓ — Retirement Account suitability criteria, 8-step onboarding sequence, near-retirement enhanced review flag
+- `prompts/contact_centre/call_summary.txt` ✓ — call summary task prompt; CallSummary JSON schema with summary/key_points/recommended_actions
+- `prompts/validation_defaults/identity.json` ✓ — 6 validation factors
+- `prompts/validation_defaults/financial.json` ✓ — 5 validation factors
+- `prompts/validation_defaults/legal.json` ✓ — 5 validation factors
+- `prompts/validation_defaults/insurance.json` ✓ — 5 validation factors
+- `prompts/validation_defaults/compliance.json` ✓ — 6 validation factors
+- `prompts/validation_defaults/entity.json` ✓ — 5 validation factors
 
-### [ ] STEP-28 — AI Validation & Version Diff (End-to-End Wire)
-**BRD:** FR-08, FR-09, Section 5.1.10–5.1.11 | **Depends:** STEP-07, STEP-14, STEP-15, STEP-24, STEP-25, STEP-18
+### [DONE] STEP-26 — Skills Framework (6 Shared Skills)
+**Date:** 2026-05-15 | **BRD:** Section 6.4, Hackathon Criterion #7 | **Depends:** STEP-24, STEP-25, STEP-04–08
+
+**Artifacts produced:**
+- `backend/app/agents/skills/base_skill.py` ✓ — `BaseSkill` ABC: `invoke(agent_id, case_id, client_id, **kwargs)` times execution + appends `SKILL_INVOKED` record to `event_logs` (graceful-fail on DB error); `_execute(**kwargs)` abstract
+- `backend/app/agents/skills/information_extraction_skill.py` ✓ — `InformationExtractionSkill`: LLM extracts requested fields from unstructured text → `{extracted: {field: value}, provider, model}`
+- `backend/app/agents/skills/decision_reasoning_skill.py` ✓ — `DecisionReasoningSkill`: LLM chain-of-thought over context + options → `{decision, reasoning, confidence, key_factors}`
+- `backend/app/agents/skills/status_summarisation_skill.py` ✓ — `StatusSummarisationSkill`: rule-based stage→label/progress mapping + optional LLM enhancement → `{stage_label, completion_percent, summary, key_points, recommended_actions}`
+- `backend/app/agents/skills/clarification_skill.py` ✓ — `ClarificationSkill`: LLM generates up to 5 prioritised clarification questions for missing/ambiguous fields → `{questions: [{field, question, rationale}]}`
+- `backend/app/agents/skills/escalation_skill.py` ✓ — `EscalationSkill`: heuristic fast-path (score ≥ threshold → always escalate) + LLM narrative when profile available → `{should_escalate, severity, reason, risk_factors, recommended_action}`
+- `backend/app/agents/skills/product_suitability_skill.py` ✓ — `ProductSuitabilitySkill`: LLM assesses product vs client profile with heuristic fallback (risk-tolerance index comparison) → `{suitable, score, reasoning, concerns, conditions}`
+- `backend/app/agents/skills/__init__.py` ✓ — re-exports all 6 skill classes + module-level singletons (`information_extraction`, `decision_reasoning`, `status_summarisation`, `clarification`, `escalation`, `product_suitability`)
+
+---
+
+### [DONE] STEP-27 — Streaming Conversational Interface (SSE Backend)
+**Date:** 2026-05-15 | **BRD:** FR-02, Section 9.1, NFR < 3s | **Integration:** REAL (Anthropic streaming) | **Depends:** STEP-14, STEP-24, STEP-05, STEP-13
+
+**Artifacts produced:**
+- `backend/app/services/conversation/session_manager.py` ✓ — `ConversationSession` owns a per-case `DataCollectionOrchestrator` + `ConversationMemory` + `collection_complete` / `_advance_sent` flags; `SessionManager` singleton (get_or_create, get, evict)
+- `backend/app/services/conversation/streaming_response_service.py` ✓ — `StreamingResponseService.stream_reply()`: async generator that calls `llm_fallback_chain.stream()` and yields SSE-formatted strings (`start → token... → end`); `stream_text()` typewriter fallback for pre-computed text; `CSA_SYSTEM_PROMPT` constant; `streaming_response_service` singleton
+- `backend/app/services/conversation/conversation_coordinator.py` ✓ — `ConversationCoordinator.handle_message()` async generator: (1) resolves/creates session seeded with `selected_products` + prior `client_data` from `ContextStoreService`; (2) extracts field value from user message via DCO + fires `asyncio.create_task` to persist to ContextStore; (3) loads DB message history excluding the current user turn (already committed by router); (4) augments user message with `[CONTEXT: next field / completion]` guidance note for LLM steering; (5) delegates to `streaming_response_service.stream_reply()`, yielding all SSE chunks; (6) post-streaming: persists assistant message to `conversation_messages` + signals `ADVANCE_STAGE → KYC` to OrchestratorAgent when all fields are collected; `conversation_coordinator` singleton
+- `backend/app/services/conversation/__init__.py` ✓ — re-exports all 3 public singletons and classes
+- `backend/app/api/routers/conversations.py` ✓ — `POST /cases/{case_id}/message`: removed `_placeholder_stream`; user message persisted to DB before streaming; delegates to `conversation_coordinator.handle_message()` as `StreamingResponse` body; `metadata={}` → `extra_metadata={}` (STEP-14 ORM convention); unused `asyncio`/`json` imports removed
+
+---
+
+### [DONE] STEP-28 — AI Validation & Version Diff (End-to-End Wire)
+**Date:** 2026-05-15 | **BRD:** FR-08, FR-09, Section 5.1.10–5.1.11, Hackathon Criteria #8, #9 | **Integration:** REAL (LLM) | **Depends:** STEP-07, STEP-14, STEP-15, STEP-24, STEP-25, STEP-18
+
+**Artifacts produced / modified:**
+
+`backend/app/services/validation/prompt_override_store.py` ✓ — shared singleton `_prompt_overrides` dict with typed functions (`set_prompt_override`, `get_prompt_override`, `reset_prompt_override`, `is_overridden`); decouples admin router from service layer so no upward imports
+
+`backend/app/services/validation/validation_prompt_repository.py` ✓ — `get_effective_prompt(category)` resolution order: (1) in-memory admin override via `prompt_override_store`, (2) `prompts/validation_defaults/{category}.json` file, (3) hardcoded fallback; all 6 categories + unknown covered
+
+`backend/app/services/validation/validation_orchestrator.py` ✓
+- `ValidationOrchestrator.validate_document(document_id, db)`: loads Document → reconstructs `OcrResult` from JSONB (falls back to simulated `OcrExtractor.extract()` when no OCR data stored) → loads effective prompt from repository → `AICompletenessValidator.validate()` (LLM via fallback chain + heuristic fallback) → persists `validation_result` JSONB + advances status `RECEIVED → UNDER_REVIEW` → emits `DOCUMENT_STATUS_CHANGED` socket event → returns `ValidationResult`
+- `ValidationOrchestrator.compute_diff(document_id, db)`: loads Document + parent → extracts raw text from both `ocr_result` JSONB fields (field-dict fallback; synthetic demo fallback) → `VersionDiffDetector.compute()` (Python difflib) → persists `diff_result` JSONB → returns `DiffResult`
+- `run_validate_in_background(document_id)` / `run_diff_in_background(document_id)`: background task wrappers each acquire their own `AsyncSessionLocal` session; safe for `asyncio.create_task`
+- `validation_orchestrator` module-level singleton
+
+`backend/app/services/validation/__init__.py` ✓ — re-exports all public symbols
+
+`backend/app/api/routers/admin/validation_prompts.py` ✓ — updated: local `_prompt_overrides` dict replaced with `prompt_override_store` functions; admin PUT/DELETE now write through the shared store so `ValidationOrchestrator` immediately picks up changes
+
+`backend/app/api/routers/documents.py` ✓ — `POST /documents/{id}/validate`: advances status `RECEIVED → UNDER_REVIEW` then fires `asyncio.create_task(run_validate_in_background(document_id))`; returns 202 immediately; LLM result pushed to frontend via socket event
+
+`backend/app/services/document/document_upload_service.py` ✓ — Step 5b: when `parent_doc_id is not None`, fires `asyncio.create_task(run_diff_in_background(doc.id))` so version diff computed automatically on every document resubmission
+
+`backend/app/agents/document_intelligence/ai_completeness_validator.py` ✓
+- `_llm_validate()` refactored: now routes through `LLMFallbackChain.complete()` + `DeterministicControlsApplier.apply()` so admin-configured provider, model, and deterministic parameters take effect; removed direct `anthropic.AsyncAnthropic` client instantiation and `_get_client()` method
+- Returns `(findings, llm_used: bool)` tuple so `validate()` can accurately set `llm_used` on the result
+- Removed STEP-28 TODO comment; updated `_DEFAULT_PROMPTS` docstring to clarify it is the final in-validator fallback (not the primary prompt source)
+- Fixed deprecated `datetime.utcnow()` → `datetime.now(timezone.utc)`
+
+**End-to-end flow:**
+1. Advisor clicks "Run AI Check" → `POST /documents/{id}/validate` → 202 returned immediately
+2. Background: OCR data reconstructed (or simulated) → effective prompt loaded → `LLMFallbackChain` calls Anthropic (with prompt caching + deterministic controls) → parses `FindingResult[]` JSON → heuristic fallback if all providers fail → persists to `documents.validation_result` JSONB
+3. `DOCUMENT_STATUS_CHANGED` socket event → `AIValidationPanel` updates in real time with pass/warn/fail findings
+4. Client resubmits document (`parent_doc_id` set) → diff auto-triggered on upload → `VersionDiffDetector.compute()` → persists to `documents.diff_result` JSONB → `VersionDiffPanel` shows similarity ratio + field-level added/modified/removed sections
+
+---
 
 ---
 

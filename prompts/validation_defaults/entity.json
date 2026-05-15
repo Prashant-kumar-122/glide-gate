@@ -1,0 +1,12 @@
+{
+  "category": "entity",
+  "version": "1.0",
+  "goal": "Confirm corporate entity documents establish current legal standing.",
+  "factors": [
+    "company_name is present",
+    "registration_number or UEN is present",
+    "registration_date is present",
+    "current status is Live or Active",
+    "directors or beneficial owners are identified"
+  ]
+}

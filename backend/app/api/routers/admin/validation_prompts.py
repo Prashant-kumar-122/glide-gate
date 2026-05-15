@@ -9,15 +9,17 @@ from pydantic import BaseModel
 
 from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import NotFoundError
+from app.services.validation.prompt_override_store import (
+    get_prompt_override,
+    is_overridden,
+    reset_prompt_override,
+    set_prompt_override,
+)
 
 router = APIRouter(prefix="/admin/validation-prompts", tags=["admin"])
 
 VALID_CATEGORIES = {"identity", "financial", "legal", "insurance", "compliance", "entity"}
 
-# In-memory store of prompt overrides (DB-backed in STEP-24/STEP-28)
-_prompt_overrides: dict[str, dict[str, Any]] = {}
-
-# Path to the defaults bundled with the agent config
 _DEFAULTS_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "prompts" / "validation_defaults"
 
 
@@ -25,7 +27,6 @@ def _load_default(category: str) -> dict[str, Any]:
     path = _DEFAULTS_DIR / f"{category}.json"
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
-    # Fallback if file not yet created (filled in STEP-25)
     return {
         "category": category,
         "goal": f"Validate completeness and authenticity of {category} documents",
@@ -56,13 +57,13 @@ async def list_validation_prompts(
     results = []
     for cat in sorted(VALID_CATEGORIES):
         base = _load_default(cat)
-        override = _prompt_overrides.get(cat)
+        override = get_prompt_override(cat)
         effective = override if override else base
         results.append(ValidationPromptOut(
             category=cat,
             goal=effective.get("goal", ""),
             factors=effective.get("factors", []),
-            is_overridden=cat in _prompt_overrides,
+            is_overridden=is_overridden(cat),
         ))
     return results
 
@@ -75,13 +76,13 @@ async def get_validation_prompt(
     if category not in VALID_CATEGORIES:
         raise NotFoundError("ValidationPrompt", category)
     base = _load_default(category)
-    override = _prompt_overrides.get(category)
+    override = get_prompt_override(category)
     effective = override if override else base
     return ValidationPromptOut(
         category=category,
         goal=effective.get("goal", ""),
         factors=effective.get("factors", []),
-        is_overridden=category in _prompt_overrides,
+        is_overridden=is_overridden(category),
     )
 
 
@@ -93,7 +94,7 @@ async def update_validation_prompt(
 ) -> ValidationPromptOut:
     if category not in VALID_CATEGORIES:
         raise NotFoundError("ValidationPrompt", category)
-    _prompt_overrides[category] = {"goal": body.goal, "factors": body.factors}
+    set_prompt_override(category, body.goal, body.factors)
     return ValidationPromptOut(
         category=category,
         goal=body.goal,
@@ -109,7 +110,7 @@ async def reset_validation_prompt(
 ) -> ValidationPromptOut:
     if category not in VALID_CATEGORIES:
         raise NotFoundError("ValidationPrompt", category)
-    _prompt_overrides.pop(category, None)
+    reset_prompt_override(category)
     base = _load_default(category)
     return ValidationPromptOut(
         category=category,
