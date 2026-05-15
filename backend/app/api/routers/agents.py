@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +32,16 @@ class AgentOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @computed_field
+    @property
+    def status(self) -> str:
+        return "active" if self.is_active else "inactive"
+
+    @computed_field
+    @property
+    def last_active(self) -> str | None:
+        return None
+
 
 class AgentTaskOut(BaseModel):
     id: UUID
@@ -54,6 +64,7 @@ class AgentTaskOut(BaseModel):
 
 class AgentTraceOut(BaseModel):
     case_id: UUID
+    agents: list[AgentOut]
     tasks: list[AgentTaskOut]
     total: int
 
@@ -103,8 +114,12 @@ async def get_agent_trace(
     result = await db.execute(query)
     tasks = result.scalars().all()
 
+    agents_result = await db.execute(select(Agent).order_by(Agent.name))
+    agents = agents_result.scalars().all()
+
     return AgentTraceOut(
         case_id=case_id,
+        agents=[AgentOut.model_validate(a) for a in agents],
         tasks=[AgentTaskOut.model_validate(t) for t in tasks],
         total=len(tasks),
     )

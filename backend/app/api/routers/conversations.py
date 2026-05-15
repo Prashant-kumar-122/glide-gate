@@ -36,6 +36,15 @@ class MessageHistoryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CallSummaryOut(BaseModel):
+    case_id: str
+    summary: str
+    key_points: list[str]
+    recommended_actions: list[str]
+    stage_label: str
+    generated_at: str
+
+
 # ── SSE helpers ───────────────────────────────────────────────────────────────
 
 def _sse_event(data: dict) -> str:
@@ -98,6 +107,33 @@ async def send_message(
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+@router.get("/{case_id}/call-summary", response_model=CallSummaryOut)
+async def get_call_summary(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> CallSummaryOut:
+    """Stub — full AI summary generation wired in STEP-34 via ContactCentreAgent."""
+    case_row = await db.execute(
+        select(OnboardingCase.current_stage).where(OnboardingCase.id == case_id)
+    )
+    stage = case_row.scalar_one_or_none()
+    if stage is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+
+    return CallSummaryOut(
+        case_id=str(case_id),
+        summary="AI call summary will be generated after a call is logged for this case.",
+        key_points=[],
+        recommended_actions=[
+            "Review uploaded documents",
+            "Contact client to schedule onboarding session",
+        ],
+        stage_label=stage,
+        generated_at=datetime.utcnow().isoformat(),
     )
 
 

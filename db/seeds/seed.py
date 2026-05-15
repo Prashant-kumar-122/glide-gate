@@ -7,8 +7,13 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import io
 import sys
 from pathlib import Path
+
+# Force UTF-8 output so box-drawing characters work on Windows
+if hasattr(sys.stdout, "buffer"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # Ensure backend/app is importable
 _backend_dir = Path(__file__).parent.parent.parent / "backend"
@@ -36,6 +41,7 @@ SEED_FILES = [
     ("04 — Client: Aarav Mehta",  "04_client_aarav_mehta.py"),
     ("05 — Sample Case",          "05_sample_case.py"),
     ("06 — Sample Events",        "06_sample_events.py"),
+    ("07 — Auth Users",           "07_users.py"),
 ]
 
 

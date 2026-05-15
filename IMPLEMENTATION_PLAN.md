@@ -386,6 +386,85 @@ FastAPI `UploadFile` + Pillow image pre-processing. Triggers Document Intelligen
 
 ---
 
+## Phase 3.5 — Auth (Backend)
+
+### STEP-18A — Auth System (Backend)
+**BRD:** Section 9.1, FR-01, Section 10.2 (role-based access control) | **Integration:** N/A | **Depends:** STEP-12, STEP-14
+
+Implement a full authentication system: `users` table (separate from `clients`), bcrypt password hashing via `passlib`, JWT token issuance via `python-jose`, signup/login/profile REST endpoints, and user seed data. Upgrades the existing demo-mode `auth.py` stub to real JWT validation with lowercase role normalisation.
+
+**Users table columns:** `id` (UUID PK), `email` (unique), `first_name`, `last_name`, `password_hash`, `role` (`client` | `advisor` | `admin`, default `client`), `is_active`, `created_at`, `updated_at`
+
+**Pydantic schemas:**
+```python
+class SignupRequest(BaseModel):
+    email: EmailStr
+    first_name: str
+    last_name: str
+    password: str          # min 8 chars, at least 1 digit
+    confirm_password: str  # must equal password
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class ProfileUpdateRequest(BaseModel):
+    email: EmailStr | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    password: str | None = None
+    confirm_password: str | None = None  # required when password is set
+
+class UserOut(BaseModel):
+    id: UUID
+    email: str
+    first_name: str
+    last_name: str
+    role: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
+```
+
+**REST endpoints (`/auth` prefix):**
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/auth/signup` | No | Create account (role=client), return JWT |
+| `POST` | `/auth/login` | No | Validate credentials, return JWT |
+| `GET` | `/auth/me` | Yes | Fetch current user profile |
+| `PATCH` | `/auth/me` | Yes | Update email / name / password |
+
+**JWT claims:** `sub` (user UUID), `email`, `role` (lowercase), `name` (full name), `exp`
+
+**Auth dependency update:** `get_current_user` in `auth.py` already decodes JWT; update `DEMO_USER["role"]` from `"Advisor"` → `"advisor"` to match lowercase convention used throughout.
+
+**Seed users (`db/seeds/07_users.py`):**
+
+| Name | Email | Password | Role |
+|---|---|---|---|
+| Admin User | admin@glide-gate.local | Admin123! | admin |
+| Demo Advisor | advisor@glide-gate.local | Advisor123! | advisor |
+| Aarav Mehta | aarav.mehta@demo.glide-gate.local | Client123! | client |
+
+**Key files:**
+- `db/schema/011_users.sql` — DDL (UUID PK, unique email, role CHECK constraint)
+- `backend/alembic/versions/0002_users.py` — migration (follows `0001_initial`; `down_revision = "0001_initial"`)
+- `backend/app/models/users.py` — `User` SQLAlchemy ORM model
+- `backend/app/models/__init__.py` — add `User` import
+- `backend/app/services/auth/auth_service.py` — `hash_password`, `verify_password`, `create_access_token`, `signup`, `login`, `get_profile`, `update_profile`; module-level `auth_service` singleton
+- `backend/app/services/auth/__init__.py` — re-exports `auth_service`
+- `backend/app/api/routers/auth.py` — 4 endpoints + Pydantic schemas
+- `backend/app/api/dependencies/auth.py` — update `DEMO_USER["role"]` → `"advisor"` (lowercase)
+- `backend/app/main.py` — register `auth.router` with `_prefix`
+- `db/seeds/07_users.py` — 3 seed users with bcrypt-hashed passwords
+- `db/seeds/seed.py` — add `07_users.py` to `SEED_FILES` list
+- `backend/pyproject.toml` — `passlib[bcrypt]` already present; no change needed
+
+---
+
 ## Phase 4 — Frontend / UI
 
 ### STEP-19 — Design System & Shared UI Components
@@ -494,6 +573,84 @@ React Flow canvas with 8 agent nodes. Animated edges for in-flight A2A messages.
 - `frontend/src/features/admin/ValidationPromptEditor.tsx`
 - `frontend/src/features/admin/CheckpointRulesEditor.tsx`
 - `frontend/src/hooks/useLLMConfig.ts`, `useValidationPrompts.ts`, `useAgentTrace.ts`
+
+---
+
+## Phase 4.5 — Auth (Frontend)
+
+### STEP-23A — Auth UI (Frontend)
+**BRD:** Section 5.1, Section 5.2 (role-based views), FR-01 | **Integration:** N/A | **Depends:** STEP-18A, STEP-19, STEP-03
+
+Implement the full frontend authentication layer: Login and Signup pages, profile view/edit, navbar user menu with dropdown, Zustand `authStore` (persisted to `localStorage`), role-based route guards, and filtered nav link visibility.
+
+**Role → default route mapping:**
+
+| Role | Default Route | Visible Nav Links |
+|---|---|---|
+| `client` | `/client` | *(none — Client Portal has its own layout)* |
+| `advisor` | `/` | Advisor Workspace, Contact Centre, Agent Trace |
+| `admin` | `/admin` | Admin Config, Agent Trace |
+
+**Route protection matrix:**
+
+| Path | Component | Allowed Roles |
+|---|---|---|
+| `/login` | `Login` | Public (redirects if already authenticated) |
+| `/signup` | `Signup` | Public (redirects if already authenticated) |
+| `/profile` | `Profile` | `client`, `advisor`, `admin` |
+| `/` | `AdvisorWorkspace` | `advisor` |
+| `/client` | `ClientPortal` | `client` |
+| `/contact-centre` | `ContactCentre` | `advisor` |
+| `/agent-trace` | `AgentTrace` | `advisor`, `admin` |
+| `/admin` | `AdminConfig` | `admin` |
+
+**`authStore` shape (Zustand + `persist` middleware → `localStorage` key `gg_auth`):**
+```typescript
+interface AuthUser {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: 'client' | 'advisor' | 'admin'
+}
+interface AuthState {
+  token: string | null
+  user: AuthUser | null
+  isAuthenticated: boolean   // derived: token !== null
+  setAuth: (token: string, user: AuthUser) => void
+  clearAuth: () => void      // clears store + localStorage
+}
+```
+
+**Axios interceptors in `api.ts`:**
+- Request: attach `Authorization: Bearer <token>` from `authStore`
+- Response: on 401 → `clearAuth()` + redirect to `/login`
+
+**`ProtectedRoute` component:** checks `isAuthenticated`; if false → redirect to `/login`; if role not in `allowedRoles` → redirect to role's default route.
+
+**Profile editing:** only `client` role gets editable fields; `advisor` and `admin` see read-only view. `ConfirmationModal` shown before saving password changes.
+
+**Key files:**
+- `frontend/src/store/authStore.ts` — Zustand store with `persist`
+- `frontend/src/store/index.ts` — add `useAuthStore` re-export
+- `frontend/src/lib/api.ts` — add `UserOut`, `TokenResponse` interfaces; add request/response interceptors
+- `frontend/src/hooks/useAuth.ts` — `useSignup()`, `useLogin()`, `useProfile()`, `useUpdateProfile()` (TanStack Query)
+- `frontend/src/components/ProtectedRoute.tsx` — role-guard wrapper
+- `frontend/src/features/auth/LoginForm.tsx` — email + password fields, `useLogin` mutation
+- `frontend/src/features/auth/SignupForm.tsx` — first/last name + email + password + confirm, `useSignup` mutation
+- `frontend/src/features/auth/ProfileCard.tsx` — read-only view + edit mode (client only), `useUpdateProfile` mutation
+- `frontend/src/features/auth/UserMenu.tsx` — right-side NavBar dropdown (full name → View Profile / Sign Out)
+- `frontend/src/routes/Login.tsx` — branding + `LoginForm` + link to Signup
+- `frontend/src/routes/Signup.tsx` — `SignupForm` + link to Login
+- `frontend/src/routes/Profile.tsx` — `ProfileCard` page at `/profile`
+- `frontend/src/App.tsx` — replace open routes with `ProtectedRoute`-wrapped routes; filter nav links by role; add `<UserMenu />` to NavBar right side
+
+---
+
+### STEP-23B — Phase 4 API Contract & Type-Shape Remediation
+**Date:** 2026-05-15 | **BRD:** Section 9.1, FR-07, FR-08, FR-09, FR-11 | **Depends:** STEP-14, STEP-18, STEP-20–23A
+
+Resolved all frontend↔backend type mismatches identified in the Phase 4 comprehensive audit. Fixed one hard crash (`TypeError` in `AgentDetailPopover`), four 4xx API failures (`PATCH /documents/{id}`, `POST /message` 422, `POST /message` 401, `GET /call-summary` 404), and six silent data failures (blank document names, 0% progress, empty product tracks, undefined diff fields, blank agent status). Backend: `documents.py` (PATCH route + computed fields), `cases.py` (CaseProgressOut full shape + ProductTrackOut enrichment), `agents.py` (AgentTraceOut agents array + AgentOut status), `conversations.py` (call-summary stub). Frontend: `useClientChat.ts` (body field, auth header, SSE parser).
 
 ---
 

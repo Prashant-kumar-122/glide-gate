@@ -46,7 +46,33 @@ poetry run alembic upgrade head
 
 ---
 
-## 3. Backend
+## 3. Seed Data
+
+Populate the database with demo products, agents, questionnaire, a sample client (Aarav Mehta), a sample case, and a full event log:
+
+```bash
+cd backend
+poetry run python ../db/seeds/seed.py
+```
+
+The seed is **idempotent** — re-running it skips rows that already exist.
+
+**What gets seeded:**
+
+| Step | Script | Description |
+|------|--------|-------------|
+| 01 | `01_products.py` | 2 products — Cash Management Account, Retirement Savings Plan |
+| 02 | `02_agents.py` | 8 CADF agents (orchestrator, KYC, document, notification, etc.) |
+| 03 | `03_questionnaire.py` | Onboarding questionnaire with 30 questions across 12 sections |
+| 04 | `04_client_aarav_mehta.py` | Demo client Aarav Mehta with profile and address |
+| 05 | `05_sample_case.py` | Sample onboarding case with two product tracks |
+| 06 | `06_sample_events.py` | 23 event log entries simulating the full onboarding journey |
+
+> **Note:** Run `alembic upgrade head` (section 2) before seeding — the seed requires the tables to exist.
+
+---
+
+## 4. Backend
 
 ```bash
 cd backend
@@ -65,7 +91,7 @@ The API will be available at:
 
 ---
 
-## 4. Frontend
+## 5. Frontend
 
 ```bash
 cd frontend

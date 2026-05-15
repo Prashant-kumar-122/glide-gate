@@ -1,0 +1,177 @@
+import { useState, useRef, useEffect } from 'react'
+import { Send, Bot, User } from 'lucide-react'
+import { useChatStore } from '@/store/chatStore'
+import { useSendMessage } from '@/hooks/useClientChat'
+import type { ChatMessage } from '@/store/chatStore'
+
+function MessageBubble({ msg }: { msg: ChatMessage }) {
+  const isUser = msg.role === 'user'
+  return (
+    <div className={['flex gap-2.5', isUser ? 'flex-row-reverse' : 'flex-row'].join(' ')}>
+      <div
+        className={[
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+          isUser ? 'bg-blue-600' : 'bg-gray-200',
+        ].join(' ')}
+      >
+        {isUser ? (
+          <User className="h-4 w-4 text-white" />
+        ) : (
+          <Bot className="h-4 w-4 text-gray-600" />
+        )}
+      </div>
+      <div
+        className={[
+          'max-w-[76%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+          isUser ? 'rounded-tr-sm bg-blue-600 text-white' : 'rounded-tl-sm bg-gray-100 text-gray-900',
+        ].join(' ')}
+      >
+        <p className="whitespace-pre-wrap">{msg.content}</p>
+        <p
+          className={[
+            'mt-1 text-[10px]',
+            isUser ? 'text-blue-200 text-right' : 'text-gray-400',
+          ].join(' ')}
+        >
+          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function TypingIndicator() {
+  return (
+    <div className="flex gap-2.5">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200">
+        <Bot className="h-4 w-4 text-gray-600" />
+      </div>
+      <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3">
+        <div className="flex gap-1 items-center">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="h-2 w-2 animate-bounce rounded-full bg-gray-400"
+              style={{ animationDelay: `${i * 150}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface ConversationalChatProps {
+  caseId: string | null
+}
+
+export default function ConversationalChat({ caseId }: ConversationalChatProps) {
+  const [input, setInput] = useState('')
+  const [streamingText, setStreamingText] = useState('')
+  const messages = useChatStore((s) => s.messages)
+  const typingIndicator = useChatStore((s) => s.typingIndicator)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const sendMessage = useSendMessage(caseId)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, typingIndicator, streamingText])
+
+  function handleSend() {
+    const text = input.trim()
+    if (!text || !caseId || sendMessage.isPending) return
+    setInput('')
+    sendMessage.mutate({
+      text,
+      onChunk: (accumulated) => setStreamingText(accumulated),
+      onDone: () => setStreamingText(''),
+    })
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 border-b border-gray-100 px-4 py-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50">
+          <Bot className="h-4 w-4 text-blue-600" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-900">GlideGate Assistant</p>
+          <p className="text-xs text-gray-400">Here to guide you through onboarding</p>
+        </div>
+      </div>
+
+      {/* Messages list */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {messages.length === 0 && !typingIndicator && !streamingText && (
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+            <div className="rounded-full bg-blue-50 p-4">
+              <Bot className="h-7 w-7 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Start your onboarding journey</p>
+              <p className="mt-1 text-xs text-gray-400">
+                Say hello and I'll guide you through the process
+              </p>
+            </div>
+          </div>
+        )}
+
+        {messages.map((msg) => (
+          <MessageBubble key={msg.id} msg={msg} />
+        ))}
+
+        {/* Streaming preview bubble */}
+        {streamingText && (
+          <MessageBubble
+            msg={{
+              id: '__streaming__',
+              role: 'assistant',
+              content: streamingText,
+              timestamp: new Date().toISOString(),
+            }}
+          />
+        )}
+
+        {/* Typing indicator while waiting for first chunk */}
+        {typingIndicator && !streamingText && <TypingIndicator />}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input area */}
+      <div className="border-t border-gray-100 p-3">
+        {!caseId && (
+          <p className="pb-2 text-center text-xs text-gray-400">
+            Select a case above to start chatting
+          </p>
+        )}
+        <div className="flex gap-2">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+            rows={2}
+            disabled={!caseId || sendMessage.isPending}
+            className="flex-1 resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-50"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!caseId || !input.trim() || sendMessage.isPending}
+            className="flex items-center justify-center self-end rounded-xl bg-blue-600 p-2.5 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

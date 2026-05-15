@@ -2,11 +2,12 @@ import { create } from 'zustand'
 
 interface WorkspaceStore {
   selectedClientId: string | null
+  selectedCaseId: string | null
   activeDocumentId: string | null
   isDrawerOpen: boolean
   uploadBadgeCounts: Record<string, number>
   socketConnected: boolean
-  setSelectedClient: (id: string | null) => void
+  setSelectedClient: (clientId: string | null, caseId: string | null) => void
   setActiveDocument: (id: string | null) => void
   setDrawerOpen: (open: boolean) => void
   incrementBadge: (caseId: string) => void
@@ -16,11 +17,13 @@ interface WorkspaceStore {
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   selectedClientId: null,
+  selectedCaseId: null,
   activeDocumentId: null,
   isDrawerOpen: false,
   uploadBadgeCounts: {},
   socketConnected: false,
-  setSelectedClient: (id) => set({ selectedClientId: id }),
+  setSelectedClient: (clientId, caseId) =>
+    set({ selectedClientId: clientId, selectedCaseId: caseId, activeDocumentId: null, isDrawerOpen: false }),
   setActiveDocument: (id) => set({ activeDocumentId: id }),
   setDrawerOpen: (open) => set({ isDrawerOpen: open }),
   incrementBadge: (caseId) =>

@@ -282,22 +282,183 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ---
 
+## Phase 3.5 — Auth (Backend)
+
+### [DONE] STEP-18A — Auth System (Backend)
+**Date:** 2026-05-14 | **BRD:** Section 9.1, FR-01, Section 10.2 | **Depends:** STEP-12, STEP-14
+
+**Artifacts produced:**
+- `db/schema/011_users.sql` ✓ — users table DDL (UUID PK, unique email, role CHECK constraint, 3 indexes)
+- `backend/alembic/versions/0002_users.py` ✓ — migration (down_revision = "0001_initial"; creates users table + 3 indexes)
+- `backend/app/models/users.py` ✓ — `User` SQLAlchemy ORM model (email, first/last_name, password_hash, role, is_active, timestamps, full_name property)
+- `backend/app/models/__init__.py` ✓ — `User` import added for Alembic autodiscovery
+- `backend/app/services/auth/auth_service.py` ✓ — `hash_password`, `verify_password`, `create_access_token` (JWT: sub/email/role/name/exp); `AuthService` with `signup`, `login`, `get_profile`, `update_profile`; module-level `auth_service` singleton
+- `backend/app/services/auth/__init__.py` ✓ — re-exports `auth_service` and helpers
+- `backend/app/api/routers/auth.py` ✓ — 4 endpoints (POST /auth/signup, POST /auth/login, GET /auth/me, PATCH /auth/me); Pydantic schemas: `SignupRequest` (password strength + match validation), `LoginRequest`, `ProfileUpdateRequest`, `UserOut`, `TokenResponse`
+- `backend/app/api/dependencies/auth.py` ✓ — `DEMO_USER["role"]` updated `"Advisor"` → `"advisor"` (lowercase convention)
+- `backend/app/main.py` ✓ — `auth.router` registered with `_prefix`
+- `db/seeds/07_users.py` ✓ — 3 seed users with bcrypt-hashed passwords (admin / advisor / client)
+- `db/seeds/seed.py` ✓ — `07_users.py` added to `SEED_FILES` list
+
+---
+
 ## Phase 4 — Frontend / UI
 
-### [ ] STEP-19 — Design System & Shared UI Components
-**BRD:** Section 5.1.15, Section 5.1.3, Section 5.1.16 | **Depends:** STEP-03
+### [DONE] STEP-19 — Design System & Shared UI Components
+**Date:** 2026-05-14 | **BRD:** Section 5.1.15, Section 5.1.3, Section 5.1.16 | **Depends:** STEP-03
 
-### [ ] STEP-20 — Advisor Workspace View (All 16 Features)
-**BRD:** Section 5.1, FR-07–10 | **Depends:** STEP-14, STEP-15, STEP-19
+**Artifacts produced:**
+- `frontend/src/design-system/tokens.ts` ✓ — `DocumentStatus` (6), `TeamRole` (5), `VisibilityLevel`; `DOC_STATUS_COLORS` (bg/text/ring/dot per status), `DOC_STATUS_LABEL`, `ROLE_COLORS`, `ROLE_LABEL`, `PROGRESS_COLOR`
+- `frontend/src/components/StatusBadge.tsx` ✓ — pill badge with dot and ring; sm/md sizes; driven by tokens
+- `frontend/src/components/RoleBadge.tsx` ✓ — compact role pill; sm/md sizes
+- `frontend/src/components/ProgressBar.tsx` ✓ — animated width transition; sm/md/lg heights; auto-green at 100%; ARIA progressbar role
+- `frontend/src/components/DocumentRow.tsx` ✓ — Zustand-connected (active doc + drawer); status icon, version, date, AI/DIFF chips, StatusBadge
+- `frontend/src/components/CategoryCard.tsx` ✓ — collapsible accordion; ProgressBar header; approved/total counter
+- `frontend/src/components/CommentThread.tsx` ✓ — threaded comments with RoleBadge; visibility selector (ALL/ADVISOR_ONLY/CLIENT_VISIBLE); textarea + send
+- `frontend/src/components/VisibilityToggle.tsx` ✓ — segmented 3-way toggle (All / Advisor / Client)
+- `frontend/src/components/ConfirmationModal.tsx` ✓ — portal overlay; danger/warning/default variants; ESC key + backdrop close; loading state
+- `frontend/src/components/UploadButton.tsx` ✓ — drag-and-drop + click; MIME type allowlist guard; disabled + dragging states
+- `tsc --noEmit` passes with zero errors ✓
 
-### [ ] STEP-21 — Client Portal View
-**BRD:** Section 5.1.6–5.1.7, Section 5.2.2, FR-02 | **Depends:** STEP-14, STEP-15, STEP-19
+### [DONE] STEP-20 — Advisor Workspace View (All 16 Features)
+**Date:** 2026-05-14 | **BRD:** Section 5.1, FR-07–10 | **Depends:** STEP-14, STEP-15, STEP-19
 
-### [ ] STEP-22 — Contact Centre Dashboard
-**BRD:** Section 7.3, FR-05 | **Depends:** STEP-14, STEP-15, STEP-19
+**Artifacts produced:**
+- `frontend/src/lib/api.ts` ✓ — axios instance + domain types: ClientOut, CaseOut, CaseSummary, ProductTrack, DocumentOut, FindingResult, ValidationResult, DiffResult, DiffSection, CollaborationComment
+- `frontend/src/hooks/useDocuments.ts` ✓ — TanStack Query hooks: useCases, useCaseDetail, useCaseProgress, useDocuments, useDocument, useDiffResult, useValidateDocument, useUploadDocument, useUpdateDocumentStatus; cache-patch helpers: applyDocumentStatusUpdate, applyDocumentUploaded, applyValidationResult
+- `frontend/src/hooks/useWorkspaceSocket.ts` ✓ — module-level socket.io singleton; joins/leaves case rooms on caseId change; handles DOCUMENT_STATUS_CHANGED, DOCUMENT_UPLOADED, PRODUCT_TRACK_UPDATE, PROGRESS_UPDATE, CASE_STAGE_CHANGED, KYC_RESULT, TASK_COMPLETE; patches TanStack Query cache in-place; increments Zustand badge counts
+- `frontend/src/store/workspaceStore.ts` ✓ — updated: added `selectedCaseId`; `setSelectedClient(clientId, caseId)` replaces old single-arg form; selecting a new client resets drawer + active document
+- `frontend/src/features/advisor/ClientRailNav.tsx` ✓ — left rail: useCases list; per-case progress bars (stage→% map); upload badge count chips; socket connection indicator (Wifi/WifiOff); loading skeleton; empty-state and error states
+- `frontend/src/features/advisor/AIValidationPanel.tsx` ✓ — findings list with pass/warn/fail verdict icons and colour-coded cards; overall verdict badge; "Run AI Check" button wired to useValidateDocument mutation; running spinner; timestamp display
+- `frontend/src/features/advisor/VersionDiffPanel.tsx` ✓ — similarity ratio ring; added/modified/removed sections with before/after inline comparison; unchanged sections hidden; computed_at timestamp
+- `frontend/src/features/advisor/StatusEditor.tsx` ✓ — mirrors backend 6-state ALLOWED_TRANSITIONS; renders only valid next-state buttons; ConfirmationModal gate before committing; isUpdating loading state
+- `frontend/src/features/advisor/ParallelProductTracks.tsx` ✓ — 2-column grid; per-product ProgressBar + steps counter; status icon (CheckCircle/AlertTriangle/Loader/Package); dynamic color variant by status; skeleton loader; empty state
+- `frontend/src/features/advisor/DocumentDetailDrawer.tsx` ✓ — 4-tab drawer (Overview, AI Validation, Version Diff, Comments); document meta panel; download link; StatusEditor embedded in Overview tab; AI/Diff tab indicator chips when results exist; CommentThread with mock data (collaboration API wired in later step)
+- `frontend/src/features/advisor/DocumentWorkspacePanel.tsx` ✓ — case progress header with overall % and escalation badge; ParallelProductTracks section; 6 CategoryCard sections (identity/financial/legal/insurance/compliance/entity) with DocumentRow list + per-category UploadButton; "Action needed" badge on NEEDS_REVISION categories
+- `frontend/src/routes/AdvisorWorkspace.tsx` ✓ — 3-column layout: ClientRailNav | DocumentWorkspacePanel | DocumentDetailDrawer; useWorkspaceSocket wired on active caseId; empty state prompt when no client selected
+- `tsc --noEmit` passes with zero errors ✓
 
-### [ ] STEP-23 — Agent Trace Canvas & Admin Config View
-**BRD:** FR-11, Section 5.1.12–5.1.14 | **Depends:** STEP-14, STEP-15, STEP-19
+### [DONE] STEP-21 — Client Portal View
+**Date:** 2026-05-14 | **BRD:** Section 5.1.6–5.1.7, Section 5.2.2, FR-02 | **Depends:** STEP-14, STEP-15, STEP-19
+
+**Artifacts produced:**
+- `frontend/src/hooks/useClientDocuments.ts` ✓ — thin wrappers: `useClientDocuments`, `useClientProgress`, `useClientUpload` delegating to existing TanStack Query hooks
+- `frontend/src/hooks/useClientChat.ts` ✓ — `useChatHistory(caseId)` (staleTime: Infinity, gcTime: 0 for clean case switching); `useSendMessage(caseId)` mutation with full SSE streaming (fetch + ReadableStream, `data: chunk` parsing, `[DONE]` sentinel, graceful fallback for non-event-stream responses); both wired to `useChatStore`
+- `frontend/src/features/client/ClientProgressBar.tsx` ✓ — client-friendly progress card; stage→label map (Getting Started/Identity Verification/Account Setup/Final Review/All Done!); dynamic colour scheme (blue/green/amber) per stage; document approved/total counter
+- `frontend/src/features/client/ConversationalChat.tsx` ✓ — user/assistant `MessageBubble` components; animated 3-dot `TypingIndicator`; streaming ghost bubble (`streamingText` state shows in-flight SSE content); Enter-to-send (Shift+Enter for newline); auto-scroll to bottom on every message update
+- `frontend/src/features/client/DocumentUploadCard.tsx` ✓ — per-category card with description, existing doc list with `StatusBadge` + version indicator; drag-and-drop + click upload zone; MIME allowlist guard; uploading spinner + new-version label when docs already exist
+- `frontend/src/features/client/ClientDocumentHub.tsx` ✓ — 2-column grid of 6 `DocumentUploadCard` instances; approved/total summary header; loading skeleton; null guard for caseId
+- `frontend/src/routes/ClientPortal.tsx` ✓ — replaces placeholder; 440px fixed chat rail (progress bar + ConversationalChat) + flex-1 document panel; auto-selects first case; case-selector dropdown when multiple cases exist; hydrates chatStore from server history on case change; `useWorkspaceSocket` for real-time document/progress updates; `tsc --noEmit` passes with zero errors ✓
+
+### [DONE] STEP-22 — Contact Centre Dashboard
+**Date:** 2026-05-14 | **BRD:** Section 7.3, FR-05, Hackathon Criterion #6 | **Depends:** STEP-14, STEP-15, STEP-19
+
+**Artifacts produced:**
+- `frontend/src/lib/socket.ts` ✓ — shared `getSocket()` singleton; eliminates duplicate socket connections when multiple hooks coexist; `useWorkspaceSocket` updated to import from here
+- `frontend/src/lib/api.ts` ✓ — `CallSummary` interface added (summary, key_points[], recommended_actions[], stage_label, generated_at)
+- `frontend/src/hooks/useAllCases.ts` ✓ — `useAllCases()` (60s refetchInterval for live CC dashboard), `useClientDetail(caseId)` → `CaseSummary`
+- `frontend/src/hooks/useCallSummary.ts` ✓ — `useCallSummary(caseId)` → `CallSummary`; `retry: false` so missing backend endpoint degrades gracefully; exports `ccQk` for cache invalidation
+- `frontend/src/features/contact-centre/ProductTrackSummary.tsx` ✓ — compact inline product track rows (icon + label + ProgressBar + %) for CC context
+- `frontend/src/features/contact-centre/CallSummaryCard.tsx` ✓ — AI call summary card with key_points and recommended_actions lists; loading skeleton; graceful "not yet available" empty state with refresh button
+- `frontend/src/features/contact-centre/CCActionBar.tsx` ✓ — Log Call / Send Email / Open Case buttons; conditional Escalate / Mark Resolved toggle based on `summary.escalated`
+- `frontend/src/features/contact-centre/ClientStatusTable.tsx` ✓ — real-time searchable client list (filter by name/stage/product); stage badge + ProgressBar per row; escalation and complete icons; Zustand `ccStore` for selection and filter text
+- `frontend/src/features/contact-centre/ClientDetailPanel.tsx` ✓ — client header (avatar, name, case ID, stage badge); stats row (overall %, docs approved/total, escalation flag); CCActionBar; ProductTrackSummary; CallSummaryCard; loading skeleton and empty-state prompt
+- `frontend/src/routes/ContactCentre.tsx` ✓ — 2-panel layout (320px client list + flex detail); CC-specific socket hook (ref-based callback avoids stale closure); top bar with live/reconnecting indicator and case count; `tsc --noEmit` passes with zero errors ✓
+
+### [DONE] STEP-23 — Agent Trace Canvas & Admin Config View
+**Date:** 2026-05-14 | **BRD:** FR-11, Section 5.1.12–5.1.14, Hackathon Criterion #10 | **Depends:** STEP-14, STEP-15, STEP-19
+
+**Artifacts produced:**
+- `frontend/src/lib/api.ts` ✓ — `AgentOut`, `AgentTaskOut`, `AgentTraceOut`, `LLMConfig`, `ValidationPrompt` interfaces added
+- `frontend/src/hooks/useAgentTrace.ts` ✓ — `useAgents()`, `useAgentTrace(caseId)` with `agentQk` query keys; 15s refetchInterval for live trace data
+- `frontend/src/hooks/useLLMConfig.ts` ✓ — `useLLMConfig()` with placeholder defaults; `useUpdateLLMConfig()` mutation wired to PUT /admin/llm-config
+- `frontend/src/hooks/useValidationPrompts.ts` ✓ — `useValidationPrompts()` parallel fetches all 6 categories (graceful fallback to defaults); `useUpdateValidationPrompt()` mutation
+- `frontend/src/features/agent-trace/agentPositions.ts` ✓ — `AGENT_IDS` (8), `AGENT_LABELS`, `AGENT_POSITIONS` layout (3-row hierarchy), `STATIC_EDGES` (9 structural connections)
+- `frontend/src/features/agent-trace/AgentNode.tsx` ✓ — Custom React Flow node: icon per agent type (Lucide), state-driven colour (idle grey → active blue → escalated amber → complete green), animated status dot, state badge; uses `AgentNodeData` type
+- `frontend/src/features/agent-trace/AgentDetailPopover.tsx` ✓ — Right-panel agent detail: node state badge, description from trace data, recent task list with status icons and duration_ms
+- `frontend/src/features/agent-trace/MessageLog.tsx` ✓ — Scrollable A2A message log from `traceStore.messageLog`: from→to arrows, status colour badges, time display; empty state prompt
+- `frontend/src/features/agent-trace/useAgentTraceSocket.ts` ✓ — Socket hook: joins case room, handles `agent_message` (enqueue edge + active node), `task_assigned`, `task_complete` (complete/idle node), `escalation_triggered` (escalated node), `case_stage_changed`; leaves room on caseId change with full store reset
+- `frontend/src/features/agent-trace/AgentTraceCanvas.tsx` ✓ — Full React Flow canvas: 8 agent nodes at fixed positions, `NODE_TYPES` registration, static edges (grey/smoothstep) + animated in-flight edges (blue/animated, auto-expire after 2s via `window.setTimeout`), case selector dropdown, state legend, MiniMap with colour-coded nodes, `AgentDetailPopover` + `MessageLog` in right panel (320px); `@xyflow/react/dist/style.css` imported
+- `frontend/src/features/admin/LLMProviderConfig.tsx` ✓ — Provider selector (4 providers: Anthropic, OpenAI, Google, Local) with preset model lists + custom model text input; saves to PUT /admin/llm-config
+- `frontend/src/features/admin/DeterministicControls.tsx` ✓ — Sliders + inputs for all 7 controls (temperature, top_p, frequency_penalty, presence_penalty, seed, max_retries, cache_ttl); tooltip descriptions via hover; saves to PUT /admin/llm-config
+- `frontend/src/features/admin/ValidationPromptEditor.tsx` ✓ — Per-category vertical tab (6 categories); goal textarea + factors list with add (Enter key) / remove (×); saves per-category to PUT /admin/validation-prompts/{category}
+- `frontend/src/features/admin/CheckpointRulesEditor.tsx` ✓ — Table of 5 default checkpoint rules (4 dimensions: product_type, risk_level, account_value_band, jurisdiction); inline add-rule form; local state with note that DB persistence is wired in STEP-30
+- `frontend/src/routes/AgentTrace.tsx` ✓ — Full-height layout: header bar + `AgentTraceCanvas` filling remaining viewport height
+- `frontend/src/routes/AdminConfig.tsx` ✓ — Vertical tab nav (LLM Provider | Deterministic Controls | Validation Prompts | Checkpoint Rules) + scrollable content pane
+- `tsc --noEmit` passes with zero errors ✓
+
+---
+
+## Phase 4.5 — Auth (Frontend)
+
+### [DONE] STEP-23A — Auth UI (Frontend)
+**Date:** 2026-05-14 | **BRD:** Section 5.1, Section 5.2, FR-01 | **Depends:** STEP-18A, STEP-19, STEP-03
+
+**Artifacts produced:**
+- `frontend/src/store/authStore.ts` ✓ — Zustand `AuthState` with `persist` middleware → `localStorage` key `gg_auth`; `AuthUser` interface; `setAuth` / `clearAuth` actions
+- `frontend/src/store/index.ts` ✓ — `useAuthStore` + `AuthUser` re-exported
+- `frontend/src/lib/api.ts` ✓ — `UserOut`, `TokenResponse` interfaces added; request interceptor attaches `Authorization: Bearer <token>`; response interceptor clears auth + redirects to `/login` on 401
+- `frontend/src/hooks/useAuth.ts` ✓ — `useSignup()`, `useLogin()` (both call `setAuth` + navigate to role default route on success), `useProfile()` (enabled when authenticated), `useUpdateProfile()` (patches query cache + refreshes store)
+- `frontend/src/components/ProtectedRoute.tsx` ✓ — redirects unauthenticated users to `/login`; redirects wrong-role users to their default route
+- `frontend/src/features/auth/LoginForm.tsx` ✓ — email + password form; `useLogin` mutation; error display
+- `frontend/src/features/auth/SignupForm.tsx` ✓ — first/last name + email + password + confirm; `useSignup` mutation; error display
+- `frontend/src/features/auth/ProfileCard.tsx` ✓ — read-only info rows (all roles); edit mode restricted to `client` role; `ConfirmationModal` gate before password change; `useUpdateProfile` mutation
+- `frontend/src/features/auth/UserMenu.tsx` ✓ — click-outside-dismissible dropdown in NavBar right; shows full name + role; links to `/profile`; Sign Out clears store + navigates to `/login`
+- `frontend/src/routes/Login.tsx` ✓ — branding header + `LoginForm`; redirects already-authenticated users to their default route
+- `frontend/src/routes/Signup.tsx` ✓ — branding header + `SignupForm`; redirects already-authenticated users
+- `frontend/src/routes/Profile.tsx` ✓ — `ProfileCard` page at `/profile`
+- `frontend/src/App.tsx` ✓ — all routes wrapped with `ProtectedRoute` (correct `allowedRoles`); NavBar filters links by role; `<UserMenu />` mounted on right side; `/login` + `/signup` public; catch-all → `/login`
+- `tsc --noEmit` passes with zero errors ✓
+
+---
+
+### [DONE] STEP-23B — Phase 4 API Contract & Type-Shape Remediation
+**Date:** 2026-05-15 | **BRD:** Section 9.1, FR-07, FR-08, FR-09, FR-11 | **Depends:** STEP-14, STEP-18, STEP-20–23A
+
+**Root cause:** A comprehensive audit identified 10 frontend↔backend contract mismatches causing API failures (HTTP 404/422) and a hard `TypeError` crash in the Agent Trace canvas. All fixes are backward-compatible and targeted — no surrounding code was refactored.
+
+**Artifacts produced / modified:**
+
+`backend/app/api/routers/documents.py` ✓
+- `DocumentOut` — added `name` (alias for `original_filename`), `has_validation_result` (bool), `has_diff` (bool) as `@computed_field` properties; frontend was receiving `undefined` for these, causing blank names and non-functional tab badges
+- `DiffOut` — added `parent_id`, `similarity_ratio`, `sections`, `summary`, `computed_at` as `@computed_field` properties unwrapping the nested `diff_result` dict; `VersionDiffPanel` was reading all-undefined fields from the raw dict wrapper
+- Added `UpdateDocumentStatusRequest` Pydantic model
+- Added `PATCH /documents/{document_id}` route (role-guarded Advisor/Admin); `useUpdateDocumentStatus` was calling this endpoint but it did not exist, causing every advisor status-change to 404
+
+`backend/app/api/routers/cases.py` ✓
+- Added `_STAGE_PROGRESS` and `_PRODUCT_STATUS_PROGRESS` lookup dicts
+- `ProductTrackOut` — added `product_name` (str, default ""), `progress` (int, default 0), `steps_total` (int, default 0), `steps_completed` (int, default 0); old fields kept with defaults for backward compat
+- `CaseProgressOut` — renamed `product_tracks` → `products`, `documents_required` → `documents_total`; added `client_id`, `client_name`, `overall_progress`, `escalated`; frontend `CaseSummary` type was fully mismatched causing "…" placeholders, 0% progress, and always-empty product tracks
+- Added `_build_product_track(cp)` helper (constructs with full product + step data)
+- `get_case_summary` — replaced `_get_case_or_404` with a comprehensive query using `selectinload(client)`, `selectinload(case_products).selectinload(product)`, `selectinload(case_products).selectinload(steps)` to populate all new fields without N+1 queries
+
+`backend/app/api/routers/agents.py` ✓
+- `AgentOut` — added `status` (`"active"` / `"inactive"` mapped from `is_active`) and `last_active` (`None` stub) as `@computed_field` properties
+- `AgentTraceOut` — added `agents: list[AgentOut]` field; `AgentDetailPopover.tsx` was calling `traceData.agents.find(...)` which crashed with `TypeError` because backend returned no `agents` array
+- `get_agent_trace` — queries all agents from the `agents` table and includes them in the response alongside tasks
+
+`backend/app/api/routers/conversations.py` ✓
+- Added `CallSummaryOut` Pydantic model
+- Added `GET /cases/{case_id}/call-summary` stub endpoint returning a placeholder response; `useCallSummary` was hitting a 404 on every Contact Centre page load
+
+`frontend/src/hooks/useClientChat.ts` ✓
+- Fixed request body field name: `{ text }` → `{ message: text }` (backend `MessageRequest` declares `message: str`; Pydantic was returning 422 on every chat submission)
+- Added `Authorization: Bearer <token>` header to raw `fetch()` call via `useAuthStore.getState().token` (missing header caused 401 Unauthorized when `DEMO_MODE=False`)
+- Fixed SSE chunk parser: added `parsed.token` to the fallback chain (`parsed.chunk ?? parsed.text ?? parsed.token ?? ''`) to match the backend placeholder stream format `{"type":"token","token":"word"}`
+
+**Bugs resolved:**
+- CRASH-1: `TypeError: Cannot read properties of undefined (reading 'find')` on agent node click — fixed ✓
+- API-1: `PATCH /api/documents/{id}` 404 on document status change — fixed ✓
+- API-2: `POST /api/cases/{id}/message` 422 on chat send — fixed ✓
+- API-3: `POST /api/cases/{id}/message` 401 without auth header — fixed ✓
+- API-4: `GET /api/cases/{id}/call-summary` 404 on Contact Centre — fixed ✓
+- API-5: SSE token chunks silently swallowed, always showing fallback message — fixed ✓
+- DATA-1: All document names showing as `undefined`/`'Document'` — fixed ✓
+- DATA-2: Validation/diff tab badges never appearing — fixed ✓
+- DATA-3: Case summary showing "…" name, 0% progress, empty product tracks — fixed ✓
+- DATA-4: `VersionDiffPanel` all-undefined fields (similarity, sections, summary) — fixed ✓
+- DATA-5: `AgentDetailPopover` crash + no agent info — fixed ✓
+- DATA-6: Agent status always `undefined` — fixed ✓
 
 ---
 

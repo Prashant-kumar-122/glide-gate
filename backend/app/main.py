@@ -8,6 +8,7 @@ from loguru import logger
 from app.config import settings
 from app.api.error_handlers import register_error_handlers
 from app.api.routers import health
+from app.api.routers import auth
 from app.api.routers import clients, cases, documents, conversations, reviews, agents, audit
 from app.api.routers.admin import llm_config, validation_prompts
 from app.websocket.socket_server import sio  # noqa: F401 — imported for side-effect (event registration)
@@ -38,6 +39,7 @@ register_error_handlers(app)
 _prefix = settings.API_PREFIX
 
 app.include_router(health.router, prefix=_prefix)
+app.include_router(auth.router, prefix=_prefix)
 app.include_router(clients.router, prefix=_prefix)
 app.include_router(cases.router, prefix=_prefix)
 app.include_router(documents.router, prefix=_prefix)
