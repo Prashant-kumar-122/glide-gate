@@ -217,6 +217,14 @@ class DocumentUploadService:
             name=f"dia-{doc.id}",
         )
 
+        # Step 5b — if this is a resubmission, compute version diff asynchronously
+        if parent_doc_id is not None:
+            from app.services.validation.validation_orchestrator import run_diff_in_background
+            asyncio.create_task(
+                run_diff_in_background(doc.id),
+                name=f"diff-{doc.id}",
+            )
+
         # Step 6 — emit DOCUMENT_UPLOADED with badge count for UI badge update
         badge_count = await document_status_service.get_upload_badge_count(case_id, db)
         await socket_emitter.document_uploaded(

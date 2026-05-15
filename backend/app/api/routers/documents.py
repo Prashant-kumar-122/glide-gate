@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -15,6 +16,7 @@ from app.api.error_handlers import NotFoundError, UnprocessableError
 from app.database import get_db
 from app.models.documents import Document
 from app.services.document.document_upload_service import document_upload_service
+from app.services.validation.validation_orchestrator import run_validate_in_background
 
 router = APIRouter(tags=["documents"])
 
@@ -237,12 +239,16 @@ async def trigger_validation(
     _user: dict = Depends(require_role("Advisor", "Admin")),
 ) -> ValidateAcceptedOut:
     doc = await _get_doc_or_404(document_id, db)
-    doc.status = "UNDER_REVIEW"
-    await db.commit()
-    # Full AI validation wired in STEP-28 via ValidationOrchestrator
+    if doc.status == "RECEIVED":
+        doc.status = "UNDER_REVIEW"
+        await db.commit()
+    asyncio.create_task(
+        run_validate_in_background(document_id),
+        name=f"validate-{document_id}",
+    )
     return ValidateAcceptedOut(
         document_id=document_id,
-        message="Validation request accepted — AI validation will run asynchronously",
+        message="Validation accepted — AI completeness check running asynchronously",
     )
 
 

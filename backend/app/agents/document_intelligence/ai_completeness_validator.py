@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
@@ -37,7 +37,11 @@ class ValidationResult(BaseModel):
 
 
 # ── Default validation prompts per category ───────────────────────────────────
-# These are returned from DB in STEP-28; here they are the hardcoded defaults.
+# Used as final fallback within the validator when no custom_prompt is supplied.
+# In production the ValidationOrchestrator always passes the effective prompt
+# (admin override → prompts/validation_defaults/{category}.json → these defaults)
+# so this dict is only reached when the validator is called directly (e.g. tests,
+# or legacy DIA agent bus tasks that omit custom_prompt).
 
 _DEFAULT_PROMPTS: dict[str, dict[str, Any]] = {
     "identity": {
@@ -133,28 +137,15 @@ Rules:
 
 class AICompletenessValidator:
     """
-    Validates document completeness using the Anthropic LLM (BRD FR-08, FR-09).
+    Validates document completeness using the LLM fallback chain (BRD FR-08, FR-09).
 
-    Falls back to a heuristic rule-based validation when the API is unavailable
-    so demos function without a live Anthropic key.
+    Routes through LLMFallbackChain + DeterministicControlsApplier so that
+    admin-configured provider, model, and deterministic parameters (temperature,
+    seed, etc.) are applied automatically.
+
+    Falls back to a heuristic rule-based validation when all LLM providers fail,
+    so demos function without a live API key.
     """
-
-    def __init__(self) -> None:
-        self._anthropic: Any = None
-
-    def _get_client(self) -> Any:
-        if self._anthropic is None:
-            try:
-                import anthropic  # type: ignore[import]
-                from app.config import settings
-
-                if settings.ANTHROPIC_API_KEY:
-                    self._anthropic = anthropic.AsyncAnthropic(
-                        api_key=settings.ANTHROPIC_API_KEY
-                    )
-            except Exception:
-                pass
-        return self._anthropic
 
     async def validate(
         self,
@@ -166,7 +157,7 @@ class AICompletenessValidator:
             category, _DEFAULT_PROMPTS["unknown"]
         )
 
-        findings = await self._llm_validate(ocr_result, prompt_cfg)
+        findings, llm_used = await self._llm_validate(ocr_result, prompt_cfg)
         if not findings:
             findings = self._heuristic_validate(ocr_result, prompt_cfg)
 
@@ -192,17 +183,25 @@ class AICompletenessValidator:
             overall_status=overall,
             findings=findings,
             completeness_pct=completeness_pct,
-            validated_at=datetime.utcnow().isoformat(),
+            validated_at=datetime.now(timezone.utc).isoformat(),
             prompt_used=json.dumps(prompt_cfg),
-            llm_used=self._anthropic is not None,
+            llm_used=llm_used,
         )
 
     async def _llm_validate(
         self, ocr_result: OcrResult, prompt_cfg: dict[str, Any]
-    ) -> list[FindingResult]:
-        client = self._get_client()
-        if client is None:
-            return []
+    ) -> tuple[list[FindingResult], bool]:
+        """Call LLMFallbackChain with deterministic controls applied.
+
+        Returns (findings, llm_used). findings is empty on failure so the
+        caller can fall through to the heuristic path.
+        """
+        try:
+            from app.services.llm.deterministic_controls_applier import controls_applier
+            from app.services.llm.llm_fallback_chain import llm_fallback_chain
+            from app.services.llm.llm_provider import LLMMessage, LLMRequest
+        except ImportError:
+            return [], False
 
         extracted_summary = "\n".join(
             f"  {f.key}: {f.value} (confidence {f.confidence:.2f})"
@@ -219,26 +218,28 @@ class AICompletenessValidator:
             "Return your assessment as a JSON array only."
         )
 
-        try:
-            from app.config import settings
+        request = LLMRequest(
+            system_prompt=_SYSTEM_PROMPT,
+            messages=[LLMMessage(role="user", content=user_message)],
+            max_tokens=1024,
+            temperature=0.2,
+            use_cache=True,
+        )
+        # Apply admin-configured deterministic controls (temperature, seed, etc.)
+        request = controls_applier.apply(request)
 
-            resp = await client.messages.create(
-                model=settings.PRIMARY_LLM_MODEL,
-                max_tokens=1024,
-                system=_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}],
-                temperature=0.2,
-            )
-            raw = resp.content[0].text.strip()
+        try:
+            response = await llm_fallback_chain.complete(request)
+            raw = response.text.strip()
             # Strip markdown code fences if present
             if raw.startswith("```"):
                 raw = raw.split("```")[1]
                 if raw.startswith("json"):
                     raw = raw[4:]
             data = json.loads(raw)
-            return [FindingResult(**item) for item in data]
+            return [FindingResult(**item) for item in data], True
         except Exception:
-            return []
+            return [], False
 
     def _heuristic_validate(
         self, ocr_result: OcrResult, prompt_cfg: dict[str, Any]
@@ -248,7 +249,6 @@ class AICompletenessValidator:
         findings: list[FindingResult] = []
 
         for factor in factors:
-            # Derive a key name from the factor text for a rough match
             factor_lower = factor.lower()
             matched = any(key in factor_lower or factor_lower in key for key in extracted_keys)
 

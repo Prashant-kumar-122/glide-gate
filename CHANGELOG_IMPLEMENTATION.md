@@ -528,8 +528,42 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ---
 
-### [ ] STEP-28 — AI Validation & Version Diff (End-to-End Wire)
-**BRD:** FR-08, FR-09, Section 5.1.10–5.1.11 | **Depends:** STEP-07, STEP-14, STEP-15, STEP-24, STEP-25, STEP-18
+### [DONE] STEP-28 — AI Validation & Version Diff (End-to-End Wire)
+**Date:** 2026-05-15 | **BRD:** FR-08, FR-09, Section 5.1.10–5.1.11, Hackathon Criteria #8, #9 | **Integration:** REAL (LLM) | **Depends:** STEP-07, STEP-14, STEP-15, STEP-24, STEP-25, STEP-18
+
+**Artifacts produced / modified:**
+
+`backend/app/services/validation/prompt_override_store.py` ✓ — shared singleton `_prompt_overrides` dict with typed functions (`set_prompt_override`, `get_prompt_override`, `reset_prompt_override`, `is_overridden`); decouples admin router from service layer so no upward imports
+
+`backend/app/services/validation/validation_prompt_repository.py` ✓ — `get_effective_prompt(category)` resolution order: (1) in-memory admin override via `prompt_override_store`, (2) `prompts/validation_defaults/{category}.json` file, (3) hardcoded fallback; all 6 categories + unknown covered
+
+`backend/app/services/validation/validation_orchestrator.py` ✓
+- `ValidationOrchestrator.validate_document(document_id, db)`: loads Document → reconstructs `OcrResult` from JSONB (falls back to simulated `OcrExtractor.extract()` when no OCR data stored) → loads effective prompt from repository → `AICompletenessValidator.validate()` (LLM via fallback chain + heuristic fallback) → persists `validation_result` JSONB + advances status `RECEIVED → UNDER_REVIEW` → emits `DOCUMENT_STATUS_CHANGED` socket event → returns `ValidationResult`
+- `ValidationOrchestrator.compute_diff(document_id, db)`: loads Document + parent → extracts raw text from both `ocr_result` JSONB fields (field-dict fallback; synthetic demo fallback) → `VersionDiffDetector.compute()` (Python difflib) → persists `diff_result` JSONB → returns `DiffResult`
+- `run_validate_in_background(document_id)` / `run_diff_in_background(document_id)`: background task wrappers each acquire their own `AsyncSessionLocal` session; safe for `asyncio.create_task`
+- `validation_orchestrator` module-level singleton
+
+`backend/app/services/validation/__init__.py` ✓ — re-exports all public symbols
+
+`backend/app/api/routers/admin/validation_prompts.py` ✓ — updated: local `_prompt_overrides` dict replaced with `prompt_override_store` functions; admin PUT/DELETE now write through the shared store so `ValidationOrchestrator` immediately picks up changes
+
+`backend/app/api/routers/documents.py` ✓ — `POST /documents/{id}/validate`: advances status `RECEIVED → UNDER_REVIEW` then fires `asyncio.create_task(run_validate_in_background(document_id))`; returns 202 immediately; LLM result pushed to frontend via socket event
+
+`backend/app/services/document/document_upload_service.py` ✓ — Step 5b: when `parent_doc_id is not None`, fires `asyncio.create_task(run_diff_in_background(doc.id))` so version diff computed automatically on every document resubmission
+
+`backend/app/agents/document_intelligence/ai_completeness_validator.py` ✓
+- `_llm_validate()` refactored: now routes through `LLMFallbackChain.complete()` + `DeterministicControlsApplier.apply()` so admin-configured provider, model, and deterministic parameters take effect; removed direct `anthropic.AsyncAnthropic` client instantiation and `_get_client()` method
+- Returns `(findings, llm_used: bool)` tuple so `validate()` can accurately set `llm_used` on the result
+- Removed STEP-28 TODO comment; updated `_DEFAULT_PROMPTS` docstring to clarify it is the final in-validator fallback (not the primary prompt source)
+- Fixed deprecated `datetime.utcnow()` → `datetime.now(timezone.utc)`
+
+**End-to-end flow:**
+1. Advisor clicks "Run AI Check" → `POST /documents/{id}/validate` → 202 returned immediately
+2. Background: OCR data reconstructed (or simulated) → effective prompt loaded → `LLMFallbackChain` calls Anthropic (with prompt caching + deterministic controls) → parses `FindingResult[]` JSON → heuristic fallback if all providers fail → persists to `documents.validation_result` JSONB
+3. `DOCUMENT_STATUS_CHANGED` socket event → `AIValidationPanel` updates in real time with pass/warn/fail findings
+4. Client resubmits document (`parent_doc_id` set) → diff auto-triggered on upload → `VersionDiffDetector.compute()` → persists to `documents.diff_result` JSONB → `VersionDiffPanel` shows similarity ratio + field-level added/modified/removed sections
+
+---
 
 ---
 
