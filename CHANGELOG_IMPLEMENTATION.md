@@ -650,8 +650,23 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 `backend/app/agents/base/base_agent.py` ✓ — `timed_process()` fires `asyncio.create_task(audit_log_service.log_agent_task_completed(...))` for both SUCCESS and FAILED outcomes; every agent task decision is now logged to the audit trail without blocking the task response
 
-### [ ] STEP-32 — Compliance Decision Logging & Evidence Packet Persistence
-**BRD:** FR-14, Section 10.2 | **Depends:** STEP-29, STEP-31
+### [DONE] STEP-32 — Compliance Decision Logging & Evidence Packet Persistence
+**Date:** 2026-05-15 | **BRD:** FR-14, Section 10.2, Hackathon Criterion #11 | **Depends:** STEP-29, STEP-31
+
+**Artifacts produced / modified:**
+
+`backend/app/services/compliance/compliance_decision_logger.py` ✓ — `ComplianceDecisionLogger` class with two typed methods:
+- `log_automated_kyc_decision()`: logs `COMPLIANCE_DECISION` event for every KYC engine outcome (PASSED → `KYC_APPROVED_AUTOMATED`, ESCALATED → `KYC_ESCALATED_FOR_REVIEW`, FAILED → `KYC_REJECTED_AUTOMATED`); carries full score breakdown (identity/AML/profile/composite), risk_band, escalation_reasons, required_documents, evidence_packet_id; acquires own DB session when no session provided
+- `log_human_review_decision()`: logs `COMPLIANCE_DECISION` event for every human reviewer action (APPROVED → `REVIEW_APPROVED_BY_HUMAN`, REJECTED → `REVIEW_REJECTED_BY_HUMAN`, MORE_INFO_REQUESTED → `REVIEW_MORE_INFO_REQUESTED_BY_HUMAN`); carries reviewer_role, decision_notes, risk_band, composite_score from stored evidence packet; graceful-fail with error log on exception
+- `compliance_decision_logger` module-level singleton
+
+`backend/app/agents/kyc_compliance/kyc_compliance_agent.py` ✓ — `_signal_outcome()` now fires `asyncio.create_task(compliance_decision_logger.log_automated_kyc_decision(...))` after routing the bus signal; covers all three KYC outcomes; float() casts applied to Decimal-mapped score fields
+
+`backend/app/services/compliance/human_review_service.py` ✓ — `decide()` now calls `compliance_decision_logger.log_human_review_decision()` after `audit_log_service.log_review_decided()`; risk_band and composite_score extracted from `review.evidence_packet["kyc_result"]`
+
+`backend/app/services/compliance/__init__.py` ✓ — `compliance_decision_logger` and `ComplianceDecisionLogger` added to exports
+
+`backend/app/api/routers/reviews.py` ✓ — `GET /reviews/{review_id}/evidence` enhanced: queries `event_logs` for `is_compliance_event=True` rows matching `case_id`, orders by `created_at`, includes up to 50 entries as `compliance_audit_trail` array alongside the existing `evidence_packet`; response now has shape `{review_id, evidence_packet, compliance_audit_trail}`
 
 ### [ ] STEP-33 — Paused Journey Resumption
 **BRD:** FR-12 | **Depends:** STEP-13, STEP-17, STEP-31

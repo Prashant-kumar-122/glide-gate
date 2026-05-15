@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.agents import EventLog
+
 from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import NotFoundError, UnprocessableError
@@ -105,7 +107,38 @@ async def get_evidence_packet(
     _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
 ) -> dict:
     review = await _get_review_or_404(review_id, db)
-    return {"review_id": str(review_id), "evidence_packet": review.evidence_packet}
+
+    # Fetch compliance audit events for this case (most recent 50)
+    audit_result = await db.execute(
+        select(EventLog)
+        .where(
+            EventLog.is_compliance_event.is_(True),
+            EventLog.case_id == review.case_id,
+        )
+        .order_by(EventLog.created_at.asc())
+        .limit(50)
+    )
+    audit_events = audit_result.scalars().all()
+    compliance_trail = [
+        {
+            "id": str(e.id),
+            "event_type": e.event_type,
+            "event_category": e.event_category,
+            "actor_id": e.actor_id,
+            "actor_role": e.actor_role,
+            "entity_type": e.entity_type,
+            "entity_id": str(e.entity_id) if e.entity_id else None,
+            "payload": e.payload,
+            "created_at": e.created_at.isoformat(),
+        }
+        for e in audit_events
+    ]
+
+    return {
+        "review_id": str(review_id),
+        "evidence_packet": review.evidence_packet,
+        "compliance_audit_trail": compliance_trail,
+    }
 
 
 @router.post("/{review_id}/decide", status_code=status.HTTP_200_OK, response_model=DecisionOut)

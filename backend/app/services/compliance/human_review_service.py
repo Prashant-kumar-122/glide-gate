@@ -22,6 +22,7 @@ from app.database import AsyncSessionLocal
 from app.models.kyc_reviews import HumanReview, KYCCheck
 from app.models.cases import OnboardingCase
 from app.services.audit.audit_log_service import audit_log_service
+from app.services.compliance.compliance_decision_logger import compliance_decision_logger
 from app.services.compliance.evidence_packet_assembler import evidence_packet_assembler
 from app.services.context_store.context_store_service import context_store
 from app.websocket.socket_emitter import socket_emitter
@@ -171,13 +172,26 @@ class HumanReviewService:
         review.decided_at = datetime.now(timezone.utc)
         await db.commit()
 
-        # Audit log
+        # Audit log — specific review event
         await audit_log_service.log_review_decided(
             review_id=review_id,
             case_id=review.case_id,
             decision=decision,
             reviewer_role=reviewer_role,
             notes=decision_notes,
+        )
+
+        # Compliance decision log — COMPLIANCE_DECISION event for 100% audit coverage
+        kyc_result = (review.evidence_packet or {}).get("kyc_result", {})
+        await compliance_decision_logger.log_human_review_decision(
+            review_id=review_id,
+            case_id=review.case_id,
+            client_id=None,
+            decision=decision,
+            reviewer_role=reviewer_role,
+            decision_notes=decision_notes,
+            risk_band=kyc_result.get("risk_band"),
+            composite_score=kyc_result.get("composite_score"),
         )
 
         # Emit socket event
