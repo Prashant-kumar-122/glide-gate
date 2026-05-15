@@ -1,0 +1,13 @@
+{
+  "category": "identity",
+  "version": "1.0",
+  "goal": "Verify the identity document is complete, valid, and not expired.",
+  "factors": [
+    "full_name is present and legible",
+    "date_of_birth is present",
+    "document_number or id_number is present",
+    "expiry_date is present and the document is not expired",
+    "nationality is present",
+    "photo or biometric data noted"
+  ]
+}

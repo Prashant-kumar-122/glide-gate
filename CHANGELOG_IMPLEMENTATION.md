@@ -480,8 +480,26 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - `backend/app/services/llm/providers/__init__.py` ✓ — re-exports all 4 provider classes
 - `backend/app/api/routers/admin/llm_config.py` ✓ — updated to use `set_overrides()` / `clear_overrides()` / `get_all_overrides()` from `deterministic_controls_applier`; dropped local `_overrides` dict so admin UI changes immediately affect all LLM calls
 
-### [ ] STEP-25 — Agent Prompt Library
-**BRD:** Section 6.4, Section 6.1, FR-08 | **Depends:** STEP-24, STEP-05–08
+### [DONE] STEP-25 — Agent Prompt Library
+**Date:** 2026-05-15 | **BRD:** Section 6.4, Section 6.1, FR-08 | **Depends:** STEP-24, STEP-05–08
+
+**Artifacts produced:**
+- `prompts/orchestrator/system.txt` ✓ — workflow stages, routing rules, FSM responsibilities
+- `prompts/customer_service/system.txt` ✓ — conversational persona, 12-section sequencing, extraction rules
+- `prompts/customer_service/data_collection.txt` ✓ — structured data extraction task prompt with field normalisation rules and template variables
+- `prompts/kyc_compliance/system.txt` ✓ — risk scoring model (identity×0.4 + AML×0.4 + profile×0.2), band thresholds, driver lists
+- `prompts/kyc_compliance/risk_assessment.txt` ✓ — LLM risk narrative task prompt; JSON schema with APPROVE/ESCALATE/REQUEST_MORE_INFO recommendation
+- `prompts/document_intelligence/system.txt` ✓ — 6-category taxonomy, 4-step processing pipeline, FindingResult schema, classification confidence thresholds
+- `prompts/document_intelligence/completeness_validation.txt` ✓ — completeness validation task prompt with category-specific factor injection via template variables
+- `prompts/product_onboarding/cash_account.txt` ✓ — Cash Account suitability criteria, 7-step onboarding sequence, SuitabilityAssessor weight configuration
+- `prompts/product_onboarding/retirement_account.txt` ✓ — Retirement Account suitability criteria, 8-step onboarding sequence, near-retirement enhanced review flag
+- `prompts/contact_centre/call_summary.txt` ✓ — call summary task prompt; CallSummary JSON schema with summary/key_points/recommended_actions
+- `prompts/validation_defaults/identity.json` ✓ — 6 validation factors
+- `prompts/validation_defaults/financial.json` ✓ — 5 validation factors
+- `prompts/validation_defaults/legal.json` ✓ — 5 validation factors
+- `prompts/validation_defaults/insurance.json` ✓ — 5 validation factors
+- `prompts/validation_defaults/compliance.json` ✓ — 6 validation factors
+- `prompts/validation_defaults/entity.json` ✓ — 5 validation factors
 
 ### [ ] STEP-26 — Skills Framework (6 Shared Skills)
 **BRD:** Section 6.4 | **Depends:** STEP-24, STEP-25, STEP-04–08

@@ -1,0 +1,12 @@
+{
+  "category": "legal",
+  "version": "1.0",
+  "goal": "Ensure the legal document is properly executed and relevant parties are identified.",
+  "factors": [
+    "document is signed or executed",
+    "relevant parties (trustee/beneficiary or grantor/attorney) are named",
+    "establishment or execution date is present",
+    "governing jurisdiction is stated",
+    "document is not expired (if applicable)"
+  ]
+}

@@ -1,0 +1,23 @@
+You are extracting structured data from a client's conversational response during wealth management onboarding.
+
+Task: Parse the client's message and extract values for the fields listed below. Return ONLY a JSON object mapping field_id → extracted value. If a field is not present in the message, omit it from the output.
+
+Rules:
+- Normalise dates to ISO-8601 format (YYYY-MM-DD).
+- Normalise currency values to plain numbers without symbols or commas (e.g. "£250,000" → 250000).
+- Map employment status to exactly one of: Employed, Self-Employed, Retired, Student, Unemployed.
+- Map risk tolerance to exactly one of: Conservative, Moderate, Balanced, Growth, Aggressive.
+- Map investment experience to exactly one of: None, Less than 1 year, 1-3 years, 3-5 years, More than 5 years.
+- Multi-choice fields (e.g. selected_products) should be returned as a JSON array.
+- Boolean fields (e.g. pep_declaration) should be true or false.
+
+Current section fields:
+{section_fields}
+
+Client message:
+{client_message}
+
+Previously collected data (for context only — do not re-extract these unless the client is correcting them):
+{collected_data}
+
+Respond with a single JSON object. Do not include any explanation or wrapper text.
