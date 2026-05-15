@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import AsyncSessionLocal
 from app.models.kyc_reviews import HumanReview, KYCCheck
 from app.models.cases import OnboardingCase
+from app.services.audit.audit_log_service import audit_log_service
 from app.services.compliance.evidence_packet_assembler import evidence_packet_assembler
 from app.services.context_store.context_store_service import context_store
 from app.websocket.socket_emitter import socket_emitter
@@ -109,7 +110,18 @@ class HumanReviewService:
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"[HumanReviewService] context update failed: {exc}")
 
-        # 6. Emit socket event
+        # 6. Audit log
+        await audit_log_service.log_review_created(
+            review_id=review.id,
+            case_id=case_id,
+            client_id=client_id,
+            escalation_reason=escalation_reason,
+            risk_band=kyc_payload.get("risk_band"),
+            composite_score=kyc_payload.get("composite_score"),
+            db=db,
+        )
+
+        # 7. Emit socket event
         await socket_emitter.escalation_triggered(case_id, {
             "review_id": str(review.id),
             "case_id": str(case_id),
@@ -158,6 +170,15 @@ class HumanReviewService:
         review.reviewer_role = reviewer_role
         review.decided_at = datetime.now(timezone.utc)
         await db.commit()
+
+        # Audit log
+        await audit_log_service.log_review_decided(
+            review_id=review_id,
+            case_id=review.case_id,
+            decision=decision,
+            reviewer_role=reviewer_role,
+            notes=decision_notes,
+        )
 
         # Emit socket event
         await socket_emitter.review_decided(review.case_id, {

@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.documents import Document
+from app.services.audit.audit_log_service import audit_log_service
 from app.websocket.socket_emitter import socket_emitter
 
 DocumentStatus = Literal[
@@ -69,6 +70,15 @@ class DocumentStatusService:
         logger.info(
             f"[DocStatus] document={document_id} {current} → {new_status}"
             + (f" reason={reason}" if reason else "")
+        )
+
+        await audit_log_service.log_document_status_changed(
+            document_id=document_id,
+            case_id=doc.case_id,
+            old_status=current,
+            new_status=new_status,
+            category=doc.category,
+            db=db,
         )
 
         if emit_event:

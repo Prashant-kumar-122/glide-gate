@@ -629,10 +629,26 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 `frontend/src/features/admin/CheckpointRulesEditor.tsx` ✓ — Fully rewritten: removed amber "local state only" banner; table now shows description, action chip, dimension chips (Risk/Product/Band/Jurisdiction), Source (Built-in shield / Custom); delete button disabled for built-in rules; add-rule form exposes all 4 dimension fields (risk_level dropdown, product_type text, account_value_band dropdown, jurisdiction text) + action + required docs (comma-separated); Reset to defaults button with confirm dialog; loading/error states throughout; `tsc --noEmit` passes with zero errors ✓
 
-### [ ] STEP-31 — Append-Only Audit Event Log
+### [DONE] STEP-31 — Append-Only Audit Event Log
+**Date:** 2026-05-15 | **BRD:** FR-14, Section 10.2 (100% of decisions logged) | **Depends:** STEP-10, STEP-12, STEP-14
 
-### [ ] STEP-31 — Append-Only Audit Event Log
-**BRD:** FR-14, Section 10.2 | **Depends:** STEP-10, STEP-12, STEP-14
+**Artifacts produced / modified:**
+
+`backend/app/services/audit/audit_event_types.py` ✓ — `AuditEventType` StrEnum (64 typed event constants across 10 categories: case lifecycle, client, data collection, KYC, document, product onboarding, human review, compliance, agent task, MCP, notification, auth, admin); `AuditEventCategory` StrEnum (7 categories)
+
+`backend/app/services/audit/audit_log_service.py` ✓ — `AuditLogService` append-only service: `log()` core method (no UPDATE/DELETE methods exist); typed convenience helpers: `log_agent_task_completed`, `log_document_status_changed`, `log_review_created`, `log_review_decided`, `log_mcp_tool_called`, `log_compliance_decision`; accepts optional `db` session (adds to caller's transaction when provided; acquires own `AsyncSessionLocal` and commits when omitted); `audit_log_service` module-level singleton
+
+`backend/app/services/audit/__init__.py` ✓ — re-exports `AuditEventType`, `AuditEventCategory`, `AuditLogService`, `audit_log_service`
+
+`backend/app/api/routers/audit.py` ✓ — role guards updated from `"Advisor"/"ComplianceOfficer"/"Admin"` → lowercase `"advisor"/"compliance_officer"/"admin"` (matches JWT convention); `datetime.utcnow()` → `datetime.now(timezone.utc)`; added `GET /audit/event-types` endpoint returning sorted StrEnum values for filter dropdowns; `AuditEventType` import added
+
+`backend/app/services/document/document_status_service.py` ✓ — `update_status()` now calls `audit_log_service.log_document_status_changed()` after every valid transition (within the same DB session); 100% of document status changes are now audited
+
+`backend/app/services/compliance/human_review_service.py` ✓ — `create_review()` calls `audit_log_service.log_review_created()` (within the same DB session, committed with the review record); `decide()` calls `audit_log_service.log_review_decided()` (own session, fire-and-forget after commit) with decision-specific event types (REVIEW_APPROVED / REVIEW_REJECTED / REVIEW_MORE_INFO_REQUESTED)
+
+`backend/app/mcp/mcp_logger.py` ✓ — `log()` now calls `audit_log_service.log_mcp_tool_called()` within the same session as the `MCPToolCall` record; both records committed atomically; 100% of MCP calls are now in event_logs in addition to mcp_tool_calls
+
+`backend/app/agents/base/base_agent.py` ✓ — `timed_process()` fires `asyncio.create_task(audit_log_service.log_agent_task_completed(...))` for both SUCCESS and FAILED outcomes; every agent task decision is now logged to the audit trail without blocking the task response
 
 ### [ ] STEP-32 — Compliance Decision Logging & Evidence Packet Persistence
 **BRD:** FR-14, Section 10.2 | **Depends:** STEP-29, STEP-31

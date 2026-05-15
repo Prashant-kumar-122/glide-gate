@@ -41,20 +41,45 @@ class BaseAgent(ABC):
         await self.bus.publish(packet)
 
     async def timed_process(self, task: TaskPacket) -> TaskResponse:
+        from app.services.audit.audit_log_service import audit_log_service
+
         start = time.monotonic()
         try:
             response = await self.process(task)
         except Exception as exc:
             elapsed = int((time.monotonic() - start) * 1000)
             self.logger.error(f"Task {task.id} ({task.task_type}) failed: {exc}")
-            return TaskResponse(
+            response = TaskResponse(
                 task_id=task.id,
                 from_agent=self.agent_id,
                 status="FAILED",
                 errors=[str(exc)],
                 duration_ms=elapsed,
             )
+            import asyncio
+            asyncio.create_task(
+                audit_log_service.log_agent_task_completed(
+                    agent_id=str(self.agent_id),
+                    task_type=str(task.task_type),
+                    case_id=task.case_id,
+                    client_id=task.client_id,
+                    duration_ms=elapsed,
+                    status="FAILED",
+                )
+            )
+            return response
         response.duration_ms = int((time.monotonic() - start) * 1000)
+        import asyncio
+        asyncio.create_task(
+            audit_log_service.log_agent_task_completed(
+                agent_id=str(self.agent_id),
+                task_type=str(task.task_type),
+                case_id=task.case_id,
+                client_id=task.client_id,
+                duration_ms=response.duration_ms,
+                status=response.status,
+            )
+        )
         return response
 
     def __repr__(self) -> str:
