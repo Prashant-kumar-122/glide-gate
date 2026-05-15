@@ -35,7 +35,8 @@ class LLMProviderFactory:
         if name == "google":
             return GoogleProvider(api_key=settings.GOOGLE_API_KEY, model=mdl)
         if name == "local":
-            return LocalModelProvider(base_url=settings.LOCAL_MODEL_ENDPOINT, model=mdl)
+            local_model = model or overrides.get("primary_model") or settings.LOCAL_MODEL_NAME
+            return LocalModelProvider(base_url=settings.LOCAL_MODEL_ENDPOINT, model=local_model)
         raise ValueError(f"Unknown LLM provider: {name!r}")
 
     def create_fallback_ordered(self) -> list[LLMProvider]:
