@@ -464,8 +464,21 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 5 — AI / LLM Capabilities
 
-### [ ] STEP-24 — LLM Provider Abstraction Layer
-**BRD:** Section 5.1.12, FR-08 | **Depends:** STEP-02, STEP-05–08
+### [DONE] STEP-24 — LLM Provider Abstraction Layer
+**Date:** 2026-05-15 | **BRD:** Section 5.1.12, FR-08 | **Depends:** STEP-02, STEP-05–08
+
+**Artifacts produced:**
+- `backend/app/services/llm/llm_provider.py` ✓ — `LLMMessage`, `LLMRequest`, `LLMResponse`, `LLMStreamChunk` Pydantic models; `LLMProvider` abstract base class with `complete()`, `stream()`, `is_available()` interface
+- `backend/app/services/llm/providers/anthropic_provider.py` ✓ — `AnthropicProvider`: Anthropic SDK, prompt caching via ephemeral `cache_control` on system block, `stream()` via `client.messages.stream()` async context manager, `cached` flag from `cache_read_input_tokens`
+- `backend/app/services/llm/providers/openai_provider.py` ✓ — `OpenAIProvider`: `AsyncOpenAI`, `seed`/`frequency_penalty`/`presence_penalty` params, `stream=True` async iterator
+- `backend/app/services/llm/providers/google_provider.py` ✓ — `GoogleProvider`: `google-generativeai` SDK (sync wrapped in `run_in_executor`), `GenerationConfig` for temperature/top_p/max_output_tokens
+- `backend/app/services/llm/providers/local_model_provider.py` ✓ — `LocalModelProvider`: `httpx.AsyncClient` against OpenAI-compatible `/chat/completions`; SSE line parsing for streaming
+- `backend/app/services/llm/llm_provider_factory.py` ✓ — `LLMProviderFactory.create()` reads provider/model from settings + runtime overrides; `create_fallback_ordered()` returns primary-first list of available providers; module-level `llm_provider_factory` singleton
+- `backend/app/services/llm/llm_fallback_chain.py` ✓ — `LLMFallbackChain.complete()` / `.stream()`: rebuilds provider list from factory on each call (picks up admin overrides live), logs per-provider failures, raises only when all fail; module-level `llm_fallback_chain` singleton
+- `backend/app/services/llm/deterministic_controls_applier.py` ✓ — `DeterministicControlsApplier.apply()` stamps 5 deterministic params (temperature, top_p, seed, frequency_penalty, presence_penalty) from merged settings+overrides onto an `LLMRequest` copy; module-level `set_overrides()` / `clear_overrides()` / `get_all_overrides()` shared by factory and admin router; `controls_applier` singleton
+- `backend/app/services/llm/__init__.py` ✓ — re-exports all public symbols
+- `backend/app/services/llm/providers/__init__.py` ✓ — re-exports all 4 provider classes
+- `backend/app/api/routers/admin/llm_config.py` ✓ — updated to use `set_overrides()` / `clear_overrides()` / `get_all_overrides()` from `deterministic_controls_applier`; dropped local `_overrides` dict so admin UI changes immediately affect all LLM calls
 
 ### [ ] STEP-25 — Agent Prompt Library
 **BRD:** Section 6.4, Section 6.1, FR-08 | **Depends:** STEP-24, STEP-05–08

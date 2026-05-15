@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.api.dependencies.role_guard import require_role
 from app.config import settings
+from app.services.llm.deterministic_controls_applier import (
+    clear_overrides,
+    get_all_overrides,
+    set_overrides,
+)
 
 router = APIRouter(prefix="/admin/llm-config", tags=["admin"])
-
-# In-memory override store (DB-persisted config wired in STEP-24)
-_overrides: dict[str, Any] = {}
 
 
 # ── Request / Response models ─────────────────────────────────────────────────
@@ -49,18 +51,19 @@ class LLMConfigUpdate(BaseModel):
 async def get_llm_config(
     _user: dict = Depends(require_role("Admin")),
 ) -> LLMConfigOut:
+    ov = get_all_overrides()
     return LLMConfigOut(
-        primary_provider=_overrides.get("primary_provider", settings.PRIMARY_LLM_PROVIDER),
-        primary_model=_overrides.get("primary_model", settings.PRIMARY_LLM_MODEL),
-        temperature=_overrides.get("temperature", settings.LLM_TEMPERATURE),
-        top_p=_overrides.get("top_p", settings.LLM_TOP_P),
-        seed=_overrides.get("seed", settings.LLM_SEED),
-        frequency_penalty=_overrides.get("frequency_penalty", settings.LLM_FREQUENCY_PENALTY),
-        presence_penalty=_overrides.get("presence_penalty", settings.LLM_PRESENCE_PENALTY),
-        max_tokens=_overrides.get("max_tokens", settings.LLM_MAX_TOKENS),
-        cache_ttl=_overrides.get("cache_ttl", settings.LLM_CACHE_TTL),
-        max_retries=_overrides.get("max_retries", settings.LLM_MAX_RETRIES),
-        overrides_active=bool(_overrides),
+        primary_provider=ov.get("primary_provider", settings.PRIMARY_LLM_PROVIDER),
+        primary_model=ov.get("primary_model", settings.PRIMARY_LLM_MODEL),
+        temperature=ov.get("temperature", settings.LLM_TEMPERATURE),
+        top_p=ov.get("top_p", settings.LLM_TOP_P),
+        seed=ov.get("seed", settings.LLM_SEED),
+        frequency_penalty=ov.get("frequency_penalty", settings.LLM_FREQUENCY_PENALTY),
+        presence_penalty=ov.get("presence_penalty", settings.LLM_PRESENCE_PENALTY),
+        max_tokens=ov.get("max_tokens", settings.LLM_MAX_TOKENS),
+        cache_ttl=ov.get("cache_ttl", settings.LLM_CACHE_TTL),
+        max_retries=ov.get("max_retries", settings.LLM_MAX_RETRIES),
+        overrides_active=bool(ov),
     )
 
 
@@ -69,8 +72,7 @@ async def update_llm_config(
     body: LLMConfigUpdate,
     _user: dict = Depends(require_role("Admin")),
 ) -> LLMConfigOut:
-    updates = body.model_dump(exclude_none=True)
-    _overrides.update(updates)
+    set_overrides(body.model_dump(exclude_none=True))
     return await get_llm_config(_user=_user)
 
 
@@ -78,5 +80,5 @@ async def update_llm_config(
 async def reset_llm_config(
     _user: dict = Depends(require_role("Admin")),
 ) -> LLMConfigOut:
-    _overrides.clear()
+    clear_overrides()
     return await get_llm_config(_user=_user)
