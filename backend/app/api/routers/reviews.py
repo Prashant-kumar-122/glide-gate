@@ -8,13 +8,13 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import NotFoundError, UnprocessableError
 from app.database import get_db
 from app.models.kyc_reviews import HumanReview
+from app.services.compliance.human_review_service import human_review_service
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -72,7 +72,7 @@ async def list_pending_reviews(
     case_id: UUID | None = None,
     include_decided: bool = False,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor")),
+    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
 ) -> list[ReviewOut]:
     query = select(HumanReview)
 
@@ -92,7 +92,7 @@ async def list_pending_reviews(
 async def get_review(
     review_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor")),
+    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
 ) -> ReviewOut:
     review = await _get_review_or_404(review_id, db)
     return ReviewOut.model_validate(review)
@@ -102,7 +102,7 @@ async def get_review(
 async def get_evidence_packet(
     review_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin")),
+    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
 ) -> dict:
     review = await _get_review_or_404(review_id, db)
     return {"review_id": str(review_id), "evidence_packet": review.evidence_packet}
@@ -113,27 +113,26 @@ async def decide_review(
     review_id: UUID,
     body: DecideRequest,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_role("ComplianceOfficer", "Admin")),
+    user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
 ) -> DecisionOut:
-    review = await _get_review_or_404(review_id, db)
-
-    if review.status != "PENDING":
-        raise UnprocessableError(
-            f"Review '{review_id}' has already been decided (status: {review.status})"
+    try:
+        review = await human_review_service.decide(
+            review_id=review_id,
+            decision=body.decision,
+            decision_notes=body.decision_notes,
+            reviewer_role=user.get("role"),
+            db=db,
         )
+    except ValueError as exc:
+        raise UnprocessableError(str(exc)) from exc
 
-    review.status = body.decision
-    review.decision = body.decision
-    review.decision_notes = body.decision_notes
-    review.reviewer_role = user.get("role")
-    review.decided_at = datetime.utcnow()
-
-    await db.commit()
-
-    # Workflow resumption wired in STEP-17 / STEP-29
     return DecisionOut(
         review_id=review_id,
-        decision=body.decision,
+        decision=review.decision,
         decided_at=review.decided_at,
-        message="Decision recorded — workflow will resume via AgentOrchestrationService",
+        message={
+            "APPROVED": "Case approved — product onboarding will resume.",
+            "REJECTED": "Case rejected — client will be notified.",
+            "MORE_INFO_REQUESTED": "Additional information requested — case remains on hold.",
+        }.get(body.decision, "Decision recorded."),
     )

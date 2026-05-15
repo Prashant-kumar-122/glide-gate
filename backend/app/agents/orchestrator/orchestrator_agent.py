@@ -174,6 +174,8 @@ class OrchestratorAgent(BaseAgent):
         )
 
     async def _handle_escalate(self, task: TaskPacket) -> TaskResponse:
+        import asyncio
+
         case_id = task.case_id
         reason: str = task.payload.get("reason", "Unspecified escalation")
 
@@ -197,12 +199,42 @@ class OrchestratorAgent(BaseAgent):
                 payload={"reason": reason},
             )
         )
+
+        # Persist HumanReview record in background (owns its own DB session)
+        asyncio.create_task(
+            self._persist_human_review(case_id, task.client_id, reason, task.payload)
+        )
+
         return TaskResponse(
             task_id=task.id,
             from_agent=self.agent_id,
             status="ESCALATED",
             result={"reason": reason},
         )
+
+    async def _persist_human_review(
+        self,
+        case_id: UUID,
+        client_id: UUID,
+        reason: str,
+        payload: dict,
+    ) -> None:
+        from app.database import AsyncSessionLocal
+        from app.services.compliance.human_review_service import human_review_service
+
+        async with AsyncSessionLocal() as db:
+            try:
+                await human_review_service.create_review(
+                    case_id=case_id,
+                    client_id=client_id,
+                    escalation_reason=reason,
+                    kyc_payload=payload,
+                    db=db,
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.logger.error(
+                    f"Failed to persist HumanReview for case={case_id}: {exc}"
+                )
 
     async def _handle_health_check(self, task: TaskPacket) -> TaskResponse:
         return TaskResponse(

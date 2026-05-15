@@ -569,8 +569,39 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 6 — Compliance & Audit
 
-### [ ] STEP-29 — Human-in-the-Loop Review Workflow
-**BRD:** FR-13 | **Depends:** STEP-06, STEP-09, STEP-13, STEP-14, STEP-15, STEP-26
+### [DONE] STEP-29 — Human-in-the-Loop Review Workflow
+**Date:** 2026-05-15 | **BRD:** FR-13, Hackathon Criteria #5, #11 | **Depends:** STEP-06, STEP-09, STEP-13, STEP-14, STEP-15, STEP-26
+
+**Artifacts produced / modified:**
+
+`backend/app/services/compliance/evidence_packet_assembler.py` ✓ — `EvidencePacketAssembler.assemble()`: DB-backed assembly of kyc_result + client_summary (Client + ClientProfile join) + document_summary (by_status counts, missing categories) + case_summary; `assemble_from_agent_payload()` convenience wrapper; `evidence_packet_assembler` singleton
+
+`backend/app/services/compliance/human_review_service.py` ✓ — `HumanReviewService`:
+- `create_review()`: persists `KYCCheck` + `HumanReview` DB records; assembles evidence packet via `EvidencePacketAssembler`; stamps `onboarding_cases.shared_context["human_review_id"]` + updates stage to ESCALATED; updates in-memory `ContextStoreService`; emits `ESCALATION_TRIGGERED` socket event
+- `decide()`: records decision + reviewer role + notes; emits `REVIEW_DECIDED` socket event; fires `_post_decision_workflow` background task
+- `_resume_after_approval()`: advances case to PARALLEL_PRODUCTS; calls `orchestration_service.start_product_onboarding()` to fan out product tasks; emits `CASE_STAGE_CHANGED`
+- `_terminate_after_rejection()`: marks case REJECTED + COMPLETE; emits `CASE_STAGE_CHANGED`
+- `_request_more_info()`: stays ESCALATED; emits `CASE_STAGE_CHANGED`; `human_review_service` singleton
+
+`backend/app/services/compliance/__init__.py` ✓ — re-exports both service classes and singletons
+
+`backend/app/agents/orchestrator/orchestrator_agent.py` ✓ — `_handle_escalate()` now fires `asyncio.create_task(_persist_human_review(...))` which acquires its own `AsyncSessionLocal` session and calls `human_review_service.create_review()` — keeps agent layer DB-free while persisting the review record
+
+`backend/app/services/orchestration/agent_orchestration_service.py` ✓ — added `start_product_onboarding(case_id, client_id, selected_products)`: publishes one `ONBOARD_PRODUCT` task per product directly to the bus; used by `HumanReviewService._resume_after_approval()` to resume workflow without re-running KYC
+
+`backend/app/api/routers/reviews.py` ✓ — `POST /reviews/{review_id}/decide` wired to `human_review_service.decide()`; returns decision-specific message; role guards updated to accept lowercase role names (`advisor`, `admin`); `ValueError` from service layer mapped to `UnprocessableError`
+
+`frontend/src/lib/api.ts` ✓ — added `ReviewOut`, `EvidencePacket`, `DecisionOut` interfaces
+
+`frontend/src/hooks/usePendingReviews.ts` ✓ — TanStack Query hooks: `usePendingReviews()` (15s refetch), `useReviewsByCase(caseId)`, `useReview(reviewId)`, `useEvidencePacket(reviewId)`, `useDecideReview()` mutation (invalidates all review queries on success); `reviewQk` query-key factory
+
+`frontend/src/features/compliance-review/EscalationQueue.tsx` ✓ — scrollable list of pending escalations; risk band colour chips; case ID + escalation reason + timestamp per row; selected-row highlight; loading skeleton; empty-state with green checkmark
+
+`frontend/src/features/compliance-review/EvidencePacketPanel.tsx` ✓ — 4-section evidence display (KYC scores heat-mapped by risk %, escalation reasons list, client profile key-value grid, document summary by status + missing categories, case details); `useEvidencePacket` TanStack Query hook
+
+`frontend/src/features/compliance-review/ReviewActionBar.tsx` ✓ — 3-button action bar (Approve / Reject / Request Info); `ConfirmationModal` gate with optional notes textarea for audit trail; `useDecideReview` mutation with loading/error states; read-only decided view when status ≠ PENDING
+
+`tsc --noEmit` passes with zero errors ✓
 
 ### [ ] STEP-30 — Configurable Checkpoint Rules (FR-15)
 **BRD:** FR-15, Section 10.2 | **Depends:** STEP-06, STEP-12, STEP-14, STEP-29
