@@ -412,6 +412,56 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ---
 
+### [DONE] STEP-23B — Phase 4 API Contract & Type-Shape Remediation
+**Date:** 2026-05-15 | **BRD:** Section 9.1, FR-07, FR-08, FR-09, FR-11 | **Depends:** STEP-14, STEP-18, STEP-20–23A
+
+**Root cause:** A comprehensive audit identified 10 frontend↔backend contract mismatches causing API failures (HTTP 404/422) and a hard `TypeError` crash in the Agent Trace canvas. All fixes are backward-compatible and targeted — no surrounding code was refactored.
+
+**Artifacts produced / modified:**
+
+`backend/app/api/routers/documents.py` ✓
+- `DocumentOut` — added `name` (alias for `original_filename`), `has_validation_result` (bool), `has_diff` (bool) as `@computed_field` properties; frontend was receiving `undefined` for these, causing blank names and non-functional tab badges
+- `DiffOut` — added `parent_id`, `similarity_ratio`, `sections`, `summary`, `computed_at` as `@computed_field` properties unwrapping the nested `diff_result` dict; `VersionDiffPanel` was reading all-undefined fields from the raw dict wrapper
+- Added `UpdateDocumentStatusRequest` Pydantic model
+- Added `PATCH /documents/{document_id}` route (role-guarded Advisor/Admin); `useUpdateDocumentStatus` was calling this endpoint but it did not exist, causing every advisor status-change to 404
+
+`backend/app/api/routers/cases.py` ✓
+- Added `_STAGE_PROGRESS` and `_PRODUCT_STATUS_PROGRESS` lookup dicts
+- `ProductTrackOut` — added `product_name` (str, default ""), `progress` (int, default 0), `steps_total` (int, default 0), `steps_completed` (int, default 0); old fields kept with defaults for backward compat
+- `CaseProgressOut` — renamed `product_tracks` → `products`, `documents_required` → `documents_total`; added `client_id`, `client_name`, `overall_progress`, `escalated`; frontend `CaseSummary` type was fully mismatched causing "…" placeholders, 0% progress, and always-empty product tracks
+- Added `_build_product_track(cp)` helper (constructs with full product + step data)
+- `get_case_summary` — replaced `_get_case_or_404` with a comprehensive query using `selectinload(client)`, `selectinload(case_products).selectinload(product)`, `selectinload(case_products).selectinload(steps)` to populate all new fields without N+1 queries
+
+`backend/app/api/routers/agents.py` ✓
+- `AgentOut` — added `status` (`"active"` / `"inactive"` mapped from `is_active`) and `last_active` (`None` stub) as `@computed_field` properties
+- `AgentTraceOut` — added `agents: list[AgentOut]` field; `AgentDetailPopover.tsx` was calling `traceData.agents.find(...)` which crashed with `TypeError` because backend returned no `agents` array
+- `get_agent_trace` — queries all agents from the `agents` table and includes them in the response alongside tasks
+
+`backend/app/api/routers/conversations.py` ✓
+- Added `CallSummaryOut` Pydantic model
+- Added `GET /cases/{case_id}/call-summary` stub endpoint returning a placeholder response; `useCallSummary` was hitting a 404 on every Contact Centre page load
+
+`frontend/src/hooks/useClientChat.ts` ✓
+- Fixed request body field name: `{ text }` → `{ message: text }` (backend `MessageRequest` declares `message: str`; Pydantic was returning 422 on every chat submission)
+- Added `Authorization: Bearer <token>` header to raw `fetch()` call via `useAuthStore.getState().token` (missing header caused 401 Unauthorized when `DEMO_MODE=False`)
+- Fixed SSE chunk parser: added `parsed.token` to the fallback chain (`parsed.chunk ?? parsed.text ?? parsed.token ?? ''`) to match the backend placeholder stream format `{"type":"token","token":"word"}`
+
+**Bugs resolved:**
+- CRASH-1: `TypeError: Cannot read properties of undefined (reading 'find')` on agent node click — fixed ✓
+- API-1: `PATCH /api/documents/{id}` 404 on document status change — fixed ✓
+- API-2: `POST /api/cases/{id}/message` 422 on chat send — fixed ✓
+- API-3: `POST /api/cases/{id}/message` 401 without auth header — fixed ✓
+- API-4: `GET /api/cases/{id}/call-summary` 404 on Contact Centre — fixed ✓
+- API-5: SSE token chunks silently swallowed, always showing fallback message — fixed ✓
+- DATA-1: All document names showing as `undefined`/`'Document'` — fixed ✓
+- DATA-2: Validation/diff tab badges never appearing — fixed ✓
+- DATA-3: Case summary showing "…" name, 0% progress, empty product tracks — fixed ✓
+- DATA-4: `VersionDiffPanel` all-undefined fields (similarity, sections, summary) — fixed ✓
+- DATA-5: `AgentDetailPopover` crash + no agent info — fixed ✓
+- DATA-6: Agent status always `undefined` — fixed ✓
+
+---
+
 ## Phase 5 — AI / LLM Capabilities
 
 ### [ ] STEP-24 — LLM Provider Abstraction Layer

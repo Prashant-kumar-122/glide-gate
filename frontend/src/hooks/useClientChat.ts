@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/store/authStore'
 import { useChatStore } from '@/store/chatStore'
 
 interface MessageRecord {
@@ -51,10 +52,14 @@ export function useSendMessage(caseId: string | null) {
       let assistantText = ''
 
       try {
+        const token = useAuthStore.getState().token
         const resp = await fetch(`/api/cases/${caseId}/message`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ message: text }),
         })
 
         if (resp.ok && resp.headers.get('content-type')?.includes('text/event-stream') && resp.body) {
@@ -71,8 +76,8 @@ export function useSendMessage(caseId: string | null) {
               const payload = line.slice(6).trim()
               if (payload === '[DONE]') break outer
               try {
-                const parsed = JSON.parse(payload) as { chunk?: string; text?: string }
-                assistantText += parsed.chunk ?? parsed.text ?? ''
+                const parsed = JSON.parse(payload) as { chunk?: string; text?: string; token?: string }
+                assistantText += parsed.chunk ?? parsed.text ?? parsed.token ?? ''
                 onChunk?.(assistantText)
               } catch {
                 // skip malformed SSE line

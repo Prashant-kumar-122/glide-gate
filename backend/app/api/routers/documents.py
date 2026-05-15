@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,6 +63,21 @@ class DocumentOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @computed_field
+    @property
+    def name(self) -> str | None:
+        return self.original_filename
+
+    @computed_field
+    @property
+    def has_validation_result(self) -> bool:
+        return bool(self.validation_result)
+
+    @computed_field
+    @property
+    def has_diff(self) -> bool:
+        return bool(self.diff_result)
+
 
 class DocumentStatusOut(BaseModel):
     id: UUID
@@ -79,11 +94,40 @@ class ValidateAcceptedOut(BaseModel):
     message: str
 
 
+class UpdateDocumentStatusRequest(BaseModel):
+    status: str
+
+
 class DiffOut(BaseModel):
     document_id: UUID
     version: int
     parent_doc_id: UUID | None
     diff_result: dict[str, Any]
+
+    @computed_field
+    @property
+    def parent_id(self) -> UUID | None:
+        return self.parent_doc_id
+
+    @computed_field
+    @property
+    def similarity_ratio(self) -> float:
+        return float(self.diff_result.get("similarity_ratio", 0.0))
+
+    @computed_field
+    @property
+    def sections(self) -> list:
+        return self.diff_result.get("sections", [])
+
+    @computed_field
+    @property
+    def summary(self) -> str:
+        return self.diff_result.get("summary", "")
+
+    @computed_field
+    @property
+    def computed_at(self) -> str | None:
+        return self.diff_result.get("computed_at")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -200,6 +244,28 @@ async def trigger_validation(
         document_id=document_id,
         message="Validation request accepted — AI validation will run asynchronously",
     )
+
+
+@router.patch(
+    "/documents/{document_id}",
+    response_model=DocumentOut,
+    tags=["documents"],
+)
+async def update_document_status(
+    document_id: UUID,
+    body: UpdateDocumentStatusRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_role("Advisor", "Admin")),
+) -> DocumentOut:
+    if body.status not in DOCUMENT_STATUSES:
+        raise UnprocessableError(
+            f"Invalid status '{body.status}'. Allowed: {list(DOCUMENT_STATUSES)}"
+        )
+    doc = await _get_doc_or_404(document_id, db)
+    doc.status = body.status
+    await db.commit()
+    await db.refresh(doc)
+    return DocumentOut.model_validate(doc)
 
 
 @router.get(

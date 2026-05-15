@@ -647,6 +647,13 @@ interface AuthState {
 
 ---
 
+### STEP-23B — Phase 4 API Contract & Type-Shape Remediation
+**Date:** 2026-05-15 | **BRD:** Section 9.1, FR-07, FR-08, FR-09, FR-11 | **Depends:** STEP-14, STEP-18, STEP-20–23A
+
+Resolved all frontend↔backend type mismatches identified in the Phase 4 comprehensive audit. Fixed one hard crash (`TypeError` in `AgentDetailPopover`), four 4xx API failures (`PATCH /documents/{id}`, `POST /message` 422, `POST /message` 401, `GET /call-summary` 404), and six silent data failures (blank document names, 0% progress, empty product tracks, undefined diff fields, blank agent status). Backend: `documents.py` (PATCH route + computed fields), `cases.py` (CaseProgressOut full shape + ProductTrackOut enrichment), `agents.py` (AgentTraceOut agents array + AgentOut status), `conversations.py` (call-summary stub). Frontend: `useClientChat.ts` (body field, auth header, SSE parser).
+
+---
+
 ## Phase 5 — AI / LLM Capabilities
 
 ### STEP-24 — LLM Provider Abstraction Layer
