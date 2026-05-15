@@ -46,6 +46,30 @@ class CallSummaryOut(BaseModel):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+@router.get("/{case_id}/greet")
+async def start_greeting(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+) -> StreamingResponse:
+    """Stream an initial greeting when the client opens a fresh conversation."""
+    case_row = await db.execute(
+        select(OnboardingCase.client_id).where(OnboardingCase.id == case_id)
+    )
+    client_id = case_row.scalar_one_or_none()
+    if client_id is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+
+    return StreamingResponse(
+        conversation_coordinator.handle_greeting(
+            case_id=case_id,
+            client_id=client_id,
+        ),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.post("/{case_id}/message")
 async def send_message(
     case_id: UUID,

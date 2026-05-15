@@ -11,6 +11,7 @@ class ConversationSession:
 
     __slots__ = (
         "case_id",
+        "client_id",
         "selected_products",
         "dco",
         "memory",
@@ -18,8 +19,9 @@ class ConversationSession:
         "_advance_sent",
     )
 
-    def __init__(self, case_id: UUID, selected_products: list[str]) -> None:
+    def __init__(self, case_id: UUID, client_id: UUID, selected_products: list[str]) -> None:
         self.case_id = case_id
+        self.client_id = client_id
         self.selected_products = selected_products
         self.dco = DataCollectionOrchestrator()
         self.memory = ConversationMemory(max_messages=40)
@@ -34,9 +36,11 @@ class SessionManager:
     def __init__(self) -> None:
         self._sessions: dict[UUID, ConversationSession] = {}
 
-    def get_or_create(self, case_id: UUID, selected_products: list[str]) -> ConversationSession:
+    def get_or_create(
+        self, case_id: UUID, client_id: UUID, selected_products: list[str]
+    ) -> ConversationSession:
         if case_id not in self._sessions:
-            self._sessions[case_id] = ConversationSession(case_id, selected_products)
+            self._sessions[case_id] = ConversationSession(case_id, client_id, selected_products)
         return self._sessions[case_id]
 
     def get(self, case_id: UUID) -> ConversationSession | None:

@@ -69,6 +69,7 @@ export interface CaseSummary {
   client_name: string
   current_stage: string
   overall_progress: number
+  questionnaire_pct: number
   documents_total: number
   documents_approved: number
   products: ProductTrack[]

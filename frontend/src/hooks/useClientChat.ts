@@ -25,9 +25,73 @@ export function useChatHistory(caseId: string | null) {
   })
 }
 
+export function useGreeting(caseId: string | null) {
+  const addMessage = useChatStore((s) => s.addMessage)
+  const setTyping = useChatStore((s) => s.setTyping)
+  const setPendingOptions = useChatStore((s) => s.setPendingOptions)
+  const setQuestionnairePct = useChatStore((s) => s.setQuestionnairePct)
+
+  return useMutation({
+    mutationFn: async ({ onChunk, onDone }: {
+      onChunk?: (accumulated: string) => void
+      onDone?: () => void
+    } = {}) => {
+      if (!caseId) return
+      setTyping(true)
+      let assistantText = ''
+      try {
+        const token = useAuthStore.getState().token
+        const resp = await fetch(`/api/cases/${caseId}/greet`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (resp.ok && resp.headers.get('content-type')?.includes('text/event-stream') && resp.body) {
+          const reader = resp.body.getReader()
+          const decoder = new TextDecoder()
+          outer: while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const raw = decoder.decode(value, { stream: true })
+            for (const line of raw.split('\n')) {
+              if (!line.startsWith('data: ')) continue
+              const payload = line.slice(6).trim()
+              if (payload === '[DONE]') break outer
+              try {
+                const parsed = JSON.parse(payload) as {
+                  type?: string; chunk?: string; text?: string; token?: string
+                  options?: string[]; field_id?: string; questionnaire_pct?: number
+                }
+                if (parsed.type === 'options' && parsed.options?.length) {
+                  setPendingOptions(parsed.options)
+                } else if (parsed.type === 'progress' && parsed.questionnaire_pct !== undefined) {
+                  setQuestionnairePct(parsed.questionnaire_pct)
+                } else {
+                  assistantText += parsed.chunk ?? parsed.text ?? parsed.token ?? ''
+                  onChunk?.(assistantText)
+                }
+              } catch { /* skip malformed line */ }
+            }
+          }
+        }
+        addMessage({
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: assistantText,
+          timestamp: new Date().toISOString(),
+        })
+        onDone?.()
+      } finally {
+        setTyping(false)
+      }
+    },
+  })
+}
+
 export function useSendMessage(caseId: string | null) {
   const addMessage = useChatStore((s) => s.addMessage)
   const setTyping = useChatStore((s) => s.setTyping)
+  const setPendingOptions = useChatStore((s) => s.setPendingOptions)
+  const clearPendingOptions = useChatStore((s) => s.clearPendingOptions)
+  const setQuestionnairePct = useChatStore((s) => s.setQuestionnairePct)
 
   return useMutation({
     mutationFn: async ({
@@ -41,6 +105,7 @@ export function useSendMessage(caseId: string | null) {
     }) => {
       if (!caseId) return
 
+      clearPendingOptions()
       addMessage({
         id: crypto.randomUUID(),
         role: 'user',
@@ -76,19 +141,31 @@ export function useSendMessage(caseId: string | null) {
               const payload = line.slice(6).trim()
               if (payload === '[DONE]') break outer
               try {
-                const parsed = JSON.parse(payload) as { chunk?: string; text?: string; token?: string }
-                assistantText += parsed.chunk ?? parsed.text ?? parsed.token ?? ''
-                onChunk?.(assistantText)
+                const parsed = JSON.parse(payload) as {
+                  type?: string
+                  chunk?: string
+                  text?: string
+                  token?: string
+                  message?: string
+                  options?: string[]
+                  field_id?: string
+                  questionnaire_pct?: number
+                }
+                if (parsed.type === 'options' && parsed.options?.length) {
+                  setPendingOptions(parsed.options)
+                } else if (parsed.type === 'progress' && parsed.questionnaire_pct !== undefined) {
+                  setQuestionnairePct(parsed.questionnaire_pct)
+                } else if (parsed.type === 'error') {
+                  console.warn('SSE error from server:', parsed.message)
+                } else {
+                  assistantText += parsed.chunk ?? parsed.text ?? parsed.token ?? ''
+                  onChunk?.(assistantText)
+                }
               } catch {
                 // skip malformed SSE line
               }
             }
           }
-        }
-
-        if (!assistantText) {
-          assistantText =
-            "Thank you for your message. Your advisor will review it and get back to you shortly."
         }
 
         addMessage({

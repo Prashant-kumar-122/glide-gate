@@ -3,10 +3,11 @@ import { X, Briefcase, Users, FileText } from 'lucide-react'
 import { useProducts, useAdvisors, useInitiateCase } from '@/hooks/useDocuments'
 
 interface Props {
-  onCreated: () => void
+  onCreated: (newCaseId: string) => void
+  onClose: () => void
 }
 
-export default function CreateCaseModal({ onCreated }: Props) {
+export default function CreateCaseModal({ onCreated, onClose }: Props) {
   const [caseName, setCaseName] = useState('')
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [advisorId, setAdvisorId] = useState<string>('')
@@ -24,12 +25,12 @@ export default function CreateCaseModal({ onCreated }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!caseName.trim() || selectedProducts.length === 0) return
-    await initiate.mutateAsync({
+    const newCase = await initiate.mutateAsync({
       case_name: caseName.trim(),
       selected_products: selectedProducts,
       assigned_advisor_id: advisorId || null,
     })
-    onCreated()
+    onCreated(newCase.id)
   }
 
   const ready = caseName.trim().length > 0 && selectedProducts.length > 0
@@ -46,7 +47,7 @@ export default function CreateCaseModal({ onCreated }: Props) {
             </p>
           </div>
           <button
-            onClick={onCreated}
+            onClick={onClose}
             className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
           >
             <X className="h-5 w-5" />

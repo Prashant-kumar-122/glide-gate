@@ -688,6 +688,35 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 `backend/app/api/routers/cases.py` ✓ — `POST /cases/{case_id}/resume`: switched from `orchestration_service.resume_onboarding()` to `journey_resumption_service.resume_case()`; role guard lowercased (`"Advisor"/"Admin"` → `"advisor"/"admin"` to match JWT convention)
 
+### [DONE] STEP-33A — Conversational Interface Enhancements & Dynamic Progress Bar
+**Date:** 2026-05-16 | **Depends:** STEP-21, STEP-27
+
+**Artifacts produced / modified:**
+
+`backend/app/agents/customer_service/data_collection_orchestrator.py` ✓ — upgraded from hardcoded fields to DB-backed question loading (`load_questions_from_db`); `_DB_TYPE_MAP` for question-type conversion; `validation_rules` field on `QuestionnaireField`; `get_question_id`, `get_questionnaire_id`, `is_db_loaded` accessors; hardcoded `_FIELDS` retained as fallback
+
+`backend/app/api/routers/conversations.py` ✓ — added `GET /{case_id}/greet` SSE endpoint to stream the opening greeting for fresh conversations
+
+`backend/app/services/conversation/conversation_coordinator.py` ✓ — added `handle_greeting()` async generator; DB answer persistence (`_persist_field` upserts to `onboarding_answers`; `_upsert_question_session` tracks progress in `onboarding_question_sessions`); emits `{type:"options"}` SSE for choice fields; emits `{type:"progress","questionnaire_pct":<0–100>}` after every reply and greeting so the frontend progress bar updates in real time
+
+`backend/app/services/conversation/session_manager.py` ✓ — `ConversationSession` and `SessionManager.get_or_create` now accept and store `client_id`
+
+`backend/app/services/conversation/streaming_response_service.py` ✓ — `stream_reply()` accepts optional `fallback_text`; streams it word-by-word when all LLM providers fail instead of emitting an error event
+
+`db/seeds/03_questionnaire.py` ✓ — expanded from 30 → 45 questions across 11 sections (added trusted_contact, background, regulatory_questions, identity, tax, acknowledgement, sign sections)
+
+`frontend/src/features/client/ConversationalChat.tsx` ✓ — added `OptionChips` component; wires `pendingOptions` from chatStore to render clickable answer chips after assistant replies; clears options on manual text input
+
+`frontend/src/features/client/CreateCaseModal.tsx` ✓ — added `onClose` prop; `onCreated` now receives `newCase.id` so the portal can auto-switch to the newly created case
+
+`frontend/src/hooks/useClientChat.ts` ✓ — added `useGreeting` hook (SSE stream from `/greet`); both `useGreeting` and `useSendMessage` parse `type:"options"` events → `setPendingOptions` and `type:"progress"` events → `setQuestionnairePct`
+
+`frontend/src/routes/ClientPortal.tsx` ✓ — integrates `useGreeting`; `greetedCases` ref prevents double-greeting on re-render; `CreateCaseModal` receives `onClose` + `onCreated(newCaseId)` and auto-switches case after creation
+
+`frontend/src/store/chatStore.ts` ✓ — added `pendingOptions`, `setPendingOptions`, `clearPendingOptions`; added `questionnairePct`, `setQuestionnairePct`; `clearMessages` resets both
+
+`frontend/src/features/client/ClientProgressBar.tsx` ✓ — replaced static `STAGE_PROGRESS` lookup with live `questionnairePct` from chatStore; INTAKE: `(questionnairePct/100)×60`; KYC: 70; PARALLEL_PRODUCTS: `70+(docs_approved/docs_total)×30`; REVIEW: 95; COMPLETE: 100
+
 ---
 
 ## Phase 7 — Demo & Visualization

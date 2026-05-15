@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, Plus } from 'lucide-react'
 import ConversationalChat from '@/features/client/ConversationalChat'
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
@@ -7,7 +7,7 @@ import CreateCaseModal from '@/features/client/CreateCaseModal'
 import { useCases, useCaseProgress } from '@/hooks/useDocuments'
 import { useWorkspaceSocket } from '@/hooks/useWorkspaceSocket'
 import { useChatStore } from '@/store/chatStore'
-import { useChatHistory } from '@/hooks/useClientChat'
+import { useChatHistory, useGreeting } from '@/hooks/useClientChat'
 
 export default function ClientPortal() {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null)
@@ -20,6 +20,10 @@ export default function ClientPortal() {
   const clearMessages = useChatStore((s) => s.clearMessages)
   const addMessage = useChatStore((s) => s.addMessage)
   const setSessionId = useChatStore((s) => s.setSessionId)
+
+  const greeting = useGreeting(activeCaseId)
+  // Track which cases have already received their greeting so we never fire twice
+  const greetedCases = useRef<Set<string>>(new Set())
 
   // Auto-select first case on load
   useEffect(() => {
@@ -40,6 +44,11 @@ export default function ClientPortal() {
         content: m.content,
         timestamp: m.created_at,
       })
+    }
+    // If this is a fresh conversation, trigger the assistant's opening greeting
+    if (history.length === 0 && activeCaseId && !greetedCases.current.has(activeCaseId)) {
+      greetedCases.current.add(activeCaseId)
+      greeting.mutate({ onChunk: undefined, onDone: undefined })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history])
@@ -129,7 +138,13 @@ export default function ClientPortal() {
 
       {/* Modal — shared by empty state and existing-cases "New case" button */}
       {showCreateModal && (
-        <CreateCaseModal onCreated={() => setShowCreateModal(false)} />
+        <CreateCaseModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={(newCaseId) => {
+            setShowCreateModal(false)
+            switchCase(newCaseId)
+          }}
+        />
       )}
 
       {/* Main portal — side-by-side layout */}
