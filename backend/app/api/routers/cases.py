@@ -19,6 +19,7 @@ from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Produ
 from app.models.clients import Client
 from app.models.documents import Document
 from app.services.orchestration.agent_orchestration_service import orchestration_service
+from app.services.orchestration.journey_resumption_service import journey_resumption_service
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -380,12 +381,12 @@ async def get_case_summary(
 async def resume_case(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin")),
+    _user: dict = Depends(require_role("advisor", "admin")),
 ) -> ResumeResponse:
     case = await _get_case_or_404(case_id, db)
-    asyncio.create_task(orchestration_service.resume_onboarding(case_id=case.id))
+    asyncio.create_task(journey_resumption_service.resume_case(case_id=case.id))
     return ResumeResponse(
         case_id=case.id,
-        message="Resume request accepted — AgentOrchestrationService is re-routing the workflow",
+        message="Resume request accepted — JourneyResumptionService will restore state and re-spawn agents",
         stage=case.current_stage,
     )

@@ -668,8 +668,25 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 `backend/app/api/routers/reviews.py` ✓ — `GET /reviews/{review_id}/evidence` enhanced: queries `event_logs` for `is_compliance_event=True` rows matching `case_id`, orders by `created_at`, includes up to 50 entries as `compliance_audit_trail` array alongside the existing `evidence_packet`; response now has shape `{review_id, evidence_packet, compliance_audit_trail}`
 
-### [ ] STEP-33 — Paused Journey Resumption
-**BRD:** FR-12 | **Depends:** STEP-13, STEP-17, STEP-31
+### [DONE] STEP-33 — Paused Journey Resumption
+**Date:** 2026-05-15 | **BRD:** FR-12, Paused Journey Resumption Appendix | **Depends:** STEP-13, STEP-17, STEP-31
+
+**Artifacts produced / modified:**
+
+`backend/app/services/orchestration/journey_resumption_service.py` ✓ — `JourneyResumptionService` with single public entry point `resume_case(case_id)`:
+- Loads `OnboardingCase` + `CaseProduct.steps` from DB via a single eager-loaded query
+- `_restore_context()`: evicts stale in-memory cache so `ContextStoreService.get()` forces a DB read; falls back to fresh `initialise()` + `update(stage)` when `shared_context` is empty or unparseable
+- `_respawn_agents()`: stage-keyed dispatch — INTAKE → `COLLECT_CLIENT_DATA` to CustomerServiceAgent; KYC → `RUN_KYC_CHECK` to KYCComplianceAgent; PARALLEL_PRODUCTS → per-product `ONBOARD_PRODUCT` with `resume_from_step` payload derived from `case_product_steps`; REVIEW → `CREATE_COLLABORATION_ROOM` to CollaborationAgent; ESCALATED / COMPLETE → log-only (no re-spawn)
+- `_find_resume_step()`: returns the `step_index` of the first non-COMPLETE/SKIPPED `CaseProductStep`; returns `len(steps)` when all steps are done (triggers REVIEW advance)
+- Logs `JOURNEY_RESUMED` audit event via `audit_log_service`
+- Emits `CASE_STAGE_CHANGED` WebSocket event via `socket_emitter`
+- `journey_resumption_service` module-level singleton
+
+`backend/app/services/orchestration/agent_orchestration_service.py` ✓ — added `publish_task(task: TaskPacket)` public method: clean interface for JourneyResumptionService to push tasks onto the bus without accessing `_bus` directly
+
+`backend/app/services/orchestration/__init__.py` ✓ — `JourneyResumptionService` and `journey_resumption_service` exported
+
+`backend/app/api/routers/cases.py` ✓ — `POST /cases/{case_id}/resume`: switched from `orchestration_service.resume_onboarding()` to `journey_resumption_service.resume_case()`; role guard lowercased (`"Advisor"/"Admin"` → `"advisor"/"admin"` to match JWT convention)
 
 ---
 

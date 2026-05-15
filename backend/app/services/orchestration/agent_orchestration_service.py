@@ -230,6 +230,17 @@ class AgentOrchestrationService:
     def is_started(self) -> bool:
         return self._started
 
+    async def publish_task(self, task: TaskPacket) -> None:
+        """Publish a raw TaskPacket directly to the event bus.
+
+        Provides a clean public interface for services (e.g. JourneyResumptionService)
+        that need fine-grained control over which task to publish without accessing
+        the private _bus attribute directly.
+        """
+        if not self._started:
+            await self.start()
+        await self._bus.publish(task)
+
     # ── Internal ──────────────────────────────────────────────────────────────
 
     def _build_agents(self) -> None:
