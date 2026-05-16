@@ -6,12 +6,12 @@ Sections (in order):
     3.  employment_status        (4 questions)
     4.  financial_information    (5 questions)
     5.  investment_objective     (4 questions)
-    6.  background               (4 questions)
+    6.  background               (5 questions)
     7.  regulatory_questions     (5 questions)
     8.  identity                 (3 questions)
     9.  tax                      (4 questions)
     10. acknowledgement          (1 question)
-    11. sign                     (4 questions)
+    11. sign                     (3 questions)
 
 Running this script purges any existing questionnaire, answers, and sessions
 for QUESTIONNAIRE_ID before re-seeding, so it is safe to run repeatedly.
@@ -97,7 +97,7 @@ QUESTIONS: list[dict] = [
         "question_text": "Phone Number",
         "question_type": "text",
         "options": [],
-        "validation_rules": {"required": True},
+        "validation_rules": {"required": True, "min_digits": 7, "max_digits": 15},
         "show_if": None,
         "order_index": 5,
     },
@@ -147,7 +147,7 @@ QUESTIONS: list[dict] = [
         "question_text": "Postal Code",
         "question_type": "text",
         "options": [],
-        "validation_rules": {"required": True},
+        "validation_rules": {"required": True, "postal_code": True},
         "show_if": None,
         "order_index": 10,
     },
@@ -168,7 +168,7 @@ QUESTIONS: list[dict] = [
         "question_key": "employment_status",
         "question_text": "What's your employment status?",
         "question_type": "select",
-        "options": ["employed", "self_employed", "retired", "student", "unemployed"],
+        "options": ["Employed", "Self-Employed", "Retired", "Student", "Unemployed"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 12,
@@ -209,7 +209,7 @@ QUESTIONS: list[dict] = [
         "question_key": "relationship_status",
         "question_text": "What's your relationship status?",
         "question_type": "select",
-        "options": ["single", "married", "divorced", "widowed", "domestic_partnership"],
+        "options": ["Single", "Married", "Divorced", "Widowed", "Domestic Partnership"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 16,
@@ -219,7 +219,7 @@ QUESTIONS: list[dict] = [
         "question_key": "annual_income",
         "question_text": "What's your annual income?",
         "question_type": "select",
-        "options": ["under_25000", "25000_50000", "50000_100000", "100000_250000", "250000_500000", "over_500000"],
+        "options": ["Under $25,000", "$25,000 - $50,000", "$50,000 - $100,000", "$100,000 - $250,000", "$250,000 - $500,000", "Over $500,000"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 17,
@@ -229,7 +229,7 @@ QUESTIONS: list[dict] = [
         "question_key": "net_worth",
         "question_text": "What's your net worth?",
         "question_type": "select",
-        "options": ["under_50000", "50000_100000", "100000_250000", "250000_500000", "500000_1000000", "over_1000000"],
+        "options": ["Under $50,000", "$50,000 - $100,000", "$100,000 - $250,000", "$250,000 - $500,000", "$500,000 - $1,000,000", "Over $1,000,000"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 18,
@@ -239,7 +239,7 @@ QUESTIONS: list[dict] = [
         "question_key": "net_worth_source",
         "question_text": "What's the main source of your net worth?",
         "question_type": "select",
-        "options": ["income", "inheritance", "savings", "business_ownership", "investments", "property_sales", "other"],
+        "options": ["Income", "Inheritance", "Savings", "Business Ownership", "Investments", "Property Sales", "Other"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 19,
@@ -249,7 +249,7 @@ QUESTIONS: list[dict] = [
         "question_key": "liquid_net_worth",
         "question_text": "What's your liquid net worth?",
         "question_type": "select",
-        "options": ["under_50000", "50000_100000", "100000_250000", "250000_500000", "500000_1000000", "over_1000000"],
+        "options": ["Under $50,000", "$50,000 - $100,000", "$100,000 - $250,000", "$250,000 - $500,000", "$500,000 - $1,000,000", "Over $1,000,000"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 20,
@@ -260,7 +260,7 @@ QUESTIONS: list[dict] = [
         "question_key": "account_type",
         "question_text": "Would you like a margin account or a cash account?",
         "question_type": "select",
-        "options": ["cash", "margin"],
+        "options": ["Cash Account", "Margin Account"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 21,
@@ -270,7 +270,7 @@ QUESTIONS: list[dict] = [
         "question_key": "source_of_funds",
         "question_text": "What is the source of funds for this account?",
         "question_type": "multi_select",
-        "options": ["income", "pension_retirement_savings", "savings", "inheritance", "business_revenue", "gift", "other"],
+        "options": ["Income", "Pension / Retirement Savings", "Savings", "Inheritance", "Business Revenue", "Gift", "Other"],
         "validation_rules": {"required": True, "min_items": 1},
         "show_if": None,
         "order_index": 22,
@@ -280,7 +280,7 @@ QUESTIONS: list[dict] = [
         "question_key": "estimated_initial_funding",
         "question_text": "Estimated Initial Funding",
         "question_type": "select",
-        "options": ["under_10000", "10000_25000", "25000_50000", "50000_100000", "100000_250000", "over_250000"],
+        "options": ["Under $10,000", "$10,000 - $25,000", "$25,000 - $50,000", "$50,000 - $100,000", "$100,000 - $250,000", "Over $250,000"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 23,
@@ -290,7 +290,7 @@ QUESTIONS: list[dict] = [
         "question_key": "investment_objective",
         "question_text": "Investment Objective",
         "question_type": "select",
-        "options": ["growth", "income", "speculation", "capital_preservation", "trading"],
+        "options": ["Growth", "Income", "Speculation", "Capital Preservation", "Trading"],
         "validation_rules": {"required": True},
         "show_if": None,
         "order_index": 24,
@@ -301,7 +301,7 @@ QUESTIONS: list[dict] = [
         "question_key": "prior_investments",
         "question_text": "Have you previously invested in the following? (Options / Equities)",
         "question_type": "multi_select",
-        "options": ["options", "equities", "bonds", "mutual_funds", "etfs", "futures", "none"],
+        "options": ["Options", "Equities", "Bonds", "Mutual Funds", "ETFs", "Futures", "None"],
         "validation_rules": {"required": True, "min_items": 1},
         "show_if": None,
         "order_index": 25,
@@ -328,13 +328,23 @@ QUESTIONS: list[dict] = [
     },
     {
         "section": "background",
+        "question_key": "large_trader_id_number",
+        "question_text": "Large Trader ID Number",
+        "question_type": "text",
+        "options": [],
+        "validation_rules": {"required": True, "alphanumeric": True, "max_alphanumeric": 20},
+        "show_if": {"field": "has_large_trader_id", "operator": "eq", "value": "Yes"},
+        "order_index": 28,
+    },
+    {
+        "section": "background",
         "question_key": "current_broker",
         "question_text": "Current Broker",
         "question_type": "text",
         "options": [],
         "validation_rules": {"required": False},
         "show_if": None,
-        "order_index": 28,
+        "order_index": 29,
     },
     # ── Section 7: regulatory_questions (5 questions) ───────────────────────
     {
@@ -345,7 +355,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 29,
+        "order_index": 30,
     },
     {
         "section": "regulatory_questions",
@@ -355,7 +365,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 30,
+        "order_index": 31,
     },
     {
         "section": "regulatory_questions",
@@ -365,7 +375,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 31,
+        "order_index": 32,
     },
     {
         "section": "regulatory_questions",
@@ -375,7 +385,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 32,
+        "order_index": 33,
     },
     {
         "section": "regulatory_questions",
@@ -385,7 +395,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 33,
+        "order_index": 34,
     },
     # ── Section 8: identity (3 questions) ───────────────────────────────────
     {
@@ -393,10 +403,10 @@ QUESTIONS: list[dict] = [
         "question_key": "id_type",
         "question_text": "ID Type",
         "question_type": "select",
-        "options": ["drivers_license", "passport", "national_id", "state_id"],
+        "options": ["Driver's License", "Passport", "National ID", "State ID"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 34,
+        "order_index": 35,
     },
     {
         "section": "identity",
@@ -406,7 +416,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 35,
+        "order_index": 36,
     },
     {
         "section": "identity",
@@ -414,9 +424,9 @@ QUESTIONS: list[dict] = [
         "question_text": "ID Expiration Date",
         "question_type": "date",
         "options": [],
-        "validation_rules": {"required": True},
+        "validation_rules": {"required": True, "future_date": True},
         "show_if": None,
-        "order_index": 36,
+        "order_index": 37,
     },
     # ── Section 9: tax (4 questions) ─────────────────────────────────────────
     {
@@ -427,37 +437,37 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 37,
+        "order_index": 38,
     },
     {
         "section": "tax",
         "question_key": "tax_id_type",
         "question_text": "Identity Type",
         "question_type": "select",
-        "options": ["ssn", "itin", "foreign_tax_id"],
+        "options": ["SSN", "ITIN", "Foreign Tax ID"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 38,
+        "order_index": 39,
     },
     {
         "section": "tax",
         "question_key": "social_security_number",
-        "question_text": "Social Security Number",
+        "question_text": "Tax ID Number",
         "question_type": "text",
         "options": [],
         "validation_rules": {"required": True},
-        "show_if": {"field": "tax_id_type", "operator": "eq", "value": "ssn"},
-        "order_index": 39,
+        "show_if": {"field": "tax_id_type", "operator": "in", "value": ["SSN", "ITIN", "Foreign Tax ID"]},
+        "order_index": 40,
     },
     {
         "section": "tax",
         "question_key": "tax_lot_method",
         "question_text": "Tax Lot Method",
         "question_type": "select",
-        "options": ["fifo", "lifo", "hcost", "lcost", "avg_cost"],
+        "options": ["FIFO", "LIFO", "Highest Cost", "Lowest Cost", "Average Cost"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 40,
+        "order_index": 41,
     },
     # ── Section 10: acknowledgement (1 question) ─────────────────────────────
     {
@@ -468,7 +478,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True, "must_be_true": True},
         "show_if": None,
-        "order_index": 41,
+        "order_index": 42,
     },
     # ── Section 11: sign (4 questions) ───────────────────────────────────────
     {
@@ -477,9 +487,9 @@ QUESTIONS: list[dict] = [
         "question_text": "Full Name",
         "question_type": "text",
         "options": [],
-        "validation_rules": {"required": True},
+        "validation_rules": {"required": True, "match_fields": ["first_name", "last_name"]},
         "show_if": None,
-        "order_index": 42,
+        "order_index": 43,
     },
     {
         "section": "sign",
@@ -487,17 +497,7 @@ QUESTIONS: list[dict] = [
         "question_text": "Initials",
         "question_type": "text",
         "options": [],
-        "validation_rules": {"required": True, "max_length": 10},
-        "show_if": None,
-        "order_index": 43,
-    },
-    {
-        "section": "sign",
-        "question_key": "signature_date",
-        "question_text": "Date",
-        "question_type": "date",
-        "options": [],
-        "validation_rules": {"required": True},
+        "validation_rules": {"required": True, "min_length": 1, "max_length": 10},
         "show_if": None,
         "order_index": 44,
     },
@@ -548,7 +548,7 @@ async def seed(session: AsyncSession) -> None:
         print(f"    [seed] question {q_data['question_key']}")
 
     await session.commit()
-    print(f"  [done] {len(QUESTIONS)} questions seeded across {len(SECTIONS)} sections")
+    print(f"  [done] {len(QUESTIONS)} questions seeded across {len(SECTIONS)} sections")  # 44 questions
 
 
 if __name__ == "__main__":

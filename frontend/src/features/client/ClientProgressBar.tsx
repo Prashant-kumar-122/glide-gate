@@ -1,5 +1,6 @@
 import { CheckCircle, Clock, AlertTriangle } from 'lucide-react'
 import ProgressBar from '@/components/ProgressBar'
+import { useChatStore } from '@/store/chatStore'
 import type { CaseSummary } from '@/lib/api'
 
 const CLIENT_STAGE_LABELS: Record<string, string> = {
@@ -11,14 +12,10 @@ const CLIENT_STAGE_LABELS: Record<string, string> = {
   ESCALATED: 'Under Review',
 }
 
-const STAGE_PROGRESS: Record<string, number> = {
-  INTAKE: 15,
-  KYC: 35,
-  PARALLEL_PRODUCTS: 60,
-  REVIEW: 80,
-  COMPLETE: 100,
-  ESCALATED: 75,
-}
+// Weight breakdown: 60% questionnaire, 10% KYC, 30% documents
+// Cumulative thresholds: INTAKE ends at 60, KYC ends at 70, docs end at 100
+const INTAKE_MAX = 60
+const KYC_MAX = 70
 
 interface ClientProgressBarProps {
   summary: CaseSummary | undefined
@@ -26,12 +23,43 @@ interface ClientProgressBarProps {
 }
 
 export default function ClientProgressBar({ summary, isLoading }: ClientProgressBarProps) {
+  const questionnairePct = useChatStore((s) => s.questionnairePct)
+
   if (isLoading) {
     return <div className="h-24 animate-pulse rounded-2xl bg-gray-100" />
   }
 
   const stage = summary?.current_stage ?? 'INTAKE'
-  const progress = summary?.overall_progress ?? STAGE_PROGRESS[stage] ?? 0
+
+  let progress: number
+  if (stage === 'INTAKE') {
+    if (questionnairePct > 0) {
+      // Live SSE: raw questionnaire completion (0-100) → convert to 0-60 bar range
+      progress = Math.round((questionnairePct / 100) * INTAKE_MAX)
+    } else {
+      // DB fallback: case.percentage already stores the computed 0-60 value
+      progress = summary?.questionnaire_pct ?? 0
+    }
+  } else if (stage === 'KYC') {
+    // 60–70%: identity verification
+    progress = KYC_MAX
+  } else if (stage === 'PARALLEL_PRODUCTS') {
+    // 70–100%: document uploads, dynamic based on approved docs
+    const docRatio =
+      summary && summary.documents_total > 0
+        ? summary.documents_approved / summary.documents_total
+        : 0
+    progress = Math.round(KYC_MAX + docRatio * (100 - KYC_MAX))
+  } else if (stage === 'REVIEW') {
+    progress = 95
+  } else if (stage === 'COMPLETE') {
+    progress = 100
+  } else if (stage === 'ESCALATED') {
+    progress = 75
+  } else {
+    progress = summary?.overall_progress ?? 0
+  }
+
   const stageLabel = CLIENT_STAGE_LABELS[stage] ?? stage
   const isComplete = stage === 'COMPLETE'
   const isEscalated = stage === 'ESCALATED' || summary?.escalated

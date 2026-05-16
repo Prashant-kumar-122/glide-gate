@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -12,10 +12,10 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.role_guard import require_role
 from app.database import get_db
 from app.models.agents import EventLog
+from app.services.audit.audit_event_types import AuditEventType
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
@@ -50,6 +50,14 @@ class PaginatedLogsOut(BaseModel):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+@router.get("/event-types", response_model=list[str])
+async def list_event_types(
+    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin")),
+) -> list[str]:
+    """Return all known audit event type strings for filter dropdowns."""
+    return sorted(str(e) for e in AuditEventType)
+
+
 @router.get("/logs", response_model=PaginatedLogsOut)
 async def get_audit_logs(
     case_id: UUID | None = Query(None),
@@ -63,7 +71,7 @@ async def get_audit_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "ComplianceOfficer", "Admin")),
+    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin")),
 ) -> PaginatedLogsOut:
     query = select(EventLog).order_by(EventLog.created_at.desc())
 
@@ -107,7 +115,7 @@ async def export_audit_logs_csv(
     from_date: datetime | None = Query(None),
     to_date: datetime | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin")),
+    _user: dict = Depends(require_role("compliance_officer", "admin")),
 ) -> StreamingResponse:
     query = select(EventLog).order_by(EventLog.created_at)
 
@@ -152,7 +160,7 @@ async def export_audit_logs_csv(
             buf.seek(0)
             buf.truncate()
 
-    filename = f"audit_logs_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"audit_logs_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
     return StreamingResponse(
         _csv_generator(),
         media_type="text/csv",

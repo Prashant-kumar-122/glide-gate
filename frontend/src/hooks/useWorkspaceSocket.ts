@@ -65,6 +65,7 @@ export function useWorkspaceSocket(caseId: string | null) {
 
     function onDocStatusChanged(data: { document_id: string; status: string; badge_count?: number }) {
       applyDocumentStatusUpdate(qc, caseId!, data.document_id, data.status)
+      qc.invalidateQueries({ queryKey: qk.caseSummary(caseId!) })
     }
 
     function onDocUploaded(data: { case_id: string; badge_count?: number }) {

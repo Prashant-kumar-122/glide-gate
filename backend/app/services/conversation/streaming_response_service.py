@@ -35,6 +35,7 @@ class StreamingResponseService:
         system_prompt: str = CSA_SYSTEM_PROMPT,
         max_tokens: int = 512,
         temperature: float = 0.7,
+        fallback_text: str = "",
     ) -> AsyncGenerator[str, None]:
         yield _sse({"type": "start"})
 
@@ -57,14 +58,22 @@ class StreamingResponseService:
         )
 
         final_resp = None
+        llm_succeeded = False
         try:
             async for chunk in llm_fallback_chain.stream(request):
                 if chunk.is_final:
                     final_resp = chunk.final_response
+                    llm_succeeded = True
                 else:
                     yield _sse({"type": "token", "token": chunk.token})
         except Exception as exc:
-            yield _sse({"type": "error", "message": str(exc)})
+            # LLM unavailable — stream fallback text word-by-word if provided
+            if fallback_text:
+                for word in fallback_text.split():
+                    yield _sse({"type": "token", "token": word + " "})
+            else:
+                yield _sse({"type": "error", "message": str(exc)})
+            yield _sse({"type": "end", "input_tokens": 0, "output_tokens": 0})
             return
 
         yield _sse({

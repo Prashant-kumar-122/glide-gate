@@ -137,6 +137,40 @@ class AgentOrchestrationService:
             f"client={client_id} products={selected_products}"
         )
 
+    async def start_product_onboarding(
+        self,
+        case_id: UUID,
+        client_id: UUID,
+        selected_products: list[str],
+    ) -> None:
+        """Resume a case directly at the PARALLEL_PRODUCTS stage.
+
+        Called by HumanReviewService after a review is APPROVED.
+        Bypasses the standard FSM advance and directly fans out to
+        ProductOnboardingAgent for each selected product.
+        """
+        if not self._started:
+            await self.start()
+
+        for product_code in selected_products:
+            await self._bus.publish(
+                TaskPacket(
+                    from_agent=AgentID.ORCHESTRATOR,
+                    to_agent=AgentID.PRODUCT_ONBOARDING,
+                    task_type=TaskType.ONBOARD_PRODUCT,
+                    case_id=case_id,
+                    client_id=client_id,
+                    priority="HIGH",
+                    payload={"product_code": product_code, "selected_products": selected_products},
+                )
+            )
+
+        self._active_cases.add(case_id)
+        logger.info(
+            f"Product onboarding started (post-review): case={case_id} "
+            f"products={selected_products}"
+        )
+
     async def resume_onboarding(self, case_id: UUID) -> None:
         """Resume a paused onboarding case.
 
@@ -195,6 +229,17 @@ class AgentOrchestrationService:
     @property
     def is_started(self) -> bool:
         return self._started
+
+    async def publish_task(self, task: TaskPacket) -> None:
+        """Publish a raw TaskPacket directly to the event bus.
+
+        Provides a clean public interface for services (e.g. JourneyResumptionService)
+        that need fine-grained control over which task to publish without accessing
+        the private _bus attribute directly.
+        """
+        if not self._started:
+            await self.start()
+        await self._bus.publish(task)
 
     # ── Internal ──────────────────────────────────────────────────────────────
 

@@ -569,20 +569,153 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 6 — Compliance & Audit
 
-### [ ] STEP-29 — Human-in-the-Loop Review Workflow
-**BRD:** FR-13 | **Depends:** STEP-06, STEP-09, STEP-13, STEP-14, STEP-15, STEP-26
+### [DONE] STEP-29 — Human-in-the-Loop Review Workflow
+**Date:** 2026-05-15 | **BRD:** FR-13, Hackathon Criteria #5, #11 | **Depends:** STEP-06, STEP-09, STEP-13, STEP-14, STEP-15, STEP-26
 
-### [ ] STEP-30 — Configurable Checkpoint Rules (FR-15)
-**BRD:** FR-15, Section 10.2 | **Depends:** STEP-06, STEP-12, STEP-14, STEP-29
+**Artifacts produced / modified:**
 
-### [ ] STEP-31 — Append-Only Audit Event Log
-**BRD:** FR-14, Section 10.2 | **Depends:** STEP-10, STEP-12, STEP-14
+`backend/app/services/compliance/evidence_packet_assembler.py` ✓ — `EvidencePacketAssembler.assemble()`: DB-backed assembly of kyc_result + client_summary (Client + ClientProfile join) + document_summary (by_status counts, missing categories) + case_summary; `assemble_from_agent_payload()` convenience wrapper; `evidence_packet_assembler` singleton
 
-### [ ] STEP-32 — Compliance Decision Logging & Evidence Packet Persistence
-**BRD:** FR-14, Section 10.2 | **Depends:** STEP-29, STEP-31
+`backend/app/services/compliance/human_review_service.py` ✓ — `HumanReviewService`:
+- `create_review()`: persists `KYCCheck` + `HumanReview` DB records; assembles evidence packet via `EvidencePacketAssembler`; stamps `onboarding_cases.shared_context["human_review_id"]` + updates stage to ESCALATED; updates in-memory `ContextStoreService`; emits `ESCALATION_TRIGGERED` socket event
+- `decide()`: records decision + reviewer role + notes; emits `REVIEW_DECIDED` socket event; fires `_post_decision_workflow` background task
+- `_resume_after_approval()`: advances case to PARALLEL_PRODUCTS; calls `orchestration_service.start_product_onboarding()` to fan out product tasks; emits `CASE_STAGE_CHANGED`
+- `_terminate_after_rejection()`: marks case REJECTED + COMPLETE; emits `CASE_STAGE_CHANGED`
+- `_request_more_info()`: stays ESCALATED; emits `CASE_STAGE_CHANGED`; `human_review_service` singleton
 
-### [ ] STEP-33 — Paused Journey Resumption
-**BRD:** FR-12 | **Depends:** STEP-13, STEP-17, STEP-31
+`backend/app/services/compliance/__init__.py` ✓ — re-exports both service classes and singletons
+
+`backend/app/agents/orchestrator/orchestrator_agent.py` ✓ — `_handle_escalate()` now fires `asyncio.create_task(_persist_human_review(...))` which acquires its own `AsyncSessionLocal` session and calls `human_review_service.create_review()` — keeps agent layer DB-free while persisting the review record
+
+`backend/app/services/orchestration/agent_orchestration_service.py` ✓ — added `start_product_onboarding(case_id, client_id, selected_products)`: publishes one `ONBOARD_PRODUCT` task per product directly to the bus; used by `HumanReviewService._resume_after_approval()` to resume workflow without re-running KYC
+
+`backend/app/api/routers/reviews.py` ✓ — `POST /reviews/{review_id}/decide` wired to `human_review_service.decide()`; returns decision-specific message; role guards updated to accept lowercase role names (`advisor`, `admin`); `ValueError` from service layer mapped to `UnprocessableError`
+
+`frontend/src/lib/api.ts` ✓ — added `ReviewOut`, `EvidencePacket`, `DecisionOut` interfaces
+
+`frontend/src/hooks/usePendingReviews.ts` ✓ — TanStack Query hooks: `usePendingReviews()` (15s refetch), `useReviewsByCase(caseId)`, `useReview(reviewId)`, `useEvidencePacket(reviewId)`, `useDecideReview()` mutation (invalidates all review queries on success); `reviewQk` query-key factory
+
+`frontend/src/features/compliance-review/EscalationQueue.tsx` ✓ — scrollable list of pending escalations; risk band colour chips; case ID + escalation reason + timestamp per row; selected-row highlight; loading skeleton; empty-state with green checkmark
+
+`frontend/src/features/compliance-review/EvidencePacketPanel.tsx` ✓ — 4-section evidence display (KYC scores heat-mapped by risk %, escalation reasons list, client profile key-value grid, document summary by status + missing categories, case details); `useEvidencePacket` TanStack Query hook
+
+`frontend/src/features/compliance-review/ReviewActionBar.tsx` ✓ — 3-button action bar (Approve / Reject / Request Info); `ConfirmationModal` gate with optional notes textarea for audit trail; `useDecideReview` mutation with loading/error states; read-only decided view when status ≠ PENDING
+
+`tsc --noEmit` passes with zero errors ✓
+
+### [DONE] STEP-30 — Configurable Checkpoint Rules (FR-15)
+**Date:** 2026-05-15 | **BRD:** FR-15, Section 10.2 | **Depends:** STEP-06, STEP-12, STEP-14, STEP-29
+
+**Artifacts produced / modified:**
+
+`backend/app/services/compliance/checkpoint_rule_repository.py` ✓ — In-memory singleton repository initialised with the 5 default rules from `CheckpointRuleEngine`; `get_all()`, `get()`, `add()`, `update()`, `remove()` (blocked for built-in rule IDs), `reset()`, `is_builtin()`, `make_rule_id()`; `_BUILTIN_IDS` frozenset guards against deleting system rules
+
+`backend/app/api/routers/admin/checkpoint_rules.py` ✓ — 5 admin-only endpoints:
+- `GET  /admin/checkpoint-rules` → `list[CheckpointRuleOut]`
+- `POST /admin/checkpoint-rules` (201) → `CheckpointRuleOut`; auto-generates `rule_id` if omitted
+- `PUT  /admin/checkpoint-rules/{rule_id}` → `CheckpointRuleOut`
+- `DELETE /admin/checkpoint-rules/{rule_id}` → `{"deleted": rule_id}`; returns 422 for built-in rule attempts
+- `POST /admin/checkpoint-rules/reset` → `list[CheckpointRuleOut]`; restores all 5 defaults
+
+`backend/app/agents/kyc_compliance/kyc_compliance_agent.py` ✓ — Removed stored `_rule_engine` instance; `_handle_run_kyc()` now builds a fresh `CheckpointRuleEngine(rules=rule_repo.get_all())` on each KYC run so admin-configured rules take effect immediately without restart
+
+`backend/app/main.py` ✓ — `checkpoint_rules.router` registered with `_prefix`
+
+`backend/app/services/compliance/__init__.py` ✓ — `checkpoint_rule_repository` module re-exported
+
+`frontend/src/lib/api.ts` ✓ — `CheckpointRuleOut` and `CreateCheckpointRuleRequest` interfaces added
+
+`frontend/src/hooks/useCheckpointRules.ts` ✓ — TanStack Query hooks: `useCheckpointRules()`, `useCreateCheckpointRule()`, `useDeleteCheckpointRule()`, `useResetCheckpointRules()`; all mutations invalidate `checkpointQk.all` on success
+
+`frontend/src/features/admin/CheckpointRulesEditor.tsx` ✓ — Fully rewritten: removed amber "local state only" banner; table now shows description, action chip, dimension chips (Risk/Product/Band/Jurisdiction), Source (Built-in shield / Custom); delete button disabled for built-in rules; add-rule form exposes all 4 dimension fields (risk_level dropdown, product_type text, account_value_band dropdown, jurisdiction text) + action + required docs (comma-separated); Reset to defaults button with confirm dialog; loading/error states throughout; `tsc --noEmit` passes with zero errors ✓
+
+### [DONE] STEP-31 — Append-Only Audit Event Log
+**Date:** 2026-05-15 | **BRD:** FR-14, Section 10.2 (100% of decisions logged) | **Depends:** STEP-10, STEP-12, STEP-14
+
+**Artifacts produced / modified:**
+
+`backend/app/services/audit/audit_event_types.py` ✓ — `AuditEventType` StrEnum (64 typed event constants across 10 categories: case lifecycle, client, data collection, KYC, document, product onboarding, human review, compliance, agent task, MCP, notification, auth, admin); `AuditEventCategory` StrEnum (7 categories)
+
+`backend/app/services/audit/audit_log_service.py` ✓ — `AuditLogService` append-only service: `log()` core method (no UPDATE/DELETE methods exist); typed convenience helpers: `log_agent_task_completed`, `log_document_status_changed`, `log_review_created`, `log_review_decided`, `log_mcp_tool_called`, `log_compliance_decision`; accepts optional `db` session (adds to caller's transaction when provided; acquires own `AsyncSessionLocal` and commits when omitted); `audit_log_service` module-level singleton
+
+`backend/app/services/audit/__init__.py` ✓ — re-exports `AuditEventType`, `AuditEventCategory`, `AuditLogService`, `audit_log_service`
+
+`backend/app/api/routers/audit.py` ✓ — role guards updated from `"Advisor"/"ComplianceOfficer"/"Admin"` → lowercase `"advisor"/"compliance_officer"/"admin"` (matches JWT convention); `datetime.utcnow()` → `datetime.now(timezone.utc)`; added `GET /audit/event-types` endpoint returning sorted StrEnum values for filter dropdowns; `AuditEventType` import added
+
+`backend/app/services/document/document_status_service.py` ✓ — `update_status()` now calls `audit_log_service.log_document_status_changed()` after every valid transition (within the same DB session); 100% of document status changes are now audited
+
+`backend/app/services/compliance/human_review_service.py` ✓ — `create_review()` calls `audit_log_service.log_review_created()` (within the same DB session, committed with the review record); `decide()` calls `audit_log_service.log_review_decided()` (own session, fire-and-forget after commit) with decision-specific event types (REVIEW_APPROVED / REVIEW_REJECTED / REVIEW_MORE_INFO_REQUESTED)
+
+`backend/app/mcp/mcp_logger.py` ✓ — `log()` now calls `audit_log_service.log_mcp_tool_called()` within the same session as the `MCPToolCall` record; both records committed atomically; 100% of MCP calls are now in event_logs in addition to mcp_tool_calls
+
+`backend/app/agents/base/base_agent.py` ✓ — `timed_process()` fires `asyncio.create_task(audit_log_service.log_agent_task_completed(...))` for both SUCCESS and FAILED outcomes; every agent task decision is now logged to the audit trail without blocking the task response
+
+### [DONE] STEP-32 — Compliance Decision Logging & Evidence Packet Persistence
+**Date:** 2026-05-15 | **BRD:** FR-14, Section 10.2, Hackathon Criterion #11 | **Depends:** STEP-29, STEP-31
+
+**Artifacts produced / modified:**
+
+`backend/app/services/compliance/compliance_decision_logger.py` ✓ — `ComplianceDecisionLogger` class with two typed methods:
+- `log_automated_kyc_decision()`: logs `COMPLIANCE_DECISION` event for every KYC engine outcome (PASSED → `KYC_APPROVED_AUTOMATED`, ESCALATED → `KYC_ESCALATED_FOR_REVIEW`, FAILED → `KYC_REJECTED_AUTOMATED`); carries full score breakdown (identity/AML/profile/composite), risk_band, escalation_reasons, required_documents, evidence_packet_id; acquires own DB session when no session provided
+- `log_human_review_decision()`: logs `COMPLIANCE_DECISION` event for every human reviewer action (APPROVED → `REVIEW_APPROVED_BY_HUMAN`, REJECTED → `REVIEW_REJECTED_BY_HUMAN`, MORE_INFO_REQUESTED → `REVIEW_MORE_INFO_REQUESTED_BY_HUMAN`); carries reviewer_role, decision_notes, risk_band, composite_score from stored evidence packet; graceful-fail with error log on exception
+- `compliance_decision_logger` module-level singleton
+
+`backend/app/agents/kyc_compliance/kyc_compliance_agent.py` ✓ — `_signal_outcome()` now fires `asyncio.create_task(compliance_decision_logger.log_automated_kyc_decision(...))` after routing the bus signal; covers all three KYC outcomes; float() casts applied to Decimal-mapped score fields
+
+`backend/app/services/compliance/human_review_service.py` ✓ — `decide()` now calls `compliance_decision_logger.log_human_review_decision()` after `audit_log_service.log_review_decided()`; risk_band and composite_score extracted from `review.evidence_packet["kyc_result"]`
+
+`backend/app/services/compliance/__init__.py` ✓ — `compliance_decision_logger` and `ComplianceDecisionLogger` added to exports
+
+`backend/app/api/routers/reviews.py` ✓ — `GET /reviews/{review_id}/evidence` enhanced: queries `event_logs` for `is_compliance_event=True` rows matching `case_id`, orders by `created_at`, includes up to 50 entries as `compliance_audit_trail` array alongside the existing `evidence_packet`; response now has shape `{review_id, evidence_packet, compliance_audit_trail}`
+
+### [DONE] STEP-33 — Paused Journey Resumption
+**Date:** 2026-05-15 | **BRD:** FR-12, Paused Journey Resumption Appendix | **Depends:** STEP-13, STEP-17, STEP-31
+
+**Artifacts produced / modified:**
+
+`backend/app/services/orchestration/journey_resumption_service.py` ✓ — `JourneyResumptionService` with single public entry point `resume_case(case_id)`:
+- Loads `OnboardingCase` + `CaseProduct.steps` from DB via a single eager-loaded query
+- `_restore_context()`: evicts stale in-memory cache so `ContextStoreService.get()` forces a DB read; falls back to fresh `initialise()` + `update(stage)` when `shared_context` is empty or unparseable
+- `_respawn_agents()`: stage-keyed dispatch — INTAKE → `COLLECT_CLIENT_DATA` to CustomerServiceAgent; KYC → `RUN_KYC_CHECK` to KYCComplianceAgent; PARALLEL_PRODUCTS → per-product `ONBOARD_PRODUCT` with `resume_from_step` payload derived from `case_product_steps`; REVIEW → `CREATE_COLLABORATION_ROOM` to CollaborationAgent; ESCALATED / COMPLETE → log-only (no re-spawn)
+- `_find_resume_step()`: returns the `step_index` of the first non-COMPLETE/SKIPPED `CaseProductStep`; returns `len(steps)` when all steps are done (triggers REVIEW advance)
+- Logs `JOURNEY_RESUMED` audit event via `audit_log_service`
+- Emits `CASE_STAGE_CHANGED` WebSocket event via `socket_emitter`
+- `journey_resumption_service` module-level singleton
+
+`backend/app/services/orchestration/agent_orchestration_service.py` ✓ — added `publish_task(task: TaskPacket)` public method: clean interface for JourneyResumptionService to push tasks onto the bus without accessing `_bus` directly
+
+`backend/app/services/orchestration/__init__.py` ✓ — `JourneyResumptionService` and `journey_resumption_service` exported
+
+`backend/app/api/routers/cases.py` ✓ — `POST /cases/{case_id}/resume`: switched from `orchestration_service.resume_onboarding()` to `journey_resumption_service.resume_case()`; role guard lowercased (`"Advisor"/"Admin"` → `"advisor"/"admin"` to match JWT convention)
+
+### [DONE] STEP-33A — Conversational Interface Enhancements & Dynamic Progress Bar
+**Date:** 2026-05-16 | **Depends:** STEP-21, STEP-27
+
+**Artifacts produced / modified:**
+
+`backend/app/agents/customer_service/data_collection_orchestrator.py` ✓ — upgraded from hardcoded fields to DB-backed question loading (`load_questions_from_db`); `_DB_TYPE_MAP` for question-type conversion; `validation_rules` field on `QuestionnaireField`; `get_question_id`, `get_questionnaire_id`, `is_db_loaded` accessors; hardcoded `_FIELDS` retained as fallback
+
+`backend/app/api/routers/conversations.py` ✓ — added `GET /{case_id}/greet` SSE endpoint to stream the opening greeting for fresh conversations
+
+`backend/app/services/conversation/conversation_coordinator.py` ✓ — added `handle_greeting()` async generator; DB answer persistence (`_persist_field` upserts to `onboarding_answers`; `_upsert_question_session` tracks progress in `onboarding_question_sessions`); emits `{type:"options"}` SSE for choice fields; emits `{type:"progress","questionnaire_pct":<0–100>}` after every reply and greeting so the frontend progress bar updates in real time
+
+`backend/app/services/conversation/session_manager.py` ✓ — `ConversationSession` and `SessionManager.get_or_create` now accept and store `client_id`
+
+`backend/app/services/conversation/streaming_response_service.py` ✓ — `stream_reply()` accepts optional `fallback_text`; streams it word-by-word when all LLM providers fail instead of emitting an error event
+
+`db/seeds/03_questionnaire.py` ✓ — expanded from 30 → 45 questions across 11 sections (added trusted_contact, background, regulatory_questions, identity, tax, acknowledgement, sign sections)
+
+`frontend/src/features/client/ConversationalChat.tsx` ✓ — added `OptionChips` component; wires `pendingOptions` from chatStore to render clickable answer chips after assistant replies; clears options on manual text input
+
+`frontend/src/features/client/CreateCaseModal.tsx` ✓ — added `onClose` prop; `onCreated` now receives `newCase.id` so the portal can auto-switch to the newly created case
+
+`frontend/src/hooks/useClientChat.ts` ✓ — added `useGreeting` hook (SSE stream from `/greet`); both `useGreeting` and `useSendMessage` parse `type:"options"` events → `setPendingOptions` and `type:"progress"` events → `setQuestionnairePct`
+
+`frontend/src/routes/ClientPortal.tsx` ✓ — integrates `useGreeting`; `greetedCases` ref prevents double-greeting on re-render; `CreateCaseModal` receives `onClose` + `onCreated(newCaseId)` and auto-switches case after creation
+
+`frontend/src/store/chatStore.ts` ✓ — added `pendingOptions`, `setPendingOptions`, `clearPendingOptions`; added `questionnairePct`, `setQuestionnairePct`; `clearMessages` resets both
+
+`frontend/src/features/client/ClientProgressBar.tsx` ✓ — replaced static `STAGE_PROGRESS` lookup with live `questionnairePct` from chatStore; INTAKE: `(questionnairePct/100)×60`; KYC: 70; PARALLEL_PRODUCTS: `70+(docs_approved/docs_total)×30`; REVIEW: 95; COMPLETE: 100
 
 ---
 

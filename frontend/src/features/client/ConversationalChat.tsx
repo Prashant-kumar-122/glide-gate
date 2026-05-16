@@ -23,7 +23,9 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       <div
         className={[
           'max-w-[76%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-          isUser ? 'rounded-tr-sm bg-blue-600 text-white' : 'rounded-tl-sm bg-gray-100 text-gray-900',
+          isUser
+            ? 'rounded-tr-sm bg-blue-600 text-white'
+            : 'rounded-tl-sm bg-gray-100 text-gray-900',
         ].join(' ')}
       >
         <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -33,7 +35,10 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
             isUser ? 'text-blue-200 text-right' : 'text-gray-400',
           ].join(' ')}
         >
-          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {new Date(msg.timestamp).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </p>
       </div>
     </div>
@@ -61,6 +66,27 @@ function TypingIndicator() {
   )
 }
 
+interface OptionChipsProps {
+  options: string[]
+  onSelect: (option: string) => void
+}
+
+function OptionChips({ options, onSelect }: OptionChipsProps) {
+  return (
+    <div className="flex flex-wrap gap-2 pl-10">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          onClick={() => onSelect(opt)}
+          className="rounded-full border border-blue-300 bg-white px-3.5 py-1.5 text-sm font-medium text-blue-700 shadow-sm transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 active:scale-95"
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 interface ConversationalChatProps {
   caseId: string | null
 }
@@ -70,22 +96,32 @@ export default function ConversationalChat({ caseId }: ConversationalChatProps) 
   const [streamingText, setStreamingText] = useState('')
   const messages = useChatStore((s) => s.messages)
   const typingIndicator = useChatStore((s) => s.typingIndicator)
+  const pendingOptions = useChatStore((s) => s.pendingOptions)
+  const clearPendingOptions = useChatStore((s) => s.clearPendingOptions)
   const bottomRef = useRef<HTMLDivElement>(null)
   const sendMessage = useSendMessage(caseId)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, typingIndicator, streamingText])
+  }, [messages, typingIndicator, streamingText, pendingOptions])
 
-  function handleSend() {
-    const text = input.trim()
-    if (!text || !caseId || sendMessage.isPending) return
+  function submitText(text: string) {
+    if (!text.trim() || !caseId || sendMessage.isPending) return
     setInput('')
     sendMessage.mutate({
-      text,
+      text: text.trim(),
       onChunk: (accumulated) => setStreamingText(accumulated),
       onDone: () => setStreamingText(''),
     })
+  }
+
+  function handleSend() {
+    submitText(input)
+  }
+
+  function handleOptionClick(option: string) {
+    clearPendingOptions()
+    submitText(option)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -93,6 +129,12 @@ export default function ConversationalChat({ caseId }: ConversationalChatProps) 
       e.preventDefault()
       handleSend()
     }
+  }
+
+  // Clear options if the user starts typing manually
+  function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setInput(e.target.value)
+    if (pendingOptions.length > 0) clearPendingOptions()
   }
 
   return (
@@ -143,6 +185,11 @@ export default function ConversationalChat({ caseId }: ConversationalChatProps) 
         {/* Typing indicator while waiting for first chunk */}
         {typingIndicator && !streamingText && <TypingIndicator />}
 
+        {/* Clickable option chips — shown after assistant replies for choice questions */}
+        {pendingOptions.length > 0 && !typingIndicator && !streamingText && (
+          <OptionChips options={pendingOptions} onSelect={handleOptionClick} />
+        )}
+
         <div ref={bottomRef} />
       </div>
 
@@ -156,7 +203,7 @@ export default function ConversationalChat({ caseId }: ConversationalChatProps) 
         <div className="flex gap-2">
           <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
             rows={2}

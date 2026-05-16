@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.database import AsyncSessionLocal
 from app.models.agents import MCPToolCall
+from app.services.audit.audit_log_service import audit_log_service
 
 
 class MCPLogger:
@@ -43,6 +44,16 @@ class MCPLogger:
                     completed_at=datetime.utcnow(),
                 )
                 session.add(record)
+                await audit_log_service.log_mcp_tool_called(
+                    connector=connector_name,
+                    tool=tool_name,
+                    agent_id=agent_id,
+                    case_id=case_id,
+                    status=status,
+                    latency_ms=latency_ms,
+                    is_simulated=is_simulated,
+                    db=session,
+                )
                 await session.commit()
                 logger.debug(
                     f"MCPLogger: {connector_name}.{tool_name} "

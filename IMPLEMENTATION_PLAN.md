@@ -790,6 +790,26 @@ When KYC scores above threshold: write `human_reviews` record → pause workflow
 
 ---
 
+### STEP-33A — Conversational Interface Enhancements & Dynamic Progress Bar
+**BRD:** Section 5.2.2, FR-02 | **Integration:** N/A | **Depends:** STEP-21, STEP-27
+
+Post-STEP-27 enhancements to the full conversational onboarding stack. `DataCollectionOrchestrator` upgraded from hardcoded fields to DB-backed question loading (`load_questions_from_db`) with hardcoded fallback; supports `validation_rules` per field and per-case `question_id` maps for DB upserts. `ConversationCoordinator` gains `handle_greeting()` (fresh-session SSE greeting), DB answer persistence (`onboarding_answers` upsert + `onboarding_question_sessions` tracker), `{type:"options"}` SSE events for choice fields rendered as clickable chips, and `{type:"progress","questionnaire_pct":<0–100>}` SSE events after every reply. `StreamingResponseService.stream_reply()` gains a `fallback_text` parameter for word-by-word LLM-unavailable fallback. Questionnaire expanded from 30 → 45 questions across 11 sections. Frontend: `OptionChips` component in `ConversationalChat`; `useGreeting` hook; `pendingOptions` + `questionnairePct` state in `chatStore`; `ClientProgressBar` replaced static stage lookup with three-phase dynamic progress (INTAKE 0–60% per question answered, KYC 70%, PARALLEL_PRODUCTS 70–100% per approved document).
+
+**Key files:**
+- `backend/app/agents/customer_service/data_collection_orchestrator.py`
+- `backend/app/api/routers/conversations.py` (`GET /{case_id}/greet`)
+- `backend/app/services/conversation/conversation_coordinator.py`
+- `backend/app/services/conversation/session_manager.py`
+- `backend/app/services/conversation/streaming_response_service.py`
+- `db/seeds/03_questionnaire.py` (45 questions, 11 sections)
+- `frontend/src/features/client/ConversationalChat.tsx`
+- `frontend/src/features/client/ClientProgressBar.tsx`
+- `frontend/src/hooks/useClientChat.ts`
+- `frontend/src/routes/ClientPortal.tsx`
+- `frontend/src/store/chatStore.ts`
+
+---
+
 ## Phase 7 — Demo & Visualization
 
 ### STEP-34 — Demo Scenarios, Fixtures & DemoModeService

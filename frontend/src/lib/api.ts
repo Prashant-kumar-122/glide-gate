@@ -69,6 +69,7 @@ export interface CaseSummary {
   client_name: string
   current_stage: string
   overall_progress: number
+  questionnaire_pct: number
   documents_total: number
   documents_approved: number
   products: ProductTrack[]
@@ -196,6 +197,60 @@ export interface ValidationPrompt {
   factors: string[]
 }
 
+export interface ReviewOut {
+  id: string
+  case_id: string
+  kyc_check_id: string
+  reviewer_id: string | null
+  reviewer_role: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'MORE_INFO_REQUESTED'
+  evidence_packet: EvidencePacket
+  decision: string | null
+  decision_notes: string | null
+  escalation_reason: string | null
+  assigned_at: string
+  decided_at: string | null
+  created_at: string
+}
+
+export interface EvidencePacket {
+  case_id: string
+  client_id: string
+  assembled_at: string
+  kyc_result: {
+    kyc_status: string
+    risk_band: string
+    composite_score: number
+    identity_score: number
+    aml_score: number
+    profile_score: number
+    should_escalate: boolean
+    escalation_reasons: string[]
+    required_documents: string[]
+    verification_id?: string
+    checked_at?: string
+  }
+  client_summary: Record<string, unknown>
+  document_summary: {
+    total: number
+    by_status: Record<string, number>
+    categories_present: string[]
+    categories_missing: string[]
+  }
+  case_summary: {
+    current_stage: string
+    status: string
+    selected_products: string[]
+  }
+}
+
+export interface DecisionOut {
+  review_id: string
+  decision: string
+  decided_at: string
+  message: string
+}
+
 export interface ProductOut {
   id: string
   product_code: string
@@ -209,4 +264,29 @@ export interface AdvisorOut {
   first_name: string
   last_name: string
   role: string
+}
+
+export interface CheckpointRuleOut {
+  rule_id: string
+  description: string
+  product_type: string | null
+  risk_level: string | null
+  account_value_band: string | null
+  jurisdiction: string | null
+  action: 'ESCALATE' | 'ENHANCED_DD' | 'REQUIRE_DOCUMENTS'
+  required_documents: string[]
+  reason_template: string
+  is_builtin: boolean
+}
+
+export interface CreateCheckpointRuleRequest {
+  rule_id?: string
+  description: string
+  product_type?: string | null
+  risk_level?: string | null
+  account_value_band?: string | null
+  jurisdiction?: string | null
+  action: 'ESCALATE' | 'ENHANCED_DD' | 'REQUIRE_DOCUMENTS'
+  required_documents?: string[]
+  reason_template?: string
 }

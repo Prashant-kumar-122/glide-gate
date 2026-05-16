@@ -19,6 +19,7 @@ from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Produ
 from app.models.clients import Client
 from app.models.documents import Document
 from app.services.orchestration.agent_orchestration_service import orchestration_service
+from app.services.orchestration.journey_resumption_service import journey_resumption_service
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -104,6 +105,7 @@ class CaseProgressOut(BaseModel):
     current_stage: str
     status: str
     overall_progress: int
+    questionnaire_pct: float
     documents_total: int
     documents_received: int
     documents_approved: int
@@ -354,6 +356,9 @@ async def get_case_summary(
     received = sum(1 for s in doc_statuses if s not in ("NOT_REQUESTED", "REQUESTED"))
     approved = sum(1 for s in doc_statuses if s == "APPROVED")
 
+    # Use the persisted percentage column (updated after each question/doc/KYC event)
+    questionnaire_pct = case.percentage
+
     ctx = case.shared_context or {}
     stage = case.current_stage
     client = case.client
@@ -367,6 +372,7 @@ async def get_case_summary(
         current_stage=stage,
         status=case.status,
         overall_progress=_STAGE_PROGRESS.get(stage, 0),
+        questionnaire_pct=questionnaire_pct,
         documents_total=total_docs,
         documents_received=received,
         documents_approved=approved,
@@ -380,12 +386,12 @@ async def get_case_summary(
 async def resume_case(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin")),
+    _user: dict = Depends(require_role("advisor", "admin")),
 ) -> ResumeResponse:
     case = await _get_case_or_404(case_id, db)
-    asyncio.create_task(orchestration_service.resume_onboarding(case_id=case.id))
+    asyncio.create_task(journey_resumption_service.resume_case(case_id=case.id))
     return ResumeResponse(
         case_id=case.id,
-        message="Resume request accepted — AgentOrchestrationService is re-routing the workflow",
+        message="Resume request accepted — JourneyResumptionService will restore state and re-spawn agents",
         stage=case.current_stage,
     )

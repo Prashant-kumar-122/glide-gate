@@ -7,13 +7,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from pydantic import BaseModel, computed_field
-from sqlalchemy import select
+from sqlalchemy import select, update as sa_update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import NotFoundError, UnprocessableError
 from app.database import get_db
+from app.database import AsyncSessionLocal
+from app.models.cases import OnboardingCase
 from app.models.documents import Document
 from app.services.document.document_upload_service import document_upload_service
 from app.services.validation.validation_orchestrator import run_validate_in_background
@@ -140,6 +142,37 @@ async def _get_doc_or_404(doc_id: UUID, db: AsyncSession) -> Document:
     if doc is None:
         raise NotFoundError("Document", str(doc_id))
     return doc
+
+
+async def _update_case_percentage_for_docs(case_id: UUID) -> None:
+    """Recompute the document portion (70-100%) of the case percentage column."""
+    try:
+        async with AsyncSessionLocal() as db:
+            total_result = await db.execute(
+                select(func.count()).select_from(Document).where(Document.case_id == case_id)
+            )
+            total = total_result.scalar() or 0
+
+            approved_result = await db.execute(
+                select(func.count()).select_from(Document)
+                .where(Document.case_id == case_id)
+                .where(Document.status == "APPROVED")
+            )
+            approved = approved_result.scalar() or 0
+
+            doc_ratio = (approved / total) if total > 0 else 0.0
+            # Documents contribute the 70-100% band of the overall progress bar
+            new_pct = round(70.0 + doc_ratio * 30.0, 1)
+
+            await db.execute(
+                sa_update(OnboardingCase)
+                .where(OnboardingCase.id == case_id)
+                .values(percentage=new_pct)
+            )
+            await db.commit()
+    except Exception as exc:
+        from loguru import logger
+        logger.warning(f"documents: percentage update failed for case {case_id}: {exc}")
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -271,6 +304,11 @@ async def update_document_status(
     doc.status = body.status
     await db.commit()
     await db.refresh(doc)
+
+    # Recalculate the document portion (70-100%) of the overall percentage column
+    if body.status in ("APPROVED", "REJECTED", "RECEIVED", "UNDER_REVIEW"):
+        asyncio.create_task(_update_case_percentage_for_docs(doc.case_id))
+
     return DocumentOut.model_validate(doc)
 
 

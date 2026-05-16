@@ -5,8 +5,18 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.base.a2a_types import OnboardingState
+from app.agents.base.a2a_types import OnboardingState, OnboardingStage
 from app.models.cases import OnboardingCase
+
+# Fixed percentage floor per stage — the minimum progress when entering each stage.
+# INTAKE is handled incrementally by _persist_field; other stages snap to these values.
+_STAGE_PERCENTAGE: dict[str, float] = {
+    OnboardingStage.KYC.value: 70.0,
+    OnboardingStage.PARALLEL_PRODUCTS.value: 70.0,  # docs update it further
+    OnboardingStage.REVIEW.value: 95.0,
+    OnboardingStage.COMPLETE.value: 100.0,
+    OnboardingStage.ESCALATED.value: 75.0,
+}
 
 
 class StateRepository:
@@ -32,10 +42,14 @@ class StateRepository:
     ) -> None:
         """Serialise OnboardingState and write it to onboarding_cases.shared_context."""
         payload = state.model_dump(mode="json")
+        values: dict = {"shared_context": payload, "current_stage": state.stage.value}
+        stage_pct = _STAGE_PERCENTAGE.get(state.stage.value)
+        if stage_pct is not None:
+            values["percentage"] = stage_pct
         await session.execute(
             update(OnboardingCase)
             .where(OnboardingCase.id == case_id)
-            .values(shared_context=payload, current_stage=state.stage.value)
+            .values(**values)
         )
 
     @staticmethod
