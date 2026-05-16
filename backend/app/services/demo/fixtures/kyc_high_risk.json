@@ -1,0 +1,34 @@
+{
+  "passing": {
+    "verification_id": "demo-kyc-pass-001",
+    "name_match_confidence": 0.9750,
+    "document_authentic": true,
+    "document_valid": true,
+    "sanctions_match": false,
+    "pep_match": false,
+    "aml_risk_factors": [],
+    "aml_risk_level": "LOW",
+    "latency_ms": 312,
+    "checked_at": "2026-05-16T10:00:00Z",
+    "provider": "simulated_identity_verification_v1",
+    "is_simulated": true
+  },
+  "high_risk": {
+    "verification_id": "demo-kyc-highrisk-001",
+    "name_match_confidence": 0.6200,
+    "document_authentic": false,
+    "document_valid": false,
+    "sanctions_match": false,
+    "pep_match": true,
+    "aml_risk_factors": [
+      "politically_exposed_person",
+      "high_income",
+      "undisclosed_source_of_funds"
+    ],
+    "aml_risk_level": "HIGH",
+    "latency_ms": 423,
+    "checked_at": "2026-05-16T10:00:00Z",
+    "provider": "simulated_identity_verification_v1",
+    "is_simulated": true
+  }
+}

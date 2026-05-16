@@ -75,7 +75,9 @@ class ConversationCoordinator:
         output_tokens = 0
         fallback = self._build_fallback_text(next_field, status.is_complete, validation_error)
 
-        async for sse_line in streaming_response_service.stream_reply(messages, fallback_text=fallback):
+        async for sse_line in streaming_response_service.stream_reply(
+            messages, case_id=case_id, fallback_text=fallback
+        ):
             yield sse_line
             if sse_line.startswith("data: "):
                 try:
@@ -145,7 +147,9 @@ class ConversationCoordinator:
         messages = [{"role": "user", "content": guided}]
         full_text = ""
 
-        async for sse_line in streaming_response_service.stream_reply(messages, fallback_text=fallback):
+        async for sse_line in streaming_response_service.stream_reply(
+            messages, case_id=case_id, fallback_text=fallback
+        ):
             yield sse_line
             if sse_line.startswith("data: "):
                 try:

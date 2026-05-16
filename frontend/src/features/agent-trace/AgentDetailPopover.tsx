@@ -4,6 +4,12 @@ import { AGENT_LABELS } from './agentPositions'
 import type { AgentId } from './agentPositions'
 import type { AgentTraceOut } from '@/lib/api'
 
+// Canvas node IDs for parallel product tracks map back to the A2A agent_type
+const CANVAS_TO_A2A: Record<string, string> = {
+  product_onboarding_cash: 'product_onboarding',
+  product_onboarding_retirement: 'product_onboarding',
+}
+
 const STATUS_ICON: Record<string, React.ReactElement> = {
   SUCCESS: <CheckCircle className="h-3.5 w-3.5 text-green-500" />,
   FAILED: <AlertTriangle className="h-3.5 w-3.5 text-red-500" />,
@@ -28,12 +34,15 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
   const nodeState = useTraceStore((s) => s.nodeStates[agentId] ?? 'idle')
   const label = AGENT_LABELS[agentId as AgentId] ?? agentId
 
+  // Canvas node IDs like product_onboarding_cash map to A2A agent_type product_onboarding
+  const a2aId = CANVAS_TO_A2A[agentId] ?? agentId
   const agentInfo = traceData?.agents.find(
-    (a) => a.agent_type === agentId || a.id === agentId,
+    (a) => a.agent_type === a2aId || a.agent_type === agentId || a.id === agentId,
   )
   const recentTasks = (
     traceData?.tasks.filter(
-      (t) => t.from_agent === agentId || t.to_agent === agentId,
+      (t) => t.from_agent === a2aId || t.to_agent === a2aId ||
+             t.from_agent === agentId || t.to_agent === agentId,
     ) ?? []
   )
     .slice(-5)

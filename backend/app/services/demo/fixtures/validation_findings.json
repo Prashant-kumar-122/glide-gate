@@ -1,0 +1,224 @@
+{
+  "identity": {
+    "overall_status": "pass",
+    "completeness_pct": 94.0,
+    "findings": [
+      {
+        "field": "full_name",
+        "severity": "pass",
+        "message": "Full name is present and clearly legible.",
+        "suggestion": null
+      },
+      {
+        "field": "date_of_birth",
+        "severity": "pass",
+        "message": "Date of birth is present and consistent with the document holder's visible age.",
+        "suggestion": null
+      },
+      {
+        "field": "document_number",
+        "severity": "pass",
+        "message": "Passport/ID number is present and in the correct format.",
+        "suggestion": null
+      },
+      {
+        "field": "expiry_date",
+        "severity": "pass",
+        "message": "Document is valid and not expired.",
+        "suggestion": null
+      },
+      {
+        "field": "nationality",
+        "severity": "pass",
+        "message": "Nationality field is present.",
+        "suggestion": null
+      },
+      {
+        "field": "photo",
+        "severity": "warn",
+        "message": "Photo is present but slightly blurry — legibility may be reduced for automated matching.",
+        "suggestion": "Request the client to resubmit a higher-resolution scan of the document."
+      }
+    ]
+  },
+  "financial": {
+    "overall_status": "pass",
+    "completeness_pct": 96.0,
+    "findings": [
+      {
+        "field": "account_holder_name",
+        "severity": "pass",
+        "message": "Account holder name matches the client's registered name.",
+        "suggestion": null
+      },
+      {
+        "field": "account_number",
+        "severity": "pass",
+        "message": "Account number is present and correctly formatted.",
+        "suggestion": null
+      },
+      {
+        "field": "statement_period",
+        "severity": "pass",
+        "message": "Statement covers the most recent 3 months as required.",
+        "suggestion": null
+      },
+      {
+        "field": "balance",
+        "severity": "pass",
+        "message": "Opening and closing balances are present.",
+        "suggestion": null
+      },
+      {
+        "field": "institution_name",
+        "severity": "pass",
+        "message": "Bank name and branch details are clearly shown.",
+        "suggestion": null
+      }
+    ]
+  },
+  "legal": {
+    "overall_status": "warn",
+    "completeness_pct": 82.0,
+    "findings": [
+      {
+        "field": "signatory_name",
+        "severity": "pass",
+        "message": "Signatory name is present and matches client records.",
+        "suggestion": null
+      },
+      {
+        "field": "effective_date",
+        "severity": "pass",
+        "message": "Effective date of the agreement is present.",
+        "suggestion": null
+      },
+      {
+        "field": "witness_signature",
+        "severity": "warn",
+        "message": "Witness signature block is present but the witness name is not printed below the signature.",
+        "suggestion": "Request an updated copy with the witness name printed legibly beneath the signature."
+      },
+      {
+        "field": "notarisation",
+        "severity": "warn",
+        "message": "Notarisation stamp is present but the notary's registration number is not visible.",
+        "suggestion": "Confirm the notary's registration number with the client."
+      }
+    ]
+  },
+  "insurance": {
+    "overall_status": "pass",
+    "completeness_pct": 91.0,
+    "findings": [
+      {
+        "field": "policy_number",
+        "severity": "pass",
+        "message": "Policy number is present and legible.",
+        "suggestion": null
+      },
+      {
+        "field": "insured_name",
+        "severity": "pass",
+        "message": "Insured name matches client records.",
+        "suggestion": null
+      },
+      {
+        "field": "coverage_amount",
+        "severity": "pass",
+        "message": "Coverage amount is clearly stated.",
+        "suggestion": null
+      },
+      {
+        "field": "expiry_date",
+        "severity": "pass",
+        "message": "Policy expiry date is present and the policy is currently active.",
+        "suggestion": null
+      },
+      {
+        "field": "beneficiary",
+        "severity": "warn",
+        "message": "Beneficiary designation is missing — this field is recommended for retirement account suitability.",
+        "suggestion": "Ask the client to confirm their nominated beneficiary."
+      }
+    ]
+  },
+  "compliance": {
+    "overall_status": "pass",
+    "completeness_pct": 98.0,
+    "findings": [
+      {
+        "field": "fatca_declaration",
+        "severity": "pass",
+        "message": "FATCA self-certification is complete and signed.",
+        "suggestion": null
+      },
+      {
+        "field": "crs_declaration",
+        "severity": "pass",
+        "message": "CRS tax residency declaration is present and consistent with client-provided data.",
+        "suggestion": null
+      },
+      {
+        "field": "pep_declaration",
+        "severity": "pass",
+        "message": "PEP declaration has been completed and is signed.",
+        "suggestion": null
+      },
+      {
+        "field": "aml_consent",
+        "severity": "pass",
+        "message": "AML/KYC consent acknowledgement is present.",
+        "suggestion": null
+      },
+      {
+        "field": "sanctions_screening_note",
+        "severity": "pass",
+        "message": "Sanctions screening disclosure has been signed.",
+        "suggestion": null
+      },
+      {
+        "field": "data_processing_consent",
+        "severity": "pass",
+        "message": "GDPR / data processing consent is present and dated.",
+        "suggestion": null
+      }
+    ]
+  },
+  "entity": {
+    "overall_status": "warn",
+    "completeness_pct": 78.0,
+    "findings": [
+      {
+        "field": "company_name",
+        "severity": "pass",
+        "message": "Registered company name is present.",
+        "suggestion": null
+      },
+      {
+        "field": "registration_number",
+        "severity": "pass",
+        "message": "Company registration number is present.",
+        "suggestion": null
+      },
+      {
+        "field": "directors_list",
+        "severity": "warn",
+        "message": "Directors list is present but one entry is missing a date of birth.",
+        "suggestion": "Request the missing director date of birth from the client."
+      },
+      {
+        "field": "ubo_declaration",
+        "severity": "warn",
+        "message": "Ultimate Beneficial Owner (UBO) declaration is missing for one shareholder with >25% ownership.",
+        "suggestion": "Request a completed UBO declaration form for the identified beneficial owner."
+      },
+      {
+        "field": "certificate_of_incorporation",
+        "severity": "pass",
+        "message": "Certificate of incorporation is present and within the last 12 months.",
+        "suggestion": null
+      }
+    ]
+  }
+}

@@ -721,14 +721,78 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ## Phase 7 — Demo & Visualization
 
-### [ ] STEP-34 — Demo Scenarios, Fixtures & DemoModeService
-**BRD:** Section 13.1, Section 11.2 | **Depends:** STEP-12, STEP-17, STEP-29
+### [DONE] STEP-34 — Demo Scenarios, Fixtures & DemoModeService
+**Date:** 2026-05-16 | **BRD:** Section 13.1, Section 11.2 (all 11 criteria) | **Depends:** STEP-12, STEP-17, STEP-29
 
-### [ ] STEP-35 — Agent Trace Canvas: Live Animation & Real-Time Log
-**BRD:** FR-11 | **Depends:** STEP-15, STEP-23, STEP-17
+**Artifacts produced / modified:**
 
-### [ ] STEP-36 — Parallel Product Track Visualization
-**BRD:** FR-01, Section 7.1 | **Depends:** STEP-20, STEP-22, STEP-35
+`backend/app/services/demo/demo_mode_service.py` ✓ — `DemoModeService` singleton (`demo_mode_service`):
+- `is_enabled()` → gates all intercepts via `settings.DEMO_MODE`
+- `stream_canned_turn(case_id)` → async generator that streams the next pre-scripted turn as SSE tokens (~25 ms/word) and advances the per-case turn counter
+- `get_validation_findings(category)` → returns pre-canned `FindingResult`-compatible dict for the given document category
+- `get_kyc_result(case_id)` → returns the pre-canned KYC verification result for the case's pinned scenario ("passing" or "high_risk")
+- `set_kyc_scenario(case_id, scenario)` / `get_kyc_scenario(case_id)` → per-case scenario pin (default "passing")
+- `reset_case(case_id)` → clears turn counter + scenario for demo re-runs
+- `status()` → admin summary: loaded turn count, categories, available scenarios, active case state
+
+`backend/app/services/demo/__init__.py` ✓ — re-exports `DemoModeService`, `demo_mode_service`
+
+`backend/app/services/demo/fixtures/kyc_high_risk.json` ✓ — Two KYC fixture objects: `passing` (confidence 0.975, no risk factors, aml_risk_level LOW) and `high_risk` (confidence 0.62, pep_match true, 3 AML risk factors, aml_risk_level HIGH)
+
+`backend/app/services/demo/fixtures/conversation_turns.json` ✓ — 19 pre-scripted assistant turns covering the full onboarding conversation from greeting → full-name → DOB → nationality → email → phone → occupation → income → source_of_funds → address → id_type → id_number → products → investment_experience → risk_tolerance → investment_horizon → tax_residency → US_person → regulatory_question → completion acknowledgement
+
+`backend/app/services/demo/fixtures/validation_findings.json` ✓ — Pre-canned findings for all 6 document categories: identity (5 pass + 1 warn, 94%), financial (5 pass, 96%), legal (2 pass + 2 warn, 82%), insurance (4 pass + 1 warn, 91%), compliance (6 pass, 98%), entity (3 pass + 2 warn, 78%)
+
+`backend/app/api/routers/demo.py` ✓ — Demo admin router (`/api/demo/*`; blocked 404 when DEMO_MODE=False):
+- `GET /demo/status` — service status + loaded fixture counts
+- `POST /demo/cases/{case_id}/reset` — reset turn counter + KYC scenario
+- `POST /demo/cases/{case_id}/kyc-scenario` — pin scenario ("passing" | "high_risk") for Scenario B
+- `GET /demo/cases/{case_id}/kyc-scenario` — get active scenario
+
+`backend/app/main.py` ✓ — `demo.router` registered with `_prefix`
+
+`backend/app/services/conversation/streaming_response_service.py` ✓ — `stream_reply()` gains optional `case_id: UUID | None = None` param; when `case_id` is provided and `DEMO_MODE=True`, delegates immediately to `demo_mode_service.stream_canned_turn()` and returns — skips all LLM calls
+
+`backend/app/services/conversation/conversation_coordinator.py` ✓ — Both `handle_message()` and `handle_greeting()` now pass `case_id=case_id` to `stream_reply()` so demo intercept fires correctly
+
+`backend/app/agents/document_intelligence/ai_completeness_validator.py` ✓ — `validate()` checks `demo_mode_service.is_enabled()` before any LLM call; when enabled, constructs `ValidationResult` directly from the `validation_findings.json` fixture for the document category; gracefully falls through to normal validation if fixture loading fails
+
+`backend/app/agents/kyc_compliance/kyc_compliance_agent.py` ✓ — `_simulate_identity_verification()` gains `case_id: UUID | None = None` param; when demo mode is enabled, returns pre-canned fixture from `demo_mode_service.get_kyc_result(case_id)` with fixture-specified latency; `_handle_run_kyc()` passes `case_id=task.case_id` to the method
+
+`docs/demo_scenario_a.md` ✓ — Happy path walkthrough: Aarav Mehta, 2 products, PASSED KYC, no escalation; covers criteria #1 #2 #3 #4 #7 #8 #9 #10; includes pre-flight checklist, step-by-step guide, sample client inputs table, expected outcome checklist
+
+`docs/demo_scenario_b.md` ✓ — Escalation path walkthrough: same client, HIGH_RISK KYC → human review → approve → resume; covers criteria #5 #6 #11; includes demo endpoint command, step-by-step guide, evidence packet fields table, expected outcome checklist, reset instructions
+
+**Demo mode summary:**
+- Set `DEMO_MODE=True` in `.env` to activate
+- Conversation: 19 pre-scripted turns streamed word-by-word at realistic cadence (~25 ms/word)
+- Validation: returns fixture findings instantly (< 100 ms) — no LLM latency
+- KYC: defaults to "passing"; set to "high_risk" via `POST /api/demo/cases/{id}/kyc-scenario` for Scenario B
+- All real agent FSM, DB persistence, socket events, and audit logging still execute normally — only LLM call is bypassed
+
+### [DONE] STEP-35 — Agent Trace Canvas: Live Animation & Real-Time Log
+**Date:** 2026-05-16 | **BRD:** FR-11, Hackathon Criterion #10 | **Depends:** STEP-15, STEP-23, STEP-17
+
+**Artifacts produced:**
+- `frontend/src/features/agent-trace/AgentTraceCanvas.tsx` ✓ — React Flow canvas: 9 agent nodes (8 + dual product tracks), animated edges, 2s auto-expire, case selector, state-colour legend
+- `frontend/src/features/agent-trace/useAgentTraceSocket.ts` ✓ — socket handlers: AGENT_MESSAGE → enqueueEdge + setNodeState; TASK_ASSIGNED/COMPLETE; ESCALATION_TRIGGERED; CASE_STAGE_CHANGED; PROGRESS_UPDATE (parallel_products_started/complete → per-product node state)
+- `frontend/src/features/agent-trace/agentPositions.ts` ✓ — 9-node layout, AGENT_NODE_MAP (product_onboarding → both product nodes), PRODUCT_NODE_MAP (product_code → canvas node ID), updated STATIC_EDGES
+- `frontend/src/features/agent-trace/AgentNode.tsx` ✓ — icons for product_onboarding_cash and product_onboarding_retirement
+- `frontend/src/features/agent-trace/AgentDetailPopover.tsx` ✓ — CANVAS_TO_A2A reverse-map for product track nodes
+- `frontend/src/features/agent-trace/MessageLog.tsx` ✓ — reverse-chronological A2A message log with status colours
+- `tsc --noEmit` passes with zero errors ✓
+
+---
+
+### [DONE] STEP-36 — Parallel Product Track Visualization
+**Date:** 2026-05-16 | **BRD:** FR-01, Section 7.1, Hackathon Criterion #3 | **Depends:** STEP-20, STEP-22, STEP-35
+
+**Artifacts produced:**
+- `frontend/src/features/advisor/ParallelProductTracks.tsx` ✓ — two-column grid of `ProductTrackCard` (status indicator, ProgressBar, steps_completed/total); skeleton loader; empty state
+- `frontend/src/features/contact-centre/ProductTrackSummary.tsx` ✓ — compact single-row per product with StatusDot + inline ProgressBar for Contact Centre panel
+- `frontend/src/hooks/useWorkspaceSocket.ts` ✓ — `PRODUCT_TRACK_UPDATE` invalidates `caseSummary` query; `PROGRESS_UPDATE` handles parallel_products_started/complete events
+- Canvas enhancement: dual `product_onboarding_cash` and `product_onboarding_retirement` nodes visible as separate nodes; both activated on parallel launch and individually completed via PROGRESS_UPDATE socket events ✓
+- `tsc --noEmit` passes with zero errors ✓
 
 ---
 

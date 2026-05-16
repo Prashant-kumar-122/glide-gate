@@ -1,0 +1,39 @@
+[
+  "Welcome to GlideGate! I'm your dedicated onboarding assistant, here to help you open your new account as smoothly as possible. I'll be collecting some information from you over the next few minutes — it should only take about 5 minutes. To get started, could you please tell me your full name?",
+
+  "Thank you, Aarav! It's great to meet you. Could you please share your date of birth? Please use the format DD/MM/YYYY.",
+
+  "Perfect, thank you. Next, could you tell me your nationality?",
+
+  "Great. Could you please provide your email address? We'll use this to send you updates on your application.",
+
+  "Thank you. What's the best phone number to reach you on?",
+
+  "Got it. What is your current occupation or job title?",
+
+  "Thank you for sharing that. Could you tell me your approximate annual income? For example, you could say something like £75,000.",
+
+  "Understood. Could you describe your primary source of funds — for example, employment income, investment returns, or business income?",
+
+  "Thank you. Could you please provide your current residential address, including your postcode?",
+
+  "Perfect. What type of identification document would you like to use? Options include Passport, National ID Card, or Driving Licence.",
+
+  "Great. Could you provide your document number — that's the number printed on the front of your Passport, National ID, or Driving Licence?",
+
+  "Excellent. Which account types would you like to open? We currently offer a Cash Account and a Retirement Account — you're welcome to open one or both.",
+
+  "Wonderful choice! Now let's talk about your investment preferences. How would you describe your investment experience — None, Limited, Moderate, or Extensive?",
+
+  "Thank you. How would you describe your risk tolerance when it comes to investing — Conservative, Moderate, or Aggressive?",
+
+  "Understood. What is your investment time horizon — Short (under 3 years), Medium (3–10 years), or Long (over 10 years)?",
+
+  "Got it. What is your country of tax residency?",
+
+  "Thank you. Are you a US person for tax purposes — a US citizen, US resident, or do you hold a green card? Please answer Yes or No.",
+
+  "Thank you for that confirmation. I'm required to ask the following regulatory question — please read it carefully and answer Yes or No: Are you currently subject to any legal proceedings, court orders, or regulatory investigations that could affect your eligibility to hold a financial account?",
+
+  "Thank you, Aarav. I'm pleased to let you know that all the information we need has been collected. Your application is now being prepared for identity verification — you should hear back from us within 24 hours. Is there anything else you'd like to ask before we proceed?"
+]

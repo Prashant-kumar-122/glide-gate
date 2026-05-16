@@ -24,6 +24,8 @@ const AGENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   kyc_compliance: ShieldCheck,
   document_intelligence: FileSearch,
   product_onboarding: Package,
+  product_onboarding_cash: Package,
+  product_onboarding_retirement: Package,
   collaboration: Users,
   contact_centre: PhoneCall,
   notification: Bell,
