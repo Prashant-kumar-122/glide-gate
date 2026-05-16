@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { getSocket } from '@/lib/socket'
 import { useTraceStore } from '@/store/traceStore'
 import type { AgentEdgeEvent, TraceMessage } from '@/store/traceStore'
+import { AGENT_NODE_MAP, PRODUCT_NODE_MAP } from './agentPositions'
+import type { AgentId } from './agentPositions'
 
 const EV = {
   AGENT_MESSAGE: 'agent_message',
@@ -9,7 +11,13 @@ const EV = {
   TASK_COMPLETE: 'task_complete',
   ESCALATION_TRIGGERED: 'escalation_triggered',
   CASE_STAGE_CHANGED: 'case_stage_changed',
+  PROGRESS_UPDATE: 'progress_update',
 } as const
+
+/** Resolve an A2A agent_id to one or more canvas node IDs. */
+function resolveNodes(agentId: string): string[] {
+  return AGENT_NODE_MAP[agentId] ?? [agentId]
+}
 
 export function useAgentTraceSocket(caseId: string | null) {
   const setNodeState = useTraceStore((s) => s.setNodeState)
@@ -41,15 +49,19 @@ export function useAgentTraceSocket(caseId: string | null) {
       const taskType = data.task_type ?? 'TASK'
       const id = data.task_id ?? `${Date.now()}-${Math.random()}`
 
+      // For agents with multiple canvas nodes (e.g. product_onboarding), activate all
+      const toNodes = resolveNodes(toAgent)
+      const primaryTo = toNodes[0] ?? toAgent
+
       const edge: AgentEdgeEvent = {
         id,
         fromAgent,
-        toAgent,
+        toAgent: primaryTo,
         messageType: taskType,
         timestamp: new Date().toISOString(),
       }
       enqueueEdge(edge)
-      setNodeState(toAgent, 'active')
+      toNodes.forEach((n) => setNodeState(n, 'active'))
 
       const msg: TraceMessage = {
         id,
@@ -63,7 +75,9 @@ export function useAgentTraceSocket(caseId: string | null) {
     }
 
     function onTaskAssigned(data: { to_agent?: string }) {
-      if (data.to_agent) setNodeState(data.to_agent, 'active')
+      if (data.to_agent) {
+        resolveNodes(data.to_agent).forEach((n) => setNodeState(n, 'active'))
+      }
     }
 
     function onTaskComplete(data: {
@@ -74,7 +88,8 @@ export function useAgentTraceSocket(caseId: string | null) {
       task_id?: string
     }) {
       if (data.from_agent) {
-        setNodeState(data.from_agent, data.status === 'FAILED' ? 'idle' : 'complete')
+        const state = data.status === 'FAILED' ? 'idle' : 'complete'
+        resolveNodes(data.from_agent).forEach((n) => setNodeState(n, state))
       }
       if (data.task_id ?? data.task_type) {
         const msg: TraceMessage = {
@@ -90,7 +105,9 @@ export function useAgentTraceSocket(caseId: string | null) {
     }
 
     function onEscalation(data: { agent_id?: string }) {
-      setNodeState(data.agent_id ?? 'kyc_compliance', 'escalated')
+      resolveNodes(data.agent_id ?? 'kyc_compliance').forEach((n) =>
+        setNodeState(n, 'escalated'),
+      )
       setNodeState('orchestrator', 'escalated')
     }
 
@@ -100,11 +117,39 @@ export function useAgentTraceSocket(caseId: string | null) {
       else if (data.stage) setNodeState('orchestrator', 'active')
     }
 
+    function onProgressUpdate(data: {
+      event?: string
+      products?: string[]
+      results?: Array<{ product_code?: string; status?: string }>
+    }) {
+      if (data.event === 'parallel_products_started' && data.products) {
+        data.products.forEach((pc) => {
+          const nodeId = PRODUCT_NODE_MAP[pc] as AgentId | undefined
+          if (nodeId) setNodeState(nodeId, 'active')
+        })
+      } else if (data.event === 'parallel_products_complete' && data.results) {
+        data.results.forEach((r) => {
+          const nodeId = r.product_code
+            ? (PRODUCT_NODE_MAP[r.product_code] as AgentId | undefined)
+            : undefined
+          if (!nodeId) return
+          const state =
+            r.status === 'COMPLETE'
+              ? 'complete'
+              : r.status === 'FAILED' || r.status === 'UNSUITABLE'
+              ? 'idle'
+              : 'active'
+          setNodeState(nodeId, state)
+        })
+      }
+    }
+
     socket.on(EV.AGENT_MESSAGE, onAgentMessage)
     socket.on(EV.TASK_ASSIGNED, onTaskAssigned)
     socket.on(EV.TASK_COMPLETE, onTaskComplete)
     socket.on(EV.ESCALATION_TRIGGERED, onEscalation)
     socket.on(EV.CASE_STAGE_CHANGED, onStageChanged)
+    socket.on(EV.PROGRESS_UPDATE, onProgressUpdate)
 
     return () => {
       socket.off(EV.AGENT_MESSAGE, onAgentMessage)
@@ -112,6 +157,7 @@ export function useAgentTraceSocket(caseId: string | null) {
       socket.off(EV.TASK_COMPLETE, onTaskComplete)
       socket.off(EV.ESCALATION_TRIGGERED, onEscalation)
       socket.off(EV.CASE_STAGE_CHANGED, onStageChanged)
+      socket.off(EV.PROGRESS_UPDATE, onProgressUpdate)
       socket.emit('leave_case_room', { case_id: caseId })
       joinedRoom.current = null
     }

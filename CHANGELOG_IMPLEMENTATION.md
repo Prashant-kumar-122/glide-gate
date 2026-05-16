@@ -770,11 +770,29 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 - KYC: defaults to "passing"; set to "high_risk" via `POST /api/demo/cases/{id}/kyc-scenario` for Scenario B
 - All real agent FSM, DB persistence, socket events, and audit logging still execute normally — only LLM call is bypassed
 
-### [ ] STEP-35 — Agent Trace Canvas: Live Animation & Real-Time Log
-**BRD:** FR-11 | **Depends:** STEP-15, STEP-23, STEP-17
+### [DONE] STEP-35 — Agent Trace Canvas: Live Animation & Real-Time Log
+**Date:** 2026-05-16 | **BRD:** FR-11, Hackathon Criterion #10 | **Depends:** STEP-15, STEP-23, STEP-17
 
-### [ ] STEP-36 — Parallel Product Track Visualization
-**BRD:** FR-01, Section 7.1 | **Depends:** STEP-20, STEP-22, STEP-35
+**Artifacts produced:**
+- `frontend/src/features/agent-trace/AgentTraceCanvas.tsx` ✓ — React Flow canvas: 9 agent nodes (8 + dual product tracks), animated edges, 2s auto-expire, case selector, state-colour legend
+- `frontend/src/features/agent-trace/useAgentTraceSocket.ts` ✓ — socket handlers: AGENT_MESSAGE → enqueueEdge + setNodeState; TASK_ASSIGNED/COMPLETE; ESCALATION_TRIGGERED; CASE_STAGE_CHANGED; PROGRESS_UPDATE (parallel_products_started/complete → per-product node state)
+- `frontend/src/features/agent-trace/agentPositions.ts` ✓ — 9-node layout, AGENT_NODE_MAP (product_onboarding → both product nodes), PRODUCT_NODE_MAP (product_code → canvas node ID), updated STATIC_EDGES
+- `frontend/src/features/agent-trace/AgentNode.tsx` ✓ — icons for product_onboarding_cash and product_onboarding_retirement
+- `frontend/src/features/agent-trace/AgentDetailPopover.tsx` ✓ — CANVAS_TO_A2A reverse-map for product track nodes
+- `frontend/src/features/agent-trace/MessageLog.tsx` ✓ — reverse-chronological A2A message log with status colours
+- `tsc --noEmit` passes with zero errors ✓
+
+---
+
+### [DONE] STEP-36 — Parallel Product Track Visualization
+**Date:** 2026-05-16 | **BRD:** FR-01, Section 7.1, Hackathon Criterion #3 | **Depends:** STEP-20, STEP-22, STEP-35
+
+**Artifacts produced:**
+- `frontend/src/features/advisor/ParallelProductTracks.tsx` ✓ — two-column grid of `ProductTrackCard` (status indicator, ProgressBar, steps_completed/total); skeleton loader; empty state
+- `frontend/src/features/contact-centre/ProductTrackSummary.tsx` ✓ — compact single-row per product with StatusDot + inline ProgressBar for Contact Centre panel
+- `frontend/src/hooks/useWorkspaceSocket.ts` ✓ — `PRODUCT_TRACK_UPDATE` invalidates `caseSummary` query; `PROGRESS_UPDATE` handles parallel_products_started/complete events
+- Canvas enhancement: dual `product_onboarding_cash` and `product_onboarding_retirement` nodes visible as separate nodes; both activated on parallel launch and individually completed via PROGRESS_UPDATE socket events ✓
+- `tsc --noEmit` passes with zero errors ✓
 
 ---
 
