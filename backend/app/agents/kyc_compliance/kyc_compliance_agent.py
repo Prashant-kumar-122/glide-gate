@@ -69,7 +69,7 @@ class KYCComplianceAgent(BaseAgent):
             f"Running KYC check for case={task.case_id} products={selected_products}"
         )
 
-        verification = await self._simulate_identity_verification(client_data)
+        verification = await self._simulate_identity_verification(client_data, case_id=task.case_id)
         risk_score = self._scorer.compute(client_data, verification)
         # Build engine fresh each call so admin-configured rules take effect immediately
         checkpoint = CheckpointRuleEngine(rules=rule_repo.get_all()).evaluate(
@@ -203,13 +203,26 @@ class KYCComplianceAgent(BaseAgent):
     # ── Simulated MCP identity verification ───────────────────────────────────
 
     async def _simulate_identity_verification(
-        self, client_data: dict[str, Any]
+        self, client_data: dict[str, Any], case_id: UUID | None = None
     ) -> dict[str, Any]:
         """
         Simulates the MCP Identity Verification connector (STEP-16).
         Deterministic seed from id_number for reproducible demo results.
+        When DEMO_MODE=True, returns the pre-canned fixture for the case's scenario.
         """
         import asyncio
+
+        # Demo mode: return pre-canned fixture
+        try:
+            from app.services.demo.demo_mode_service import demo_mode_service
+            if demo_mode_service.is_enabled() and case_id is not None:
+                fixture = demo_mode_service.get_kyc_result(case_id)
+                if fixture:
+                    latency = fixture.get("latency_ms", 300) / 1000.0
+                    await asyncio.sleep(latency)
+                    return fixture
+        except Exception:
+            pass  # fall through to normal simulation
 
         latency = random.uniform(0.2, 0.8)
         await asyncio.sleep(latency)

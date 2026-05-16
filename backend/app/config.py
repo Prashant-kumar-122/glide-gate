@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
     LOCAL_MODEL_ENDPOINT: str = "http://localhost:11434/v1"
-    LOCAL_MODEL_NAME: str = "llama3.1:8b"
+    LOCAL_MODEL_NAME: str = "llama3:latest"
 
     # ── Primary LLM Config ───────────────────────────────────────────────────
     PRIMARY_LLM_PROVIDER: Literal["anthropic", "openai", "google", "local"] = "anthropic"

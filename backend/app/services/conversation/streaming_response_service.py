@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from typing import AsyncGenerator
+from uuid import UUID
 
 from app.services.llm.llm_provider import LLMMessage, LLMRequest
 from app.services.llm.llm_fallback_chain import llm_fallback_chain
@@ -32,11 +33,20 @@ class StreamingResponseService:
         self,
         messages: list[dict[str, str]],
         *,
+        case_id: UUID | None = None,
         system_prompt: str = CSA_SYSTEM_PROMPT,
         max_tokens: int = 512,
         temperature: float = 0.7,
         fallback_text: str = "",
     ) -> AsyncGenerator[str, None]:
+        # Demo mode: return pre-canned turn instead of calling the LLM
+        if case_id is not None:
+            from app.services.demo.demo_mode_service import demo_mode_service
+            if demo_mode_service.is_enabled():
+                async for chunk in demo_mode_service.stream_canned_turn(case_id, fallback=fallback_text):
+                    yield chunk
+                return
+
         yield _sse({"type": "start"})
 
         llm_messages = [

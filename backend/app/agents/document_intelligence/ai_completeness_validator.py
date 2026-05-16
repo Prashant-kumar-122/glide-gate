@@ -153,6 +153,27 @@ class AICompletenessValidator:
         category: DocumentCategory,
         custom_prompt: dict[str, Any] | None = None,
     ) -> ValidationResult:
+        # Demo mode: return pre-canned findings immediately, bypassing the LLM
+        try:
+            from app.services.demo.demo_mode_service import demo_mode_service
+            if demo_mode_service.is_enabled():
+                fixture = demo_mode_service.get_validation_findings(str(category))
+                if fixture:
+                    findings = [FindingResult(**f) for f in fixture.get("findings", [])]
+                    return ValidationResult(
+                        validation_id=uuid4(),
+                        document_id=ocr_result.document_id,
+                        category=category,
+                        overall_status=fixture.get("overall_status", "pass"),
+                        findings=findings,
+                        completeness_pct=float(fixture.get("completeness_pct", 90.0)),
+                        validated_at=datetime.now(timezone.utc).isoformat(),
+                        prompt_used="[demo-mode-fixture]",
+                        llm_used=False,
+                    )
+        except Exception:
+            pass  # gracefully continue to real validation if demo service fails
+
         prompt_cfg = custom_prompt or _DEFAULT_PROMPTS.get(
             category, _DEFAULT_PROMPTS["unknown"]
         )
