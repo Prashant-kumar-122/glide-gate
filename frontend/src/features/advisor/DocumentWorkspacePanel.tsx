@@ -46,8 +46,10 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
   const byCategory = groupByCategory(docs ?? [])
 
   function handleUpload(category: string, files: File[]) {
+    const catDocs = byCategory[category] ?? []
+    const latestDoc = catDocs[catDocs.length - 1]
     files.forEach((file) =>
-      uploadMutation.mutate({ file, category }),
+      uploadMutation.mutate({ file, category, parentDocId: latestDoc?.id }),
     )
   }
 
@@ -148,11 +150,18 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
                     ))}
 
                     <div className="mt-2 px-1">
-                      <UploadButton
-                        label={`Upload ${cat.label} document`}
-                        onUpload={(files) => handleUpload(cat.key, files)}
-                        disabled={uploadMutation.isPending}
-                      />
+                      {catDocs[catDocs.length - 1]?.status === 'APPROVED' ? (
+                        <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
+                          <span>✓</span>
+                          <span>Document approved — no further uploads needed</span>
+                        </div>
+                      ) : (
+                        <UploadButton
+                          label={`Upload ${cat.label} document`}
+                          onUpload={(files) => handleUpload(cat.key, files)}
+                          disabled={uploadMutation.isPending}
+                        />
+                      )}
                     </div>
                   </div>
                 </CategoryCard>

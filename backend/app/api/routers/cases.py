@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -250,6 +250,19 @@ async def initiate_case(
     unknown = set(body.selected_products) - found_codes
     if unknown:
         raise ConflictError(f"Unknown product codes: {sorted(unknown)}")
+
+    if body.case_name:
+        duplicate = await db.execute(
+            select(OnboardingCase).where(
+                OnboardingCase.client_id == client_id,
+                func.lower(OnboardingCase.extra_metadata["case_name"].astext)
+                == body.case_name.strip().lower(),
+            )
+        )
+        if duplicate.scalar_one_or_none() is not None:
+            raise ConflictError(
+                f"A case named '{body.case_name.strip()}' already exists. Please choose a different name."
+            )
 
     metadata = dict(body.metadata)
     if body.case_name:

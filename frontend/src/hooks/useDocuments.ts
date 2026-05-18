@@ -84,10 +84,11 @@ export function useValidateDocument(caseId: string | null) {
 export function useUploadDocument(caseId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ file, category }: { file: File; category: string }) => {
+    mutationFn: ({ file, category, parentDocId }: { file: File; category: string; parentDocId?: string }) => {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('category', category)
+      if (parentDocId) fd.append('parent_doc_id', parentDocId)
       return api.post(`/cases/${caseId}/documents`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       }).then((r) => r.data as DocumentOut)

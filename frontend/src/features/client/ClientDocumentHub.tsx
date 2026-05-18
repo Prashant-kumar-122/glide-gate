@@ -82,7 +82,7 @@ export default function ClientDocumentHub({ caseId }: ClientDocumentHubProps) {
             category={cat}
             documents={byCategory[cat] ?? []}
             commentCountByDoc={commentCountByDoc}
-            onUpload={(file) => upload.mutate({ file, category: cat })}
+            onUpload={(file, parentDocId) => upload.mutate({ file, category: cat, parentDocId })}
             onDocumentClick={setSelectedDoc}
             isUploading={upload.isPending}
           />
