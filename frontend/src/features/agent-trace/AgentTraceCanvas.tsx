@@ -16,7 +16,7 @@ import { AgentNode } from './AgentNode'
 import { AgentDetailPopover } from './AgentDetailPopover'
 import { MessageLog } from './MessageLog'
 import { useAgentTraceSocket } from './useAgentTraceSocket'
-import { AGENT_IDS, AGENT_LABELS, AGENT_POSITIONS, STATIC_EDGES } from './agentPositions'
+import { AGENT_IDS, AGENT_LABELS, AGENT_POSITIONS, STATIC_EDGES, AGENT_NODE_MAP } from './agentPositions'
 import { useAgentTrace } from '@/hooks/useAgentTrace'
 import { useCases } from '@/hooks/useDocuments'
 
@@ -51,6 +51,7 @@ export default function AgentTraceCanvas() {
   const dequeueEdge = useTraceStore((s) => s.dequeueEdge)
   const selectedAgent = useTraceStore((s) => s.selectedAgent)
   const setSelectedAgent = useTraceStore((s) => s.setSelectedAgent)
+  const setNodeState = useTraceStore((s) => s.setNodeState)
 
   const { data: cases } = useCases()
   const { data: traceData } = useAgentTrace(activeCaseId)
@@ -73,6 +74,37 @@ export default function AgentTraceCanvas() {
       })),
     )
   }, [nodeStates, setNodes])
+
+  // Hydrate node states from persisted task history on load / poll
+  useEffect(() => {
+    if (!traceData?.tasks?.length) return
+
+    const agentTasks: Record<string, { status: string }[]> = {}
+    for (const task of traceData.tasks) {
+      if (!agentTasks[task.to_agent]) agentTasks[task.to_agent] = []
+      agentTasks[task.to_agent].push(task)
+    }
+
+    // Orchestrator state derived from the full task set
+    const allStatuses = traceData.tasks.map((t) => t.status)
+    const anyEscalated = allStatuses.some((s) => s === 'ESCALATED')
+    const anyInProgress = allStatuses.some((s) => s === 'IN_PROGRESS' || s === 'PENDING')
+    const allDone = allStatuses.every((s) => ['SUCCESS', 'PARTIAL', 'FAILED'].includes(s))
+    setNodeState(
+      'orchestrator',
+      anyEscalated ? 'escalated' : anyInProgress ? 'active' : allDone ? 'complete' : 'idle',
+    )
+
+    for (const [agentId, tasks] of Object.entries(agentTasks)) {
+      if (agentId === 'orchestrator') continue
+      const hasEscalated = tasks.some((t) => t.status === 'ESCALATED')
+      const hasInProgress = tasks.some((t) => t.status === 'IN_PROGRESS' || t.status === 'PENDING')
+      const hasSuccess = tasks.some((t) => t.status === 'SUCCESS' || t.status === 'PARTIAL')
+      const state = hasEscalated ? 'escalated' : hasInProgress ? 'active' : hasSuccess ? 'complete' : 'idle'
+      const nodeIds = AGENT_NODE_MAP[agentId] ?? [agentId]
+      nodeIds.forEach((n) => setNodeState(n, state))
+    }
+  }, [traceData, setNodeState])
 
   // Build edge set: static structural + animated in-flight messages
   useEffect(() => {
