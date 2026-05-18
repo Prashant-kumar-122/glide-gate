@@ -1,6 +1,7 @@
 from app.database import Base
 
 # Import all models so Alembic autogenerates the full migration
+from app.models.admin_config import AdminConfig
 from app.models.users import User
 from app.models.clients import Client, ClientAddress, ClientProfile
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
@@ -25,6 +26,8 @@ from app.models.questionnaire import (
 
 __all__ = [
     "Base",
+    # admin config
+    "AdminConfig",
     # auth
     "User",
     # clients

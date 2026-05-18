@@ -825,6 +825,83 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ---
 
+### [DONE] STEP-36B — Persist Admin Config to DB (Fix In-Memory Prompt & LLM Config Loss)
+**Date:** 2026-05-18 | **BRD:** Section 5.1.12, FR-08, Section 10.2 | **Depends:** STEP-28, STEP-30, STEP-36A
+
+**Root cause:** Three in-memory stores were lost on every server restart:
+- `prompt_override_store._prompt_overrides` — per-category validation prompt edits made via Admin UI
+- `deterministic_controls_applier._active_overrides` — LLM provider / model / temperature etc.
+- `checkpoint_rule_repository._rules` — custom KYC checkpoint rules added/modified via Admin UI (originally deferred in STEP-30 with an explicit TODO comment)
+
+**Design: write-through cache + single `admin_config` table**
+
+All three stores keep their in-memory state as an L1 cache (synchronous reads — zero latency, no changes to callers). Writes now also fire an async DB upsert. A startup hook warms all caches from DB before the app begins serving requests.
+
+The `admin_config` table uses a single JSONB blob per namespace (`validation_prompts`, `llm_config`, `checkpoint_rules`) — extensible, one migration, no schema change for new admin config areas.
+
+**Artifacts produced / modified:**
+
+`db/schema/012_admin_config.sql` ✓ — DDL reference: `admin_config(namespace PK, config JSONB, updated_at)`
+
+`backend/alembic/versions/0004_admin_config.py` ✓ — migration (`down_revision = "0003_case_percentage"`); creates `admin_config` table
+
+`backend/app/models/admin_config.py` ✓ — `AdminConfig` SQLAlchemy ORM model (namespace PK, config JSONB, updated_at)
+
+`backend/app/models/__init__.py` ✓ — `AdminConfig` import added for Alembic autodiscovery
+
+`backend/app/services/admin/__init__.py` ✓ — new package; re-exports `admin_config_repository`
+
+`backend/app/services/admin/admin_config_repository.py` ✓ — `AdminConfigRepository` with 5 async methods:
+- `load(namespace)` → `dict` (returns `{}` on DB error)
+- `save(namespace, config)` → full upsert of blob
+- `patch(namespace, updates)` → merge partial updates into stored blob
+- `delete_key(namespace, key)` → remove one key from blob
+- `clear(namespace)` → wipe all overrides for namespace
+- All methods swallow DB exceptions with `logger.warning` (never crash callers)
+- `admin_config_repository` module-level singleton
+- Constants: `NAMESPACE_VALIDATION_PROMPTS = "validation_prompts"`, `NAMESPACE_LLM_CONFIG = "llm_config"`, `NAMESPACE_CHECKPOINT_RULES = "checkpoint_rules"`
+
+`backend/app/services/validation/prompt_override_store.py` ✓ — write-through cache:
+- `_prompt_overrides` dict retained as L1 cache; `get_prompt_override()` / `is_overridden()` unchanged (synchronous)
+- `set_prompt_override()` → updates cache + `_fire_db_save()` (schedules `_persist_all()` task)
+- `reset_prompt_override()` → updates cache + `_fire_db_delete(category)` (schedules `_delete_one()` task)
+- `load_from_db()` async startup loader: clears cache, loads from `admin_config_repository.load("validation_prompts")`
+
+`backend/app/services/llm/deterministic_controls_applier.py` ✓ — write-through cache (same pattern):
+- `_active_overrides` dict retained as L1 cache; `get_all_overrides()` unchanged (synchronous)
+- `set_overrides()` → updates cache + `_fire_db_patch()` (schedules `_persist_patch()` task)
+- `clear_overrides()` → clears cache + `_fire_db_clear()` (schedules `_persist_clear()` task)
+- `load_from_db()` async startup loader: clears cache, loads from `admin_config_repository.load("llm_config")`
+
+`backend/app/services/compliance/checkpoint_rule_repository.py` ✓ — rewritten with write-through cache:
+- `_rules` list retained as L1 cache; `get_all()` / `get()` / `is_builtin()` / `make_rule_id()` unchanged (synchronous)
+- `add()` → appends to cache + `_fire_db_save()` (schedules `_persist_all()` task)
+- `update()` → replaces in cache + `_fire_db_save()`
+- `remove()` → removes from cache + `_fire_db_save()`
+- `reset()` → restores cache to `_DEFAULT_RULES` + `_fire_db_clear()` (clears DB row so next startup also loads defaults)
+- `load_from_db()` async startup loader: loads `{"rules": [...]}` blob from `admin_config_repository.load("checkpoint_rules")`; deserialises each dict back to `CheckpointRule` via `model_validate()`; falls back to `_DEFAULT_RULES` if DB is empty or deserialisation fails
+- Removed stale TODO comment ("replaced by DB-backed store in a future phase")
+
+`backend/app/main.py` ✓ — `on_startup()` now calls `load_prompt_overrides()`, `load_llm_config()`, and `load_checkpoint_rules()` before `orchestration_service.start()`; all imports are local to avoid circular imports at module level
+
+**Zero changes to:**
+- `validation_prompt_repository.py` — still calls `get_prompt_override()` synchronously
+- `validation_prompts.py` admin router — still calls `set_prompt_override()` / `reset_prompt_override()`
+- `llm_config.py` admin router — still calls `set_overrides()` / `clear_overrides()`
+- `checkpoint_rules.py` admin router — still calls `rule_repo.add()` / `update()` / `remove()` / `reset()` synchronously
+- `kyc_compliance_agent.py` — still builds `CheckpointRuleEngine(rules=rule_repo.get_all())`; now gets the persisted list
+- Every other agent or service that reads these configs
+
+**Verification:**
+1. `alembic upgrade head` → `admin_config` table created
+2. Set a validation prompt override in Admin UI → restart backend → override still active
+3. Change LLM temperature in Admin UI → restart backend → temperature still applied
+4. Add a custom checkpoint rule in Admin UI → restart backend → custom rule still present
+5. `SELECT namespace, config FROM admin_config;` → shows 3 namespace rows
+6. Reset checkpoint rules in Admin UI → row shows `{}` blob; next restart loads defaults
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### [ ] STEP-37 — Unit Tests (Agents, Services, Skills)

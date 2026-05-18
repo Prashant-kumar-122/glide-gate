@@ -19,8 +19,8 @@ router = APIRouter(prefix="/admin/llm-config", tags=["admin"])
 # ── Request / Response models ─────────────────────────────────────────────────
 
 class LLMConfigOut(BaseModel):
-    primary_provider: str
-    primary_model: str
+    provider: str
+    model: str
     temperature: float
     top_p: float
     seed: int
@@ -33,8 +33,8 @@ class LLMConfigOut(BaseModel):
 
 
 class LLMConfigUpdate(BaseModel):
-    primary_provider: Literal["anthropic", "openai", "google", "local"] | None = None
-    primary_model: str | None = None
+    provider: Literal["anthropic", "openai", "google", "local"] | None = None
+    model: str | None = None
     temperature: float | None = Field(None, ge=0.0, le=2.0)
     top_p: float | None = Field(None, ge=0.0, le=1.0)
     seed: int | None = None
@@ -53,8 +53,8 @@ async def get_llm_config(
 ) -> LLMConfigOut:
     ov = get_all_overrides()
     return LLMConfigOut(
-        primary_provider=ov.get("primary_provider", settings.PRIMARY_LLM_PROVIDER),
-        primary_model=ov.get("primary_model", settings.PRIMARY_LLM_MODEL),
+        provider=ov.get("provider", settings.PRIMARY_LLM_PROVIDER),
+        model=ov.get("model", settings.PRIMARY_LLM_MODEL),
         temperature=ov.get("temperature", settings.LLM_TEMPERATURE),
         top_p=ov.get("top_p", settings.LLM_TOP_P),
         seed=ov.get("seed", settings.LLM_SEED),

@@ -24,9 +24,9 @@ class LLMProviderFactory:
         overrides = get_all_overrides()
         name: ProviderName = (  # type: ignore[assignment]
             provider_name
-            or overrides.get("primary_provider", settings.PRIMARY_LLM_PROVIDER)
+            or overrides.get("provider", settings.PRIMARY_LLM_PROVIDER)
         )
-        mdl = model or overrides.get("primary_model", settings.PRIMARY_LLM_MODEL)
+        mdl = model or overrides.get("model", settings.PRIMARY_LLM_MODEL)
 
         if name == "anthropic":
             return AnthropicProvider(api_key=settings.ANTHROPIC_API_KEY, model=mdl)
@@ -35,7 +35,7 @@ class LLMProviderFactory:
         if name == "google":
             return GoogleProvider(api_key=settings.GOOGLE_API_KEY, model=mdl)
         if name == "local":
-            local_model = model or overrides.get("primary_model") or settings.LOCAL_MODEL_NAME
+            local_model = model or overrides.get("model") or settings.LOCAL_MODEL_NAME
             return LocalModelProvider(base_url=settings.LOCAL_MODEL_ENDPOINT, model=local_model)
         raise ValueError(f"Unknown LLM provider: {name!r}")
 
@@ -43,7 +43,7 @@ class LLMProviderFactory:
         """Primary provider first, then available fallbacks in declaration order."""
         overrides = get_all_overrides()
         primary: ProviderName = overrides.get(  # type: ignore[assignment]
-            "primary_provider", settings.PRIMARY_LLM_PROVIDER
+            "provider", settings.PRIMARY_LLM_PROVIDER
         )
         ordered: list[ProviderName] = [primary] + [  # type: ignore[list-item]
             n for n in _ALL_PROVIDERS if n != primary

@@ -850,6 +850,41 @@ Two-column independent progress bars per product track in Advisor Workspace and 
 
 ---
 
+### STEP-36B — Persist Admin Config to DB (Fix In-Memory Prompt & LLM Config Loss)
+**BRD:** Section 5.1.12, FR-08, Section 10.2 | **Integration:** N/A | **Depends:** STEP-28, STEP-30, STEP-36A
+
+**Root cause:** Three in-memory stores were lost on every server restart, silently discarding admin-configured settings:
+- `prompt_override_store._prompt_overrides` — validation prompt edits per document category
+- `deterministic_controls_applier._active_overrides` — LLM provider / model / deterministic parameters
+- `checkpoint_rule_repository._rules` — custom KYC checkpoint rules (deferred in STEP-30 with an explicit TODO comment)
+
+**Design: write-through cache + single `admin_config` table**
+
+All three stores keep their in-memory state as an L1 cache (synchronous reads — no changes to callers). Writes fire async DB upserts. A startup hook warms all caches before the app serves requests.
+
+```
+admin_config
+├── namespace   VARCHAR(50) PK   -- 'validation_prompts' | 'llm_config' | 'checkpoint_rules'
+├── config      JSONB            -- full override blob per namespace
+└── updated_at  TIMESTAMP
+```
+
+Checkpoint rules are stored as `{"rules": [{...}, ...]}` — the full active list including both builtin and custom rules. On `reset()`, the DB row is cleared so the next startup reloads `_DEFAULT_RULES`.
+
+**Key files:**
+- `db/schema/012_admin_config.sql` — DDL reference
+- `backend/alembic/versions/0004_admin_config.py` — migration
+- `backend/app/models/admin_config.py` — `AdminConfig` ORM model
+- `backend/app/models/__init__.py` — add `AdminConfig` import
+- `backend/app/services/admin/__init__.py` — new package
+- `backend/app/services/admin/admin_config_repository.py` — `load`, `save`, `patch`, `delete_key`, `clear` async ops; constants `NAMESPACE_VALIDATION_PROMPTS`, `NAMESPACE_LLM_CONFIG`, `NAMESPACE_CHECKPOINT_RULES`; `admin_config_repository` singleton
+- `backend/app/services/validation/prompt_override_store.py` — write-through cache; add `load_from_db()`
+- `backend/app/services/llm/deterministic_controls_applier.py` — write-through cache; add `load_from_db()`
+- `backend/app/services/compliance/checkpoint_rule_repository.py` — write-through cache; add `load_from_db()`; all 4 write ops (`add`, `update`, `remove`, `reset`) fire async DB writes
+- `backend/app/main.py` — call all three `load_from_db()` functions in `on_startup()`
+
+---
+
 ### STEP-36A — Agent Event Bus: Persist Agent Tasks to DB (Fix Agent Trace Canvas)
 **BRD:** FR-11, Hackathon Criterion #10 | **Integration:** N/A | **Depends:** STEP-35, STEP-36
 
