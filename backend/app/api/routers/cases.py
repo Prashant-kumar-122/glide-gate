@@ -122,6 +122,7 @@ class CaseListOut(BaseModel):
     status: str
     current_stage: str
     selected_products: list[str]
+    percentage: float
     created_at: datetime
     updated_at: datetime
 
@@ -213,6 +214,7 @@ async def list_cases(
             status=case.status,
             current_stage=case.current_stage,
             selected_products=case.selected_products,
+            percentage=case.percentage,
             created_at=case.created_at,
             updated_at=case.updated_at,
         )
@@ -371,7 +373,7 @@ async def get_case_summary(
         client_name=client_name,
         current_stage=stage,
         status=case.status,
-        overall_progress=_STAGE_PROGRESS.get(stage, 0),
+        overall_progress=round(case.percentage),
         questionnaire_pct=questionnaire_pct,
         documents_total=total_docs,
         documents_received=received,

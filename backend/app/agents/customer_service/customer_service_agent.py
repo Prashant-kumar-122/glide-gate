@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
 
 from app.agents.base.a2a_types import (
     AgentID,
@@ -12,6 +11,7 @@ from app.agents.base.a2a_types import (
 )
 from app.agents.base.base_agent import BaseAgent
 from app.agents.customer_service.conversation_memory import ConversationMemory
+from app.database import AsyncSessionLocal
 from app.agents.customer_service.data_collection_orchestrator import (
     CollectionStatus,
     DataCollectionOrchestrator,
@@ -90,8 +90,11 @@ class CustomerServiceAgent(BaseAgent):
         selected_products: list[str] = task.payload.get("selected_products", [])
         self._dco.init_session(task.case_id, selected_products)
         self._memory.clear(task.case_id)
-
-        greeting = await self._greeting(task.case_id, selected_products)
+ 
+        async with AsyncSessionLocal() as db:
+            await self._dco.load_questions_from_db(task.case_id, db)
+ 
+        greeting = await self._greeting(selected_products)
         self._memory.add(task.case_id, "assistant", greeting)
 
         return TaskResponse(
@@ -121,7 +124,12 @@ class CustomerServiceAgent(BaseAgent):
             self._dco.init_session(
                 task.case_id, task.payload.get("selected_products", [])
             )
-
+ 
+        # Load DB questions if not yet loaded for this case
+        if not self._dco.is_db_loaded(task.case_id):
+            async with AsyncSessionLocal() as db:
+                await self._dco.load_questions_from_db(task.case_id, db)
+ 
         self._memory.add(task.case_id, "user", user_message)
 
         classification = self._classifier.classify(user_message)
@@ -129,8 +137,9 @@ class CustomerServiceAgent(BaseAgent):
 
         # Attempt value extraction for the current pending field
         extracted_value: Any = None
+        extraction_error: str | None = None
         if current_field and classification.intent in (Intent.PROVIDE_INFO, Intent.CONFIRM):
-            extracted_value = self._dco.extract_and_update(
+            extracted_value, extraction_error = self._dco.extract_and_update(
                 task.case_id, user_message, current_field
             )
 
@@ -139,15 +148,15 @@ class CustomerServiceAgent(BaseAgent):
 
         # Generate reply
         if status.is_complete:
-            reply = await self._completion_message(task.case_id)
+            reply = await self._completion_message()
             await self._signal_advance(task, status)
         elif classification.intent == Intent.REQUEST_HELP:
-            reply = await self._help_response(task.case_id, user_message, current_field)
+            reply = await self._help_response(user_message, current_field)
         elif classification.intent == Intent.ASK_QUESTION:
-            reply = await self._answer_and_redirect(task.case_id, user_message, next_field)
+            reply = await self._answer_and_redirect(user_message, next_field)
         else:
             reply = await self._next_question(
-                task.case_id, extracted_value, current_field, next_field
+                extracted_value, current_field, next_field, extraction_error
             )
 
         self._memory.add(task.case_id, "assistant", reply)
@@ -230,7 +239,7 @@ class CustomerServiceAgent(BaseAgent):
 
     # ── Response generators ───────────────────────────────────────────────────
 
-    async def _greeting(self, case_id: UUID, products: list[str]) -> str:
+    async def _greeting(self, products: list[str]) -> str:
         names = {"cash_account": "Cash Account", "retirement_account": "Retirement Account"}
         product_str = " and ".join(names.get(p, p) for p in products) if products else "your account"
         result = await self._llm(
@@ -241,13 +250,21 @@ class CustomerServiceAgent(BaseAgent):
 
     async def _next_question(
         self,
-        case_id: UUID,
         extracted_value: Any,
         prev_field: QuestionnaireField | None,
         next_field: QuestionnaireField | None,
+        validation_error: str | None = None,
     ) -> str:
         if next_field is None:
             return _FALLBACK_COMPLETE
+
+        if validation_error and prev_field:
+            result = await self._llm(
+                f"The client provided an invalid value for '{prev_field.label}'. "
+                f"Reason: {validation_error} "
+                f"Apologise briefly and ask them to try again: '{prev_field.question}'."
+            )
+            return result or f"I'm sorry, that value isn't valid — {validation_error} Please try again."
 
         ack = ""
         if extracted_value is not None and prev_field:
@@ -262,11 +279,11 @@ class CustomerServiceAgent(BaseAgent):
             f"{ack}Acknowledge their answer in one sentence then ask: '{q}'. "
             f"Total reply: 2–3 sentences."
         )
-        ack_text = f"Thank you for that. " if extracted_value is not None else ""
+        ack_text = "Thank you for that. " if extracted_value is not None else ""
         return result or f"{ack_text}{next_field.question}"
 
     async def _help_response(
-        self, case_id: UUID, user_message: str, field: QuestionnaireField | None
+        self, user_message: str, field: QuestionnaireField | None
     ) -> str:
         if field is None:
             return "We've collected everything needed. Let me know if you have any final questions."
@@ -277,7 +294,7 @@ class CustomerServiceAgent(BaseAgent):
         return result or f"Happy to clarify! {field.question}"
 
     async def _answer_and_redirect(
-        self, case_id: UUID, user_message: str, next_field: QuestionnaireField | None
+        self, user_message: str, next_field: QuestionnaireField | None
     ) -> str:
         if next_field is None:
             return "Great question! We're almost done — let me know if you have anything else."
@@ -287,7 +304,7 @@ class CustomerServiceAgent(BaseAgent):
         )
         return result or f"Great question! To continue: {next_field.question}"
 
-    async def _completion_message(self, case_id: UUID) -> str:
+    async def _completion_message(self) -> str:
         result = await self._llm(
             "All required onboarding information has been collected. "
             "Write a warm 2-sentence thank-you message and explain that identity verification is the next step."

@@ -59,6 +59,7 @@ export interface CaseOut {
   current_stage: string
   status: string
   selected_products: string[]
+  percentage: number
   created_at: string
   updated_at: string
 }

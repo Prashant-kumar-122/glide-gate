@@ -13,17 +13,6 @@ const STAGE_LABELS: Record<string, string> = {
   ESCALATED: 'Escalated',
 }
 
-function stageToProgress(stage: string): number {
-  const map: Record<string, number> = {
-    INTAKE: 15,
-    KYC: 35,
-    PARALLEL_PRODUCTS: 60,
-    REVIEW: 80,
-    COMPLETE: 100,
-    ESCALATED: 75,
-  }
-  return map[stage] ?? 0
-}
 
 interface CaseItemProps {
   c: CaseOut
@@ -42,7 +31,7 @@ function caseDisplayName(c: CaseOut): string {
 }
 
 function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
-  const progress = stageToProgress(c.current_stage)
+  const progress = Math.round(c.percentage ?? 0)
   const stageLabel = STAGE_LABELS[c.current_stage] ?? c.current_stage
 
   return (
