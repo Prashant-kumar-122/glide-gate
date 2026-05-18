@@ -151,6 +151,32 @@ export function useAdvisors() {
   })
 }
 
+export interface QuestionSchemaItem {
+  question_key: string
+  section: string
+  label: string
+  order_index: number
+}
+
+export function useQuestionnaireSchema(caseId: string | null) {
+  return useQuery<{ fields: QuestionSchemaItem[] }>({
+    queryKey: ['cases', caseId, 'questionnaire-schema'] as const,
+    queryFn: () => api.get(`/cases/${caseId}/questionnaire-schema`).then((r) => r.data),
+    enabled: !!caseId,
+    staleTime: 60_000,
+  })
+}
+
+export function useCollectedFields(caseId: string | null) {
+  return useQuery<{ client_data: Record<string, unknown> }>({
+    queryKey: ['cases', caseId, 'collected-fields'] as const,
+    queryFn: () => api.get(`/cases/${caseId}/collected-fields`).then((r) => r.data),
+    enabled: !!caseId,
+    refetchInterval: 5000,
+    staleTime: 0,
+  })
+}
+
 export function useInitiateCase() {
   const qc = useQueryClient()
   return useMutation({

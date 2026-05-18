@@ -16,6 +16,7 @@ from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
+from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.models.clients import Client
 from app.models.documents import Document
 from app.services.orchestration.agent_orchestration_service import orchestration_service
@@ -131,6 +132,21 @@ class ResumeResponse(BaseModel):
     case_id: UUID
     message: str
     stage: str
+
+
+class CollectedFieldsOut(BaseModel):
+    client_data: dict[str, Any]
+
+
+class QuestionSchemaItem(BaseModel):
+    question_key: str
+    section: str
+    label: str
+    order_index: int
+
+
+class QuestionnaireSchemaOut(BaseModel):
+    fields: list[QuestionSchemaItem]
 
 
 class ProductOut(BaseModel):
@@ -382,6 +398,90 @@ async def get_case_summary(
         kyc_status=ctx.get("kyc_status"),
         escalated=escalated,
     )
+
+
+@router.get("/{case_id}/questionnaire-schema", response_model=QuestionnaireSchemaOut)
+async def get_questionnaire_schema(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> QuestionnaireSchemaOut:
+    """Return all questions (key + section + label) for the questionnaire bound to this case."""
+    # Verify case access
+    case_row = await db.execute(
+        select(OnboardingCase.client_id).where(OnboardingCase.id == case_id)
+    )
+    client_id = case_row.scalar_one_or_none()
+    if client_id is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
+        raise NotFoundError("OnboardingCase", str(case_id))
+
+    # Resolve questionnaire: prefer the one linked via the case's session
+    questionnaire_id: UUID | None = None
+    session_row = await db.execute(
+        select(OnboardingQuestionSession.questionnaire_id)
+        .where(OnboardingQuestionSession.case_id == case_id)
+        .limit(1)
+    )
+    questionnaire_id = session_row.scalar_one_or_none()
+
+    # Fall back to the active questionnaire
+    if questionnaire_id is None:
+        q_row = await db.execute(
+            select(OnboardingQuestionnaire.id)
+            .where(OnboardingQuestionnaire.is_active.is_(True))
+            .limit(1)
+        )
+        questionnaire_id = q_row.scalar_one_or_none()
+
+    if questionnaire_id is None:
+        return QuestionnaireSchemaOut(fields=[])
+
+    oq_result = await db.execute(
+        select(OnboardingQuestion)
+        .where(OnboardingQuestion.questionnaire_id == questionnaire_id)
+        .order_by(OnboardingQuestion.order_index)
+    )
+    questions = oq_result.scalars().all()
+
+    fields = []
+    for q in questions:
+        # Prefer a short 'label' stored in extra_metadata, otherwise format the question_key
+        label = (q.extra_metadata or {}).get("label") or _fmt_key(q.question_key)
+        fields.append(
+            QuestionSchemaItem(
+                question_key=q.question_key,
+                section=q.section,
+                label=label,
+                order_index=q.order_index,
+            )
+        )
+    return QuestionnaireSchemaOut(fields=fields)
+
+
+def _fmt_key(key: str) -> str:
+    """snake_case → Title Case Words, strip common prefixes."""
+    return key.replace("_", " ").strip().title()
+
+
+@router.get("/{case_id}/collected-fields", response_model=CollectedFieldsOut)
+async def get_collected_fields(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> CollectedFieldsOut:
+    result = await db.execute(
+        select(OnboardingCase.shared_context, OnboardingCase.client_id).where(OnboardingCase.id == case_id)
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    shared_ctx, client_id = row
+    if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    client_data = (shared_ctx or {}).get("client_data", {})
+    return CollectedFieldsOut(client_data=client_data)
 
 
 @router.post("/{case_id}/resume", status_code=status.HTTP_202_ACCEPTED, response_model=ResumeResponse)
