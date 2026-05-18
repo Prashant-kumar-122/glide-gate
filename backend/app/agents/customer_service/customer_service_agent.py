@@ -12,6 +12,7 @@ from app.agents.base.a2a_types import (
 )
 from app.agents.base.base_agent import BaseAgent
 from app.agents.customer_service.conversation_memory import ConversationMemory
+from app.database import AsyncSessionLocal
 from app.agents.customer_service.data_collection_orchestrator import (
     CollectionStatus,
     DataCollectionOrchestrator,
@@ -90,7 +91,10 @@ class CustomerServiceAgent(BaseAgent):
         selected_products: list[str] = task.payload.get("selected_products", [])
         self._dco.init_session(task.case_id, selected_products)
         self._memory.clear(task.case_id)
-
+ 
+        async with AsyncSessionLocal() as db:
+            await self._dco.load_questions_from_db(task.case_id, db)
+ 
         greeting = await self._greeting(task.case_id, selected_products)
         self._memory.add(task.case_id, "assistant", greeting)
 
@@ -121,7 +125,12 @@ class CustomerServiceAgent(BaseAgent):
             self._dco.init_session(
                 task.case_id, task.payload.get("selected_products", [])
             )
-
+ 
+        # Load DB questions if not yet loaded for this case
+        if not self._dco.is_db_loaded(task.case_id):
+            async with AsyncSessionLocal() as db:
+                await self._dco.load_questions_from_db(task.case_id, db)
+ 
         self._memory.add(task.case_id, "user", user_message)
 
         classification = self._classifier.classify(user_message)
