@@ -850,6 +850,34 @@ Two-column independent progress bars per product track in Advisor Workspace and 
 
 ---
 
+### STEP-36A — Agent Event Bus: Persist Agent Tasks to DB (Fix Agent Trace Canvas)
+**BRD:** FR-11, Hackathon Criterion #10 | **Integration:** N/A | **Depends:** STEP-35, STEP-36
+
+**Root cause:** `AgentEventBus.dispatch_loop()` processed `TaskPacket` objects entirely in-memory. The `agent_tasks` table (created in `0001_initial`) was never written to, so `GET /api/agents/trace/{case_id}` returned zero tasks and the Agent Trace Canvas showed no agent activity.
+
+**In-memory audit (full inventory):**
+
+| Component | File | What lives in memory | Needs DB fix? |
+|---|---|---|---|
+| **AgentTask records** | `agents/base/agent_event_bus.py` | Task dispatch/completion never persisted | **YES — P0, this step** |
+| `ConversationMemory._store` | `agents/customer_service/conversation_memory.py` | Rolling 40-msg buffer | No — backed by `conversation_messages` table |
+| `SessionManager._sessions` | `services/conversation/session_manager.py` | Active session objects | No — reconstructable from DB |
+| `ContextStoreService._cache` | `services/context_store/context_store_service.py` | `OnboardingState` per case | No — backed by `onboarding_cases.shared_context` JSONB |
+| `DataCollectionOrchestrator._collected` | `agents/customer_service/data_collection_orchestrator.py` | In-flight answers | No — persisted to `onboarding_answers` |
+| `AgentEventBus._queues/_agents` | `agents/base/agent_event_bus.py` | In-flight `TaskPacket` objects | No — ephemeral by design |
+| `prompt_override_store._prompt_overrides` | `services/validation/prompt_override_store.py` | Admin LLM prompt overrides | P2 — separate concern, not fixed here |
+
+**Fix (single file):** `backend/app/agents/base/agent_event_bus.py`
+- Add `_save_task_in_progress(packet, started_at)`: inserts `AgentTask` row with `status="IN_PROGRESS"` on task dequeue.
+- Add `_update_task_completed(task_id, response)`: updates row with final `status`, `result`, `errors`, `duration_ms`, `completed_at`.
+- Update `dispatch_loop()`: call both helpers; synthesise a `TaskResponse(status="FAILED")` on unhandled exceptions rather than silently discarding.
+- Both helpers swallow DB exceptions with `logger.warning` so a DB error never crashes the dispatch loop.
+
+**Key files:**
+- `backend/app/agents/base/agent_event_bus.py` — only file changed; no migrations needed
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### STEP-37 — Unit Tests (Agents, Services, Skills)

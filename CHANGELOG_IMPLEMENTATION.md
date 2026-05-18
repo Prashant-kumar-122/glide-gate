@@ -796,6 +796,35 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ---
 
+### [DONE] STEP-36A — Agent Event Bus: Persist Agent Tasks to DB (Fix Agent Trace Canvas)
+**Date:** 2026-05-18 | **BRD:** FR-11, Hackathon Criterion #10 | **Depends:** STEP-35, STEP-36
+
+**Root cause:** `AgentEventBus.dispatch_loop()` processed every `TaskPacket` entirely in-memory. The `agent_tasks` table (created in migration `0001_initial`) was never written to, so `GET /api/agents/trace/{case_id}` always returned zero tasks and the Agent Trace Canvas showed no activity.
+
+**Fix — single file changed:** `backend/app/agents/base/agent_event_bus.py`
+
+- Added `datetime`, `UUID` imports and `TaskResponse` to top-level imports (previously only imported via `TYPE_CHECKING`).
+- Added `_save_task_in_progress(packet, started_at)` private async helper: opens its own `AsyncSessionLocal`, inserts an `AgentTask` row with `status="IN_PROGRESS"` and `started_at` timestamp; swallows DB exceptions with `logger.warning` so a DB hiccup never crashes the dispatch loop.
+- Added `_update_task_completed(task_id, response)` private async helper: opens its own `AsyncSessionLocal`, issues a SQLAlchemy `update()` to stamp `status`, `result`, `errors`, `duration_ms`, and `completed_at` on the existing row; same graceful-fail pattern.
+- Updated `dispatch_loop()`:
+  - Captures `started_at = datetime.utcnow()` immediately after `queue.get()`.
+  - Awaits `_save_task_in_progress()` before calling `agent.timed_process()`.
+  - On unhandled exception: synthesises a `TaskResponse(status="FAILED", errors=[str(exc)], ...)` rather than swallowing the error silently (previous behaviour discarded the response entirely).
+  - Awaits `_update_task_completed()` after the `try/except/finally` block so the row is always finalised regardless of success or failure.
+
+**No migrations required** — `agent_tasks` table and `AgentTask` ORM model existed since `0001_initial`.
+
+**Artifacts modified:**
+- `backend/app/agents/base/agent_event_bus.py` ✓
+
+**Verification:**
+1. Start backend → create a case → trigger onboarding
+2. `GET /api/agents/trace/{case_id}` returns populated `AgentTask` rows with `status`, `duration_ms`, and `result`
+3. Agent Trace Canvas nodes animate and message log populates via the existing socket events + the 15 s REST poll now also returns data
+4. `SELECT id, from_agent, to_agent, task_type, status, duration_ms FROM agent_tasks WHERE case_id = '<uuid>';` shows rows
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### [ ] STEP-37 — Unit Tests (Agents, Services, Skills)
