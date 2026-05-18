@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from loguru import logger
 
-from app.agents.base.a2a_types import AgentID, TaskPacket, TaskType
+from app.agents.base.a2a_types import AgentID, TaskPacket, TaskResponse, TaskType
 
 if TYPE_CHECKING:
     from app.agents.base.base_agent import BaseAgent
@@ -61,6 +63,56 @@ class AgentEventBus:
     def task_done(self, agent_id: AgentID) -> None:
         self._queues[agent_id].task_done()
 
+    # ── DB persistence helpers ────────────────────────────────────────────────
+
+    async def _save_task_in_progress(self, packet: TaskPacket, started_at: datetime) -> None:
+        """Write an IN_PROGRESS AgentTask row when a task is dequeued."""
+        from app.database import AsyncSessionLocal
+        from app.models.agents import AgentTask as AgentTaskRow
+        try:
+            async with AsyncSessionLocal() as db:
+                db.add(AgentTaskRow(
+                    id=packet.id,
+                    from_agent=str(packet.from_agent),
+                    to_agent=str(packet.to_agent),
+                    task_type=str(packet.task_type),
+                    case_id=packet.case_id,
+                    client_id=packet.client_id,
+                    priority=packet.priority,
+                    payload=packet.payload,
+                    expected_schema=packet.expected_schema or "",
+                    status="IN_PROGRESS",
+                    result={},
+                    errors=[],
+                    created_at=packet.created_at,
+                    started_at=started_at,
+                ))
+                await db.commit()
+        except Exception as exc:
+            logger.warning(f"[EventBus] Failed to persist task {packet.id} IN_PROGRESS: {exc}")
+
+    async def _update_task_completed(self, task_id: UUID, response: TaskResponse) -> None:
+        """Update an existing AgentTask row with final status, result, and duration."""
+        from sqlalchemy import update
+        from app.database import AsyncSessionLocal
+        from app.models.agents import AgentTask as AgentTaskRow
+        try:
+            async with AsyncSessionLocal() as db:
+                await db.execute(
+                    update(AgentTaskRow)
+                    .where(AgentTaskRow.id == task_id)
+                    .values(
+                        status=response.status,
+                        result=response.result,
+                        errors=response.errors or [],
+                        duration_ms=response.duration_ms,
+                        completed_at=datetime.utcnow(),
+                    )
+                )
+                await db.commit()
+        except Exception as exc:
+            logger.warning(f"[EventBus] Failed to update task {task_id} completed: {exc}")
+
     # ── Dispatch loops ────────────────────────────────────────────────────────
 
     async def dispatch_loop(self, agent_id: AgentID) -> None:
@@ -70,6 +122,8 @@ class AgentEventBus:
         logger.info(f"[EventBus] Dispatch loop started: {agent_id}")
         while True:
             packet = await queue.get()
+            started_at = datetime.utcnow()
+            await self._save_task_in_progress(packet, started_at)
             try:
                 response = await agent.timed_process(packet)
                 logger.info(
@@ -78,8 +132,17 @@ class AgentEventBus:
                 )
             except Exception as exc:
                 logger.error(f"[EventBus] Unhandled error in {agent_id}: {exc}")
+                response = TaskResponse(
+                    task_id=packet.id,
+                    from_agent=agent_id,
+                    status="FAILED",
+                    result={},
+                    errors=[str(exc)],
+                    duration_ms=0,
+                )
             finally:
                 queue.task_done()
+            await self._update_task_completed(packet.id, response)
 
     async def start_all(self) -> list[asyncio.Task]:
         """Start dispatch loops for every registered agent and return the tasks."""

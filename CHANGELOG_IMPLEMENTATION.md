@@ -796,6 +796,116 @@ Total: 10 + 4 + 11 = **25 tables** across Phase 2.5.
 
 ---
 
+### [DONE] STEP-36A — Agent Event Bus: Persist Agent Tasks to DB (Fix Agent Trace Canvas)
+**Date:** 2026-05-18 | **BRD:** FR-11, Hackathon Criterion #10 | **Depends:** STEP-35, STEP-36
+
+**Root cause:** `AgentEventBus.dispatch_loop()` processed every `TaskPacket` entirely in-memory. The `agent_tasks` table (created in migration `0001_initial`) was never written to, so `GET /api/agents/trace/{case_id}` always returned zero tasks and the Agent Trace Canvas showed no activity.
+
+**Fix — single file changed:** `backend/app/agents/base/agent_event_bus.py`
+
+- Added `datetime`, `UUID` imports and `TaskResponse` to top-level imports (previously only imported via `TYPE_CHECKING`).
+- Added `_save_task_in_progress(packet, started_at)` private async helper: opens its own `AsyncSessionLocal`, inserts an `AgentTask` row with `status="IN_PROGRESS"` and `started_at` timestamp; swallows DB exceptions with `logger.warning` so a DB hiccup never crashes the dispatch loop.
+- Added `_update_task_completed(task_id, response)` private async helper: opens its own `AsyncSessionLocal`, issues a SQLAlchemy `update()` to stamp `status`, `result`, `errors`, `duration_ms`, and `completed_at` on the existing row; same graceful-fail pattern.
+- Updated `dispatch_loop()`:
+  - Captures `started_at = datetime.utcnow()` immediately after `queue.get()`.
+  - Awaits `_save_task_in_progress()` before calling `agent.timed_process()`.
+  - On unhandled exception: synthesises a `TaskResponse(status="FAILED", errors=[str(exc)], ...)` rather than swallowing the error silently (previous behaviour discarded the response entirely).
+  - Awaits `_update_task_completed()` after the `try/except/finally` block so the row is always finalised regardless of success or failure.
+
+**No migrations required** — `agent_tasks` table and `AgentTask` ORM model existed since `0001_initial`.
+
+**Artifacts modified:**
+- `backend/app/agents/base/agent_event_bus.py` ✓
+
+**Verification:**
+1. Start backend → create a case → trigger onboarding
+2. `GET /api/agents/trace/{case_id}` returns populated `AgentTask` rows with `status`, `duration_ms`, and `result`
+3. Agent Trace Canvas nodes animate and message log populates via the existing socket events + the 15 s REST poll now also returns data
+4. `SELECT id, from_agent, to_agent, task_type, status, duration_ms FROM agent_tasks WHERE case_id = '<uuid>';` shows rows
+
+---
+
+### [DONE] STEP-36B — Persist Admin Config to DB (Fix In-Memory Prompt & LLM Config Loss)
+**Date:** 2026-05-18 | **BRD:** Section 5.1.12, FR-08, Section 10.2 | **Depends:** STEP-28, STEP-30, STEP-36A
+
+**Root cause:** Three in-memory stores were lost on every server restart:
+- `prompt_override_store._prompt_overrides` — per-category validation prompt edits made via Admin UI
+- `deterministic_controls_applier._active_overrides` — LLM provider / model / temperature etc.
+- `checkpoint_rule_repository._rules` — custom KYC checkpoint rules added/modified via Admin UI (originally deferred in STEP-30 with an explicit TODO comment)
+
+**Design: write-through cache + single `admin_config` table**
+
+All three stores keep their in-memory state as an L1 cache (synchronous reads — zero latency, no changes to callers). Writes now also fire an async DB upsert. A startup hook warms all caches from DB before the app begins serving requests.
+
+The `admin_config` table uses a single JSONB blob per namespace (`validation_prompts`, `llm_config`, `checkpoint_rules`) — extensible, one migration, no schema change for new admin config areas.
+
+**Artifacts produced / modified:**
+
+`db/schema/012_admin_config.sql` ✓ — DDL reference: `admin_config(namespace PK, config JSONB, updated_at)`
+
+`backend/alembic/versions/0004_admin_config.py` ✓ — migration (`down_revision = "0003_case_percentage"`); creates `admin_config` table
+
+`backend/app/models/admin_config.py` ✓ — `AdminConfig` SQLAlchemy ORM model (namespace PK, config JSONB, updated_at)
+
+`backend/app/models/__init__.py` ✓ — `AdminConfig` import added for Alembic autodiscovery
+
+`backend/app/services/admin/__init__.py` ✓ — new package; re-exports `admin_config_repository`
+
+`backend/app/services/admin/admin_config_repository.py` ✓ — `AdminConfigRepository` with 5 async methods:
+- `load(namespace)` → `dict` (returns `{}` on DB error)
+- `save(namespace, config)` → full upsert of blob
+- `patch(namespace, updates)` → merge partial updates into stored blob
+- `delete_key(namespace, key)` → remove one key from blob
+- `clear(namespace)` → wipe all overrides for namespace
+- All methods swallow DB exceptions with `logger.warning` (never crash callers)
+- `admin_config_repository` module-level singleton
+- Constants: `NAMESPACE_VALIDATION_PROMPTS = "validation_prompts"`, `NAMESPACE_LLM_CONFIG = "llm_config"`, `NAMESPACE_CHECKPOINT_RULES = "checkpoint_rules"`
+
+`backend/app/services/validation/prompt_override_store.py` ✓ — write-through cache:
+- `_prompt_overrides` dict retained as L1 cache; `get_prompt_override()` / `is_overridden()` unchanged (synchronous)
+- `set_prompt_override()` → updates cache + `_fire_db_save()` (schedules `_persist_all()` task)
+- `reset_prompt_override()` → updates cache + `_fire_db_delete(category)` (schedules `_delete_one()` task)
+- `load_from_db()` async startup loader: clears cache, loads from `admin_config_repository.load("validation_prompts")`
+
+`backend/app/services/llm/deterministic_controls_applier.py` ✓ — write-through cache (same pattern):
+- `_active_overrides` dict retained as L1 cache; `get_all_overrides()` unchanged (synchronous)
+- `set_overrides()` → updates cache + `_fire_db_patch()` (schedules `_persist_patch()` task)
+- `clear_overrides()` → clears cache + `_fire_db_clear()` (schedules `_persist_clear()` task)
+- `load_from_db()` async startup loader: clears cache, loads from `admin_config_repository.load("llm_config")`
+
+`backend/app/services/compliance/checkpoint_rule_repository.py` ✓ — rewritten with write-through cache:
+- `_rules` list retained as L1 cache; `get_all()` / `get()` / `is_builtin()` / `make_rule_id()` unchanged (synchronous)
+- `add()` → appends to cache + `_fire_db_save()` (schedules `_persist_all()` task)
+- `update()` → replaces in cache + `_fire_db_save()`
+- `remove()` → removes from cache + `_fire_db_save()`
+- `reset()` → restores cache to `_DEFAULT_RULES` + `_fire_db_clear()` (clears DB row so next startup also loads defaults)
+- `load_from_db()` async startup loader: loads `{"rules": [...]}` blob from `admin_config_repository.load("checkpoint_rules")`; deserialises each dict back to `CheckpointRule` via `model_validate()`; falls back to `_DEFAULT_RULES` if DB is empty or deserialisation fails
+- Removed stale TODO comment ("replaced by DB-backed store in a future phase")
+
+`backend/app/main.py` ✓ — `on_startup()` now calls `load_prompt_overrides()`, `load_llm_config()`, and `load_checkpoint_rules()` before `orchestration_service.start()`; all imports are local to avoid circular imports at module level
+
+**Zero changes to:**
+- `validation_prompt_repository.py` — still calls `get_prompt_override()` synchronously
+- `validation_prompts.py` admin router — still calls `set_prompt_override()` / `reset_prompt_override()`
+- `llm_config.py` admin router — still calls `set_overrides()` / `clear_overrides()`
+- `checkpoint_rules.py` admin router — still calls `rule_repo.add()` / `update()` / `remove()` / `reset()` synchronously
+- `kyc_compliance_agent.py` — still builds `CheckpointRuleEngine(rules=rule_repo.get_all())`; now gets the persisted list
+- Every other agent or service that reads these configs
+
+`db/seeds/08_admin_config.py` ✓ — seeds all 3 namespace rows with empty `{}` config on fresh install; idempotent (skips rows that already exist)
+
+`db/seeds/seed.py` ✓ — `08 — Admin Config` entry added to `SEED_FILES` list
+
+**Verification:**
+1. `alembic upgrade head && python db/seeds/seed.py` → `admin_config` table created; 3 namespace rows seeded
+2. Set a validation prompt override in Admin UI → restart backend → override still active
+3. Change LLM temperature in Admin UI → restart backend → temperature still applied
+4. Add a custom checkpoint rule in Admin UI → restart backend → custom rule still present
+5. `SELECT namespace, config FROM admin_config;` → shows 3 rows (`validation_prompts`, `llm_config`, `checkpoint_rules`)
+6. Reset checkpoint rules in Admin UI → row shows `{}` blob; next restart loads `_DEFAULT_RULES`
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### [ ] STEP-37 — Unit Tests (Agents, Services, Skills)

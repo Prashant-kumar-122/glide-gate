@@ -65,6 +65,19 @@ async def on_startup() -> None:
         f"demo_mode={settings.DEMO_MODE} "
         f"llm={settings.PRIMARY_LLM_PROVIDER}/{settings.PRIMARY_LLM_MODEL}"
     )
+    # Warm admin config caches from DB so overrides survive server restarts
+    from app.services.validation.prompt_override_store import (
+        load_from_db as load_prompt_overrides,
+    )
+    from app.services.llm.deterministic_controls_applier import (
+        load_from_db as load_llm_config,
+    )
+    from app.services.compliance.checkpoint_rule_repository import (
+        load_from_db as load_checkpoint_rules,
+    )
+    await load_prompt_overrides()
+    await load_llm_config()
+    await load_checkpoint_rules()
     await orchestration_service.start()
 
 

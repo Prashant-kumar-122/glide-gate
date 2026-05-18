@@ -850,6 +850,71 @@ Two-column independent progress bars per product track in Advisor Workspace and 
 
 ---
 
+### STEP-36B — Persist Admin Config to DB (Fix In-Memory Prompt & LLM Config Loss)
+**BRD:** Section 5.1.12, FR-08, Section 10.2 | **Integration:** N/A | **Depends:** STEP-28, STEP-30, STEP-36A
+
+**Root cause:** Three in-memory stores were lost on every server restart, silently discarding admin-configured settings:
+- `prompt_override_store._prompt_overrides` — validation prompt edits per document category
+- `deterministic_controls_applier._active_overrides` — LLM provider / model / deterministic parameters
+- `checkpoint_rule_repository._rules` — custom KYC checkpoint rules (deferred in STEP-30 with an explicit TODO comment)
+
+**Design: write-through cache + single `admin_config` table**
+
+All three stores keep their in-memory state as an L1 cache (synchronous reads — no changes to callers). Writes fire async DB upserts. A startup hook warms all caches before the app serves requests.
+
+```
+admin_config
+├── namespace   VARCHAR(50) PK   -- 'validation_prompts' | 'llm_config' | 'checkpoint_rules'
+├── config      JSONB            -- full override blob per namespace
+└── updated_at  TIMESTAMP
+```
+
+Checkpoint rules are stored as `{"rules": [{...}, ...]}` — the full active list including both builtin and custom rules. On `reset()`, the DB row is cleared so the next startup reloads `_DEFAULT_RULES`.
+
+**Key files:**
+- `db/schema/012_admin_config.sql` — DDL reference
+- `backend/alembic/versions/0004_admin_config.py` — migration
+- `backend/app/models/admin_config.py` — `AdminConfig` ORM model
+- `backend/app/models/__init__.py` — add `AdminConfig` import
+- `backend/app/services/admin/__init__.py` — new package
+- `backend/app/services/admin/admin_config_repository.py` — `load`, `save`, `patch`, `delete_key`, `clear` async ops; constants `NAMESPACE_VALIDATION_PROMPTS`, `NAMESPACE_LLM_CONFIG`, `NAMESPACE_CHECKPOINT_RULES`; `admin_config_repository` singleton
+- `backend/app/services/validation/prompt_override_store.py` — write-through cache; add `load_from_db()`
+- `backend/app/services/llm/deterministic_controls_applier.py` — write-through cache; add `load_from_db()`
+- `backend/app/services/compliance/checkpoint_rule_repository.py` — write-through cache; add `load_from_db()`; all 4 write ops (`add`, `update`, `remove`, `reset`) fire async DB writes
+- `backend/app/main.py` — call all three `load_from_db()` functions in `on_startup()`
+- `db/seeds/08_admin_config.py` — seed all 3 namespace rows with empty `{}` on fresh install (idempotent)
+- `db/seeds/seed.py` — add `08 — Admin Config` entry
+
+---
+
+### STEP-36A — Agent Event Bus: Persist Agent Tasks to DB (Fix Agent Trace Canvas)
+**BRD:** FR-11, Hackathon Criterion #10 | **Integration:** N/A | **Depends:** STEP-35, STEP-36
+
+**Root cause:** `AgentEventBus.dispatch_loop()` processed `TaskPacket` objects entirely in-memory. The `agent_tasks` table (created in `0001_initial`) was never written to, so `GET /api/agents/trace/{case_id}` returned zero tasks and the Agent Trace Canvas showed no agent activity.
+
+**In-memory audit (full inventory):**
+
+| Component | File | What lives in memory | Needs DB fix? |
+|---|---|---|---|
+| **AgentTask records** | `agents/base/agent_event_bus.py` | Task dispatch/completion never persisted | **YES — P0, this step** |
+| `ConversationMemory._store` | `agents/customer_service/conversation_memory.py` | Rolling 40-msg buffer | No — backed by `conversation_messages` table |
+| `SessionManager._sessions` | `services/conversation/session_manager.py` | Active session objects | No — reconstructable from DB |
+| `ContextStoreService._cache` | `services/context_store/context_store_service.py` | `OnboardingState` per case | No — backed by `onboarding_cases.shared_context` JSONB |
+| `DataCollectionOrchestrator._collected` | `agents/customer_service/data_collection_orchestrator.py` | In-flight answers | No — persisted to `onboarding_answers` |
+| `AgentEventBus._queues/_agents` | `agents/base/agent_event_bus.py` | In-flight `TaskPacket` objects | No — ephemeral by design |
+| `prompt_override_store._prompt_overrides` | `services/validation/prompt_override_store.py` | Admin LLM prompt overrides | P2 — separate concern, not fixed here |
+
+**Fix (single file):** `backend/app/agents/base/agent_event_bus.py`
+- Add `_save_task_in_progress(packet, started_at)`: inserts `AgentTask` row with `status="IN_PROGRESS"` on task dequeue.
+- Add `_update_task_completed(task_id, response)`: updates row with final `status`, `result`, `errors`, `duration_ms`, `completed_at`.
+- Update `dispatch_loop()`: call both helpers; synthesise a `TaskResponse(status="FAILED")` on unhandled exceptions rather than silently discarding.
+- Both helpers swallow DB exceptions with `logger.warning` so a DB error never crashes the dispatch loop.
+
+**Key files:**
+- `backend/app/agents/base/agent_event_bus.py` — only file changed; no migrations needed
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### STEP-37 — Unit Tests (Agents, Services, Skills)

@@ -42,6 +42,7 @@ SEED_FILES = [
     ("05 — Sample Case",          "05_sample_case.py"),
     ("06 — Sample Events",        "06_sample_events.py"),
     ("07 — Auth Users",           "07_users.py"),
+    ("08 — Admin Config",         "08_admin_config.py"),
 ]
 
 
