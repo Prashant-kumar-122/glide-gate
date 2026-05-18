@@ -151,7 +151,8 @@ export interface CollaborationComment {
   author_name: string
   author_role: string
   body: string
-  visibility: 'ALL' | 'ADVISOR_ONLY' | 'CLIENT_VISIBLE'
+  visibility: 'ALL' | 'ADVISOR_ONLY'
+  document_id: string | null
   created_at: string
 }
 
