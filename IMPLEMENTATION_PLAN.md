@@ -882,6 +882,8 @@ Checkpoint rules are stored as `{"rules": [{...}, ...]}` — the full active lis
 - `backend/app/services/llm/deterministic_controls_applier.py` — write-through cache; add `load_from_db()`
 - `backend/app/services/compliance/checkpoint_rule_repository.py` — write-through cache; add `load_from_db()`; all 4 write ops (`add`, `update`, `remove`, `reset`) fire async DB writes
 - `backend/app/main.py` — call all three `load_from_db()` functions in `on_startup()`
+- `db/seeds/08_admin_config.py` — seed all 3 namespace rows with empty `{}` on fresh install (idempotent)
+- `db/seeds/seed.py` — add `08 — Admin Config` entry
 
 ---
 

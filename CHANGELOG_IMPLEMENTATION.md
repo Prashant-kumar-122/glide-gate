@@ -892,13 +892,17 @@ The `admin_config` table uses a single JSONB blob per namespace (`validation_pro
 - `kyc_compliance_agent.py` — still builds `CheckpointRuleEngine(rules=rule_repo.get_all())`; now gets the persisted list
 - Every other agent or service that reads these configs
 
+`db/seeds/08_admin_config.py` ✓ — seeds all 3 namespace rows with empty `{}` config on fresh install; idempotent (skips rows that already exist)
+
+`db/seeds/seed.py` ✓ — `08 — Admin Config` entry added to `SEED_FILES` list
+
 **Verification:**
-1. `alembic upgrade head` → `admin_config` table created
+1. `alembic upgrade head && python db/seeds/seed.py` → `admin_config` table created; 3 namespace rows seeded
 2. Set a validation prompt override in Admin UI → restart backend → override still active
 3. Change LLM temperature in Admin UI → restart backend → temperature still applied
 4. Add a custom checkpoint rule in Admin UI → restart backend → custom rule still present
-5. `SELECT namespace, config FROM admin_config;` → shows 3 namespace rows
-6. Reset checkpoint rules in Admin UI → row shows `{}` blob; next restart loads defaults
+5. `SELECT namespace, config FROM admin_config;` → shows 3 rows (`validation_prompts`, `llm_config`, `checkpoint_rules`)
+6. Reset checkpoint rules in Admin UI → row shows `{}` blob; next restart loads `_DEFAULT_RULES`
 
 ---
 
