@@ -9,7 +9,8 @@ export interface Comment {
   authorRole: TeamRole
   body: string
   createdAt: string
-  visibility: 'ALL' | 'ADVISOR_ONLY' | 'CLIENT_VISIBLE'
+  visibility: 'ALL' | 'ADVISOR_ONLY'
+  documentId?: string | null
 }
 
 interface CommentThreadProps {
@@ -22,7 +23,6 @@ interface CommentThreadProps {
 const VISIBILITY_LABELS: Record<Comment['visibility'], string> = {
   ALL: 'Everyone',
   ADVISOR_ONLY: 'Advisor only',
-  CLIENT_VISIBLE: 'Client visible',
 }
 
 function CommentBubble({ comment }: { comment: Comment }) {
@@ -85,7 +85,6 @@ export default function CommentThread({
             >
               <option value="ALL">Everyone</option>
               <option value="ADVISOR_ONLY">Advisor only</option>
-              <option value="CLIENT_VISIBLE">Client visible</option>
             </select>
             <button
               onClick={handleSubmit}

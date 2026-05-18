@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { FolderOpen } from 'lucide-react'
 import DocumentUploadCard from './DocumentUploadCard'
+import ClientDocumentModal from './ClientDocumentModal'
 import { useClientDocuments, useClientUpload } from '@/hooks/useClientDocuments'
+import { useComments } from '@/hooks/useComments'
 import type { DocumentOut } from '@/lib/api'
 
 const CATEGORIES = [
@@ -29,6 +32,13 @@ interface ClientDocumentHubProps {
 export default function ClientDocumentHub({ caseId }: ClientDocumentHubProps) {
   const { data: docs, isLoading } = useClientDocuments(caseId)
   const upload = useClientUpload(caseId ?? '')
+  const { data: comments = [] } = useComments(caseId)
+  const [selectedDoc, setSelectedDoc] = useState<DocumentOut | null>(null)
+
+  const commentCountByDoc = comments.reduce<Record<string, number>>((acc, c) => {
+    if (c.documentId) acc[c.documentId] = (acc[c.documentId] ?? 0) + 1
+    return acc
+  }, {})
 
   if (!caseId) {
     return (
@@ -71,11 +81,21 @@ export default function ClientDocumentHub({ caseId }: ClientDocumentHubProps) {
             key={cat}
             category={cat}
             documents={byCategory[cat] ?? []}
+            commentCountByDoc={commentCountByDoc}
             onUpload={(file) => upload.mutate({ file, category: cat })}
+            onDocumentClick={setSelectedDoc}
             isUploading={upload.isPending}
           />
         ))}
       </div>
+
+      {selectedDoc && caseId && (
+        <ClientDocumentModal
+          doc={selectedDoc}
+          caseId={caseId}
+          onClose={() => setSelectedDoc(null)}
+        />
+      )}
     </div>
   )
 }

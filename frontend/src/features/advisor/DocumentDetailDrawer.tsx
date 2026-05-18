@@ -2,13 +2,13 @@ import { X, FileText, Download, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useDocument, useDiffResult, useValidateDocument, useUpdateDocumentStatus } from '@/hooks/useDocuments'
+import { useComments, useAddComment } from '@/hooks/useComments'
 import StatusBadge from '@/components/StatusBadge'
 import CommentThread from '@/components/CommentThread'
 import AIValidationPanel from './AIValidationPanel'
 import VersionDiffPanel from './VersionDiffPanel'
 import StatusEditor from './StatusEditor'
 import type { DocumentStatus } from '@/design-system/tokens'
-import type { Comment } from '@/components/CommentThread'
 
 type DrawerTab = 'overview' | 'validation' | 'diff' | 'comments'
 
@@ -17,17 +17,6 @@ const TABS: { key: DrawerTab; label: string }[] = [
   { key: 'validation', label: 'AI Validation' },
   { key: 'diff', label: 'Version Diff' },
   { key: 'comments', label: 'Comments' },
-]
-
-const MOCK_COMMENTS: Comment[] = [
-  {
-    id: '1',
-    authorName: 'Sarah Chen',
-    authorRole: 'Advisor',
-    body: 'Please review and ensure the address matches the utility bill.',
-    createdAt: new Date(Date.now() - 3600_000).toISOString(),
-    visibility: 'ALL',
-  },
 ]
 
 export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
@@ -40,6 +29,11 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
   const { data: diff, isLoading: diffLoading } = useDiffResult(
     activeTab === 'diff' && activeDocumentId && doc?.has_diff ? activeDocumentId : null,
   )
+  const { data: comments = [], isLoading: commentsLoading } = useComments(
+    activeTab === 'comments' ? caseId : null,
+    activeDocumentId,
+  )
+  const addCommentMutation = useAddComment(caseId)
 
   const validateMutation = useValidateDocument(caseId)
   const statusMutation = useUpdateDocumentStatus(caseId)
@@ -204,14 +198,23 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
               )}
 
               {activeTab === 'comments' && (
-                <CommentThread
-                  comments={MOCK_COMMENTS}
-                  currentRole="Advisor"
-                  onAddComment={(body, visibility) => {
-                    // Wire to POST /collaboration/{case_id}/comments in later steps
-                    console.log('Comment:', body, visibility)
-                  }}
-                />
+                commentsLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                  </div>
+                ) : (
+                  <CommentThread
+                    comments={comments}
+                    currentRole="Advisor"
+                    onAddComment={(body, visibility) => {
+                      addCommentMutation.mutate({
+                        body,
+                        visibility,
+                        document_id: activeDocumentId ?? undefined,
+                      })
+                    }}
+                  />
+                )
               )}
             </>
           )}

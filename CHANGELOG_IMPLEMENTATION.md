@@ -906,6 +906,94 @@ The `admin_config` table uses a single JSONB blob per namespace (`validation_pro
 
 ---
 
+### [DONE] STEP-36C — Advisor-to-Client Comment System
+**Date:** 2026-05-18 | **BRD:** Section 5.1, Section 5.2.2, FR-05, FR-07 | **Depends:** STEP-14, STEP-20, STEP-21, STEP-36B
+
+**Problem:** Advisors had no way to persist comments to the database, and clients had no way to see advisor notes on their documents. The `DocumentDetailDrawer` used hardcoded `MOCK_COMMENTS`, `onAddComment` only logged to the console, and the client portal had no comment UI at all.
+
+**Visibility model — simplified to two options:**
+
+| Frontend label | DB value | Visible to |
+|---|---|---|
+| Everyone (`ALL`) | `client_visible` | Advisor + Client |
+| Advisor only (`ADVISOR_ONLY`) | `team` | Advisor only |
+
+The previous `CLIENT_VISIBLE` option was redundant and removed from `CommentThread`.
+
+**Backend — `backend/app/api/routers/collaboration.py` (new file)**
+
+Two endpoints under the existing `/cases` prefix:
+
+- `GET /cases/{case_id}/comments?document_id=<uuid>` — lists top-level comments for a case, optionally filtered by document; clients automatically see only `client_visible` rows; advisors see all
+- `POST /cases/{case_id}/comments` — creates a `CollaborationComment`; auto-creates an OPEN `CollaborationRoom` for the case if none exists (using `_get_or_create_room` helper with `db.flush()` so the room ID is available before the comment insert); author full name stored in `extra_metadata["author_name"]`; maps frontend `visibility` string to DB constraint value via `_VIS_TO_DB` dict
+
+Both endpoints use `get_current_user` dependency; role is mapped to canonical `TeamRole` casing via `_ROLE_MAP`. No new DB tables or migrations — `collaboration_rooms` and `collaboration_comments` tables already exist since `0001_initial`.
+
+`backend/app/main.py` ✓ — `collaboration.router` imported and registered with `_prefix`
+
+**Frontend — `frontend/src/hooks/useComments.ts` (new file)**
+
+- `useComments(caseId, documentId?)` — TanStack Query `useQuery`; fetches `GET /cases/{caseId}/comments?document_id=...`; maps `CollaborationComment` API response to `Comment` component shape (includes `documentId` field); enabled only when `caseId` is set; 10 s stale time
+- `useAddComment(caseId)` — TanStack Query `useMutation`; posts to `POST /cases/{caseId}/comments`; on success invalidates all `['cases', caseId, 'comments']` query keys so both the drawer and the client hub refetch
+
+**`frontend/src/lib/api.ts` ✓**
+- `CollaborationComment.visibility` narrowed from `'ALL' | 'ADVISOR_ONLY' | 'CLIENT_VISIBLE'` → `'ALL' | 'ADVISOR_ONLY'`
+- `document_id: string | null` field added
+
+**Advisor view changes:**
+
+`frontend/src/components/CommentThread.tsx` ✓
+- `Comment.visibility` type narrowed to `'ALL' | 'ADVISOR_ONLY'`
+- `VISIBILITY_LABELS` map reduced to two entries
+- `CLIENT_VISIBLE` `<option>` removed from the visibility `<select>`
+
+`frontend/src/features/advisor/DocumentDetailDrawer.tsx` ✓
+- Removed `MOCK_COMMENTS` constant and `Comment` type import
+- Added `useComments(caseId, activeDocumentId)` — fetches only when Comments tab is active; scoped to the currently open document
+- Added `useAddComment(caseId)` — called from `onAddComment` callback with `{ body, visibility, document_id: activeDocumentId }`
+- Loading spinner shown while comments are fetching
+
+**Client portal changes:**
+
+`frontend/src/features/client/ClientDocumentModal.tsx` (new file)
+- Centered overlay modal (max-w-md, max-h 85 vh) with backdrop click and Escape key dismiss
+- Two tabs: **Overview** (status, category, version, uploaded date, SHA-256 if present) and **Advisor Notes**
+- Advisor Notes tab calls `useComments(caseId, doc.id)` — API already filters to `client_visible` only for the client role; renders author name + `RoleBadge` + timestamp + comment body in the same style as `CommentBubble`; shows empty state with `MessageCircle` icon when no notes exist; shows count badge on tab when notes are present
+
+`frontend/src/features/client/DocumentUploadCard.tsx` ✓
+- Removed `commentsByDoc` prop and all inline comment rendering
+- Added `onDocumentClick: (doc: DocumentOut) => void` prop
+- Added `commentCountByDoc?: Record<string, number>` prop
+- Each document row is now a `<button>` (`hover:bg-blue-50`) that fires `onDocumentClick`
+- A `💬 N` pill badge (blue, `MessageCircle` icon + count) appears next to the document name when `commentCountByDoc[doc.id] > 0`
+
+`frontend/src/features/client/ClientDocumentHub.tsx` ✓
+- Added `useComments(caseId)` — fetches all case comments once (no document filter); API returns only `client_visible` rows for the client role
+- Builds `commentCountByDoc` via `reduce` on the comments array keyed by `c.documentId`
+- Manages `selectedDoc: DocumentOut | null` state
+- Passes `commentCountByDoc` and `onDocumentClick={setSelectedDoc}` to each `DocumentUploadCard`
+- Renders `<ClientDocumentModal>` when `selectedDoc` is set
+
+**Artifacts produced / modified:**
+- `backend/app/api/routers/collaboration.py` ✓ (new)
+- `backend/app/main.py` ✓
+- `frontend/src/hooks/useComments.ts` ✓ (new)
+- `frontend/src/lib/api.ts` ✓
+- `frontend/src/components/CommentThread.tsx` ✓
+- `frontend/src/features/advisor/DocumentDetailDrawer.tsx` ✓
+- `frontend/src/features/client/ClientDocumentModal.tsx` ✓ (new)
+- `frontend/src/features/client/DocumentUploadCard.tsx` ✓
+- `frontend/src/features/client/ClientDocumentHub.tsx` ✓
+
+**Verification:**
+1. Advisor opens Document Detail Drawer → Comments tab → posts "Please re-upload with better resolution" with visibility **Advisor only** → row saved in `collaboration_comments` with `visibility = 'team'`
+2. Same flow with visibility **Everyone** → `visibility = 'client_visible'`
+3. Client opens portal → document row shows `💬 1` badge next to name
+4. Client clicks document → modal opens → Advisor Notes tab shows the "Everyone" comment; "Advisor only" comment is not visible
+5. `SELECT content, visibility FROM collaboration_comments WHERE case_id = '<uuid>';` → rows present with correct visibility values
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### [ ] STEP-37 — Unit Tests (Agents, Services, Skills)

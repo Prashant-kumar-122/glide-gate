@@ -915,6 +915,48 @@ Checkpoint rules are stored as `{"rules": [{...}, ...]}` — the full active lis
 
 ---
 
+### STEP-36C — Advisor-to-Client Comment System
+**BRD:** Section 5.1, Section 5.2.2, FR-05, FR-07 | **Integration:** N/A | **Depends:** STEP-14, STEP-20, STEP-21, STEP-36B
+
+Implement end-to-end comment functionality between advisor and client. Advisors post comments on specific documents in the Document Detail Drawer; clients see `client_visible` comments in a dedicated modal when they click a document in the Client Portal.
+
+**Visibility model (two options only):**
+| Frontend | DB | Who sees it |
+|---|---|---|
+| `ALL` (Everyone) | `client_visible` | Advisor + Client |
+| `ADVISOR_ONLY` | `team` | Advisor only |
+
+**Backend — new router:**
+- `GET /cases/{case_id}/comments?document_id=<uuid>` — list comments for a case/document; clients automatically filtered to `client_visible` only
+- `POST /cases/{case_id}/comments` — create a comment; auto-creates an OPEN `CollaborationRoom` for the case if none exists; author name stored in `extra_metadata`
+- `CollaborationComment` DB model used directly; no new tables or migrations needed
+
+**Frontend — new hook:**
+- `useComments(caseId, documentId?)` — TanStack Query fetch, maps `CollaborationComment` → `Comment` (includes `documentId` field)
+- `useAddComment(caseId)` — mutation; invalidates all `['cases', caseId, 'comments']` queries on success
+
+**Advisor view changes:**
+- `DocumentDetailDrawer`: replaced mock `MOCK_COMMENTS` array with `useComments(caseId, activeDocumentId)` and `useAddComment(caseId)`; comments scoped to active document; loading spinner shown while fetching
+- `CommentThread`: removed `CLIENT_VISIBLE` option from visibility dropdown; now offers only `ALL` (Everyone) and `ADVISOR_ONLY`
+
+**Client portal changes:**
+- `ClientDocumentModal`: new full-screen modal opened when client clicks a document row; two tabs — **Overview** (status, category, version, upload date) and **Advisor Notes** (read-only comment list with author name, role badge, timestamp, comment count badge on tab); closes on Escape or backdrop click
+- `DocumentUploadCard`: document rows are now `<button>` elements firing `onDocumentClick`; shows a `💬 N` count pill next to document name when advisor notes exist
+- `ClientDocumentHub`: fetches all case comments once; builds `commentCountByDoc` map passed to each card; manages `selectedDoc` state; renders `ClientDocumentModal`
+
+**Key files:**
+- `backend/app/api/routers/collaboration.py` — new router (GET + POST endpoints)
+- `backend/app/main.py` — register `collaboration.router`
+- `frontend/src/hooks/useComments.ts` — new TanStack Query hook
+- `frontend/src/lib/api.ts` — updated `CollaborationComment` type (`CLIENT_VISIBLE` removed, `document_id` added)
+- `frontend/src/components/CommentThread.tsx` — visibility type narrowed to `ALL | ADVISOR_ONLY`
+- `frontend/src/features/advisor/DocumentDetailDrawer.tsx` — real API wired, mock data removed
+- `frontend/src/features/client/ClientDocumentModal.tsx` — new client document detail modal
+- `frontend/src/features/client/DocumentUploadCard.tsx` — clickable rows + comment count badge
+- `frontend/src/features/client/ClientDocumentHub.tsx` — comment count map + modal state
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### STEP-37 — Unit Tests (Agents, Services, Skills)
