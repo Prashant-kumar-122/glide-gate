@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -143,10 +143,18 @@ class QuestionSchemaItem(BaseModel):
     section: str
     label: str
     order_index: int
+    field_type: str
+    options: list[str] | None = None
+    validation_rules: dict[str, Any] | None = None
 
 
 class QuestionnaireSchemaOut(BaseModel):
     fields: list[QuestionSchemaItem]
+
+
+class UpdateCollectedFieldRequest(BaseModel):
+    question_key: str
+    value: Any
 
 
 class ProductOut(BaseModel):
@@ -445,16 +453,28 @@ async def get_questionnaire_schema(
     )
     questions = oq_result.scalars().all()
 
+    _DB_TYPE_MAP = {
+        "text": "text", "number": "number", "date": "date",
+        "select": "choice", "multi_select": "multi_choice",
+        "boolean": "choice", "currency": "number",
+    }
+
     fields = []
     for q in questions:
-        # Prefer a short 'label' stored in extra_metadata, otherwise format the question_key
         label = (q.extra_metadata or {}).get("label") or _fmt_key(q.question_key)
+        field_type = _DB_TYPE_MAP.get(q.question_type, "text")
+        options = list(q.options) if q.options else None
+        if q.question_type == "boolean":
+            options = ["Yes", "No"]
         fields.append(
             QuestionSchemaItem(
                 question_key=q.question_key,
                 section=q.section,
                 label=label,
                 order_index=q.order_index,
+                field_type=field_type,
+                options=options,
+                validation_rules=dict(q.validation_rules) if q.validation_rules else None,
             )
         )
     return QuestionnaireSchemaOut(fields=fields)
@@ -481,6 +501,38 @@ async def get_collected_fields(
     if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
         raise NotFoundError("OnboardingCase", str(case_id))
     client_data = (shared_ctx or {}).get("client_data", {})
+    return CollectedFieldsOut(client_data=client_data)
+
+
+@router.patch("/{case_id}/collected-fields", response_model=CollectedFieldsOut)
+async def update_collected_field(
+    case_id: UUID,
+    body: UpdateCollectedFieldRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> CollectedFieldsOut:
+    result = await db.execute(
+        select(OnboardingCase.client_id, OnboardingCase.shared_context)
+        .where(OnboardingCase.id == case_id)
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    client_id, shared_ctx = row
+    if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
+        raise NotFoundError("OnboardingCase", str(case_id))
+
+    shared_ctx = dict(shared_ctx or {})
+    client_data = dict(shared_ctx.get("client_data", {}))
+    client_data[body.question_key] = body.value
+    shared_ctx["client_data"] = client_data
+
+    await db.execute(
+        sa_update(OnboardingCase)
+        .where(OnboardingCase.id == case_id)
+        .values(shared_context=shared_ctx)
+    )
+    await db.commit()
     return CollectedFieldsOut(client_data=client_data)
 
 

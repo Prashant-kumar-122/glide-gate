@@ -156,6 +156,9 @@ export interface QuestionSchemaItem {
   section: string
   label: string
   order_index: number
+  field_type: string
+  options?: string[] | null
+  validation_rules?: Record<string, unknown> | null
 }
 
 export function useQuestionnaireSchema(caseId: string | null) {
@@ -172,8 +175,18 @@ export function useCollectedFields(caseId: string | null) {
     queryKey: ['cases', caseId, 'collected-fields'] as const,
     queryFn: () => api.get(`/cases/${caseId}/collected-fields`).then((r) => r.data),
     enabled: !!caseId,
-    refetchInterval: 5000,
-    staleTime: 0,
+    staleTime: Infinity,
+  })
+}
+
+export function useUpdateCollectedField(caseId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ questionKey, value }: { questionKey: string; value: unknown }) =>
+      api.patch(`/cases/${caseId}/collected-fields`, { question_key: questionKey, value }).then((r) => r.data),
+    onSuccess: () => {
+      if (caseId) qc.invalidateQueries({ queryKey: ['cases', caseId, 'collected-fields'] })
+    },
   })
 }
 

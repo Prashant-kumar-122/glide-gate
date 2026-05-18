@@ -79,6 +79,7 @@ export default function ClientPortal() {
 
   // Invalidate collected fields immediately when questionnaire progress changes
   const questionnairePct = useChatStore((s) => s.questionnairePct)
+
   useEffect(() => {
     if (activeCaseId) {
       queryClient.invalidateQueries({ queryKey: ['cases', activeCaseId, 'collected-fields'] })
@@ -246,6 +247,7 @@ export default function ClientPortal() {
             </div>
             <div className="flex-1 overflow-hidden">
               <OnboardingFormView
+                caseId={activeCaseId}
                 clientData={collectedData?.client_data ?? {}}
                 schema={schemaData?.fields ?? []}
                 isLoading={collectedLoading}

@@ -915,6 +915,88 @@ Checkpoint rules are stored as `{"rules": [{...}, ...]}` — the full active lis
 
 ---
 
+### STEP-36C — Client Portal: 3-Panel Layout, Onboarding Form View & Inline Editing
+**BRD:** Section 5.2.2, FR-02 | **Integration:** N/A | **Depends:** STEP-33A, STEP-36B
+
+#### Goal
+Replace the 2-panel client UI (chat | documents) with a 3-panel resizable workspace that mirrors an advisor's view of the client: the centre panel surfaces collected onboarding answers as a live, editable form grouped by DB questionnaire sections so clients can review and correct answers without re-entering the chat flow.
+
+#### Design decisions
+
+| Decision | Rationale |
+|---|---|
+| Inline click-to-edit (not re-ask via chat) | Direct PATCH to `shared_context` is immediate, predictable, and does not risk confusing the LLM guidance context with partial correction messages |
+| `staleTime: Infinity` + explicit invalidation | Prevents a polling GET every 5 s; form only refreshes when `questionnairePct` advances (i.e., after an actual answer is collected) |
+| Validation mirrored from backend | Prevents a round-trip to discover a format error; error is surfaced immediately under the input before any API call is made |
+| `field_type` / `options` / `validation_rules` on schema endpoint | Allows the frontend to render the correct input widget and run the correct validation with no knowledge of the DB schema structure |
+| Signature field cursive font | `Dancing Script` loaded from Google Fonts; applied when `question_key` contains `"signature"` — no configuration required |
+| Pencil button always available | Removing the questionnaire-completion gate keeps correction accessible at any stage; the backend PATCH simply overwrites whatever is stored |
+
+#### Backend: new endpoints in `cases.py`
+
+```
+GET  /cases/{case_id}/questionnaire-schema
+     → QuestionnaireSchemaOut { fields: QuestionSchemaItem[] }
+     QuestionSchemaItem { question_key, section, label, order_index,
+                          field_type, options, validation_rules }
+
+GET  /cases/{case_id}/collected-fields
+     → CollectedFieldsOut { client_data: dict }
+
+PATCH /cases/{case_id}/collected-fields
+     body: { question_key: str, value: Any }
+     → CollectedFieldsOut { client_data: dict }
+     # fetches shared_context, merges key, writes back via sa_update
+```
+
+`_DB_TYPE_MAP` in schema endpoint: `select→choice`, `multi_select→multi_choice`, `boolean→choice` (auto Yes/No options), `currency→number`.
+
+#### Frontend architecture
+
+```
+ClientPortal (3-panel layout)
+├── Left  [leftWidth px, default 380]
+│   ├── ClientProgressBar
+│   └── ConversationalChat
+├── ResizeDivider  ← drag to resize left ↔ centre
+├── Centre [centerWidth px, default 360]
+│   └── OnboardingFormView
+│       ├── Summary bar (N fields collected)
+│       ├── Section groups (DB order_index order)
+│       └── Field rows
+│           ├── Readonly: value box + hover pencil "Correct" button
+│           └── Editing: ChoiceInput | MultiChoiceInput | text/number/date input
+│                       + inline error + Save / Cancel buttons
+├── ResizeDivider  ← drag to resize centre ↔ right
+└── Right [flex-1]
+    └── ClientDocumentHub (accordion per category)
+```
+
+#### Client-side validation rules (mirrors `validate_value` in DCO)
+
+| Rule key | Check |
+|---|---|
+| `min_length` | `v.length < rule` — only applied when explicitly present (no default-1 fallback) |
+| `max_length` | `v.length > rule` |
+| `alphanumeric` + `max_alphanumeric` | Regex `^[a-zA-Z0-9]+$`; optional length cap |
+| `min_digits` / `max_digits` | Count digits only (`\D` stripped) |
+| `postal_code` | Regex `^[a-zA-Z0-9][\s\-a-zA-Z0-9]{2,9}$` |
+| `min_age` (date field) | Parse DD/MM/YYYY → compute age → enforce minimum |
+| `future_date` (date field) | Parse DD/MM/YYYY → must be after today |
+| multi_choice | Require ≥ 1 selection |
+
+**Key files:**
+- `backend/app/api/routers/cases.py` — 3 new endpoints + `UpdateCollectedFieldRequest` + extended `QuestionSchemaItem`
+- `frontend/src/routes/ClientPortal.tsx` — 3-panel resizable layout, `ResizeDivider`, `useCollectedFields`, `useQuestionnaireSchema`
+- `frontend/src/features/client/OnboardingFormView.tsx` — new component; `ChoiceInput`, `MultiChoiceInput`, `validateField`, signature font
+- `frontend/src/features/client/ClientDocumentHub.tsx` — accordion refactor
+- `frontend/src/hooks/useDocuments.ts` — `useQuestionnaireSchema`, `useCollectedFields`, `useUpdateCollectedField`; extended `QuestionSchemaItem`
+- `frontend/src/store/chatStore.ts` — removed Option-3 correction state
+- `frontend/src/features/client/ConversationalChat.tsx` — removed Option-3 auto-submit effect
+- `frontend/index.html` — Dancing Script Google Font
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### STEP-37 — Unit Tests (Agents, Services, Skills)

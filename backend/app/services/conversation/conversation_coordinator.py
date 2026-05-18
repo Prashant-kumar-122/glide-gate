@@ -368,7 +368,8 @@ class ConversationCoordinator:
 
         try:
             async with AsyncSessionLocal() as db:
-                now = datetime.now(timezone.utc)
+                # Use naive UTC — columns are TIMESTAMP WITHOUT TIME ZONE
+                now = datetime.now(timezone.utc).replace(tzinfo=None)
 
                 # Upsert OnboardingAnswer — one row per (case_id, question_id)
                 stmt = (
