@@ -25,6 +25,7 @@ const STAGE_COLORS: Record<string, string> = {
 interface Props {
   summary?: CaseSummary
   summaryLoading?: boolean
+  caseName?: string | null
   callSummary?: CallSummary
   callSummaryLoading?: boolean
   callSummaryError?: boolean
@@ -34,6 +35,7 @@ interface Props {
 export default function ClientDetailPanel({
   summary,
   summaryLoading,
+  caseName,
   callSummary,
   callSummaryLoading,
   callSummaryError,
@@ -77,7 +79,10 @@ export default function ClientDetailPanel({
               <p className="text-base font-semibold text-gray-900">
                 {summary.client_name ?? 'Client'}
               </p>
-              <p className="text-xs text-gray-400">Case #{summary.case_id.slice(0, 8)}</p>
+              <p className="text-xs text-gray-400">
+                <span className="font-medium text-gray-500">Case name: </span>
+                {caseName ?? `#${summary.case_id.slice(0, 8)}`}
+              </p>
             </div>
           </div>
           <span className={['rounded-full px-2.5 py-1 text-xs font-medium', badgeClass].join(' ')}>

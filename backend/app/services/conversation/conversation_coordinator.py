@@ -287,7 +287,11 @@ class ConversationCoordinator:
         if is_complete:
             return (
                 "Thank you for providing all the required information. "
-                "Your identity verification will begin shortly."
+                "Your identity verification will begin shortly.\n\n"
+                "Please remember to upload your required documents (such as a government-issued ID, "
+                "proof of address, and any other supporting documents) through the Documents section "
+                "of your portal. Uploading them promptly will help ensure there are no delays in "
+                "processing your application."
             )
         if next_field:
             if validation_error:

@@ -100,6 +100,7 @@ export default function ContactCentre() {
           <ClientDetailPanel
             summary={summary}
             summaryLoading={summaryLoading && !!selectedClientId}
+            caseName={selectedCase?.case_name}
             callSummary={callSummary}
             callSummaryLoading={callSummaryLoading && !!selectedClientId}
             callSummaryError={callSummaryError}

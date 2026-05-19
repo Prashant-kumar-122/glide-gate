@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronDown, Upload, CheckCircle, AlertTriangle, FileText, FolderOpen } from 'lucide-react'
 import StatusBadge from '@/components/StatusBadge'
+import ClientDocumentModal from './ClientDocumentModal'
 import { useClientDocuments, useClientUpload } from '@/hooks/useClientDocuments'
+import { useComments } from '@/hooks/useComments'
 import type { DocumentOut } from '@/lib/api'
 
 const CATEGORIES = [
@@ -204,6 +206,13 @@ interface ClientDocumentHubProps {
 export default function ClientDocumentHub({ caseId }: ClientDocumentHubProps) {
   const { data: docs, isLoading } = useClientDocuments(caseId)
   const upload = useClientUpload(caseId ?? '')
+  const { data: comments = [] } = useComments(caseId)
+  const [selectedDoc, setSelectedDoc] = useState<DocumentOut | null>(null)
+
+  const commentCountByDoc = comments.reduce<Record<string, number>>((acc, c) => {
+    if (c.documentId) acc[c.documentId] = (acc[c.documentId] ?? 0) + 1
+    return acc
+  }, {})
   const byCategory = groupByCategory(docs ?? [])
 
   // Start all closed; open categories with documents once data loads
@@ -266,13 +275,23 @@ export default function ClientDocumentHub({ caseId }: ClientDocumentHubProps) {
             key={cat}
             category={cat}
             documents={byCategory[cat] ?? []}
-            onUpload={(file) => upload.mutate({ file, category: cat })}
+            commentCountByDoc={commentCountByDoc}
+            onUpload={(file, parentDocId) => upload.mutate({ file, category: cat, parentDocId })}
+            onDocumentClick={setSelectedDoc}
             isUploading={upload.isPending}
             open={openCategories.has(cat)}
             onToggle={() => toggleCategory(cat)}
           />
         ))}
       </div>
+
+      {selectedDoc && caseId && (
+        <ClientDocumentModal
+          doc={selectedDoc}
+          caseId={caseId}
+          onClose={() => setSelectedDoc(null)}
+        />
+      )}
     </div>
   )
 }

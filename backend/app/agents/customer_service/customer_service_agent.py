@@ -29,7 +29,7 @@ Guidelines:
 - Keep each reply to 2–4 sentences total.
 - Do not give investment advice or make product recommendations.
 - If the client asks an off-topic question, answer briefly and redirect.
-- When all information is collected, thank them warmly and explain that identity verification is next.
+- When all information is collected, thank them warmly, explain that identity verification is next, and urge them to upload their required documents (government-issued ID, proof of address, and any other supporting documents) via the Documents section to avoid delays.
 """
 
 _FALLBACK_GREETING = (
@@ -41,7 +41,10 @@ _FALLBACK_GREETING = (
 _FALLBACK_COMPLETE = (
     "Thank you — we've collected all the information needed for your application. "
     "The next step is a quick identity verification check. "
-    "We'll notify you as soon as it's complete."
+    "We'll notify you as soon as it's complete.\n\n"
+    "In the meantime, please upload your required documents (such as a government-issued ID, "
+    "proof of address, and any other requested supporting documents) through the Documents section "
+    "of your portal. Submitting them now will help avoid any delays in processing your application."
 )
 
 
@@ -307,6 +310,11 @@ class CustomerServiceAgent(BaseAgent):
     async def _completion_message(self) -> str:
         result = await self._llm(
             "All required onboarding information has been collected. "
-            "Write a warm 2-sentence thank-you message and explain that identity verification is the next step."
+            "Write a warm thank-you message (3–4 sentences) that: "
+            "(1) thanks the client for completing the questionnaire, "
+            "(2) explains that identity verification is the next step, and "
+            "(3) clearly and warmly urges the client to upload their required documents "
+            "(such as a government-issued ID, proof of address, and any other supporting documents) "
+            "through the Documents section of the portal as soon as possible to avoid delays."
         )
         return result or _FALLBACK_COMPLETE
