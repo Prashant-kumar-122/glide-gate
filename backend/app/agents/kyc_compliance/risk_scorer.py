@@ -91,8 +91,14 @@ class RiskScorer:
             score += 40.0
         if d.get("source_of_funds") == "Other":
             score += 20.0
-        net_worth = float(d.get("net_worth") or 0)
-        annual_income = float(d.get("annual_income") or 0)
+        try:
+            net_worth = float(d.get("net_worth") or 0)
+        except (TypeError, ValueError):
+            net_worth = 0.0
+        try:
+            annual_income = float(d.get("annual_income") or 0)
+        except (TypeError, ValueError):
+            annual_income = 0.0
         if net_worth > 5_000_000:
             score += 15.0
         # Wealth-income mismatch (net worth > 10× annual income)

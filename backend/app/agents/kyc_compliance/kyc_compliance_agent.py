@@ -184,7 +184,6 @@ class KYCComplianceAgent(BaseAgent):
                     "client_data": task.payload.get("client_data", {}),
                 },
             ))
-
         # Log compliance decision for every KYC outcome (PASSED, ESCALATED, or FAILED)
         import asyncio
         asyncio.create_task(
@@ -241,7 +240,11 @@ class KYCComplianceAgent(BaseAgent):
         pep_match = rng.random() < 0.03  # 3% PEP rate
 
         aml_risk_factors: list[str] = []
-        if float(client_data.get("annual_income") or 0) > 1_000_000:
+        try:
+            _income = float(client_data.get("annual_income") or 0)
+        except (TypeError, ValueError):
+            _income = 0.0
+        if _income > 1_000_000:
             aml_risk_factors.append("high_income")
         if client_data.get("source_of_funds") == "Other":
             aml_risk_factors.append("undisclosed_source_of_funds")

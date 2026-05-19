@@ -73,7 +73,10 @@ class SuitabilityAssessor:
         score_components.append(risk_score * 0.40)
 
         # ── Income adequacy ───────────────────────────────────────────────────
-        annual_income = float(client_data.get("annual_income") or 0.0)
+        try:
+            annual_income = float(client_data.get("annual_income") or 0.0)
+        except (TypeError, ValueError):
+            annual_income = 0.0
         min_income = _PRODUCT_MIN_INCOME.get(product_code, 0.0)
 
         if min_income == 0.0 or annual_income >= min_income:

@@ -235,7 +235,10 @@ class ProductOnboardingAgent(BaseAgent):
             step_data["account_status"] = "PROVISIONED"
 
         elif step_name == "contribution_limits_check":
-            annual_income = float(client_data.get("annual_income") or 0.0)
+            try:
+                annual_income = float(client_data.get("annual_income") or 0.0)
+            except (TypeError, ValueError):
+                annual_income = 0.0
             step_data["annual_contribution_limit"] = min(annual_income * 0.18, 30_000.0)
             step_data["carry_forward_available"] = True
 
