@@ -52,6 +52,7 @@ export default function AgentTraceCanvas() {
   const selectedAgent = useTraceStore((s) => s.selectedAgent)
   const setSelectedAgent = useTraceStore((s) => s.setSelectedAgent)
   const setNodeState = useTraceStore((s) => s.setNodeState)
+  const initMessages = useTraceStore((s) => s.initMessages)
 
   const { data: cases } = useCases()
   const { data: traceData } = useAgentTrace(activeCaseId)
@@ -75,7 +76,7 @@ export default function AgentTraceCanvas() {
     )
   }, [nodeStates, setNodes])
 
-  // Hydrate node states from persisted task history on load / poll
+  // Hydrate node states and message log from persisted task history on load / poll
   useEffect(() => {
     if (!traceData?.tasks?.length) return
 
@@ -104,7 +105,21 @@ export default function AgentTraceCanvas() {
       const nodeIds = AGENT_NODE_MAP[agentId] ?? [agentId]
       nodeIds.forEach((n) => setNodeState(n, state))
     }
-  }, [traceData, setNodeState])
+
+    // Populate the A2A message log from historical tasks
+    const historicalMessages = traceData.tasks
+      .slice()
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .map((task) => ({
+        id: task.id,
+        fromAgent: task.from_agent,
+        toAgent: task.to_agent,
+        taskType: task.task_type,
+        status: task.status,
+        timestamp: task.created_at,
+      }))
+    initMessages(historicalMessages)
+  }, [traceData, setNodeState, initMessages])
 
   // Build edge set: static structural + animated in-flight messages
   useEffect(() => {
