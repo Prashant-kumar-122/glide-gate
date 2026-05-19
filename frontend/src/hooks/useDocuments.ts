@@ -152,6 +152,45 @@ export function useAdvisors() {
   })
 }
 
+export interface QuestionSchemaItem {
+  question_key: string
+  section: string
+  label: string
+  order_index: number
+  field_type: string
+  options?: string[] | null
+  validation_rules?: Record<string, unknown> | null
+}
+
+export function useQuestionnaireSchema(caseId: string | null) {
+  return useQuery<{ fields: QuestionSchemaItem[] }>({
+    queryKey: ['cases', caseId, 'questionnaire-schema'] as const,
+    queryFn: () => api.get(`/cases/${caseId}/questionnaire-schema`).then((r) => r.data),
+    enabled: !!caseId,
+    staleTime: 60_000,
+  })
+}
+
+export function useCollectedFields(caseId: string | null) {
+  return useQuery<{ client_data: Record<string, unknown> }>({
+    queryKey: ['cases', caseId, 'collected-fields'] as const,
+    queryFn: () => api.get(`/cases/${caseId}/collected-fields`).then((r) => r.data),
+    enabled: !!caseId,
+    staleTime: Infinity,
+  })
+}
+
+export function useUpdateCollectedField(caseId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ questionKey, value }: { questionKey: string; value: unknown }) =>
+      api.patch(`/cases/${caseId}/collected-fields`, { question_key: questionKey, value }).then((r) => r.data),
+    onSuccess: () => {
+      if (caseId) qc.invalidateQueries({ queryKey: ['cases', caseId, 'collected-fields'] })
+    },
+  })
+}
+
 export function useInitiateCase() {
   const qc = useQueryClient()
   return useMutation({

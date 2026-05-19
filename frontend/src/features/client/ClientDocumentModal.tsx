@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { X, FileText, Loader2 } from 'lucide-react'
+import { X, FileText, Loader2, Download } from 'lucide-react'
 import StatusBadge from '@/components/StatusBadge'
 import CommentThread from '@/components/CommentThread'
 import { useComments, useAddComment } from '@/hooks/useComments'
-import type { DocumentOut } from '@/lib/api'
+import { api, type DocumentOut } from '@/lib/api'
 
 type Tab = 'overview' | 'comments'
 
@@ -20,6 +20,23 @@ interface ClientDocumentModalProps {
 
 export default function ClientDocumentModal({ doc, caseId, onClose }: ClientDocumentModalProps) {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const [downloading, setDownloading] = useState(false)
+
+  async function handleDownload() {
+    if (downloading) return
+    setDownloading(true)
+    try {
+      const res = await api.get(`/documents/${doc.id}/download`, { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = doc.name ?? `document-${doc.id}`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const { data: comments = [], isLoading: commentsLoading } = useComments(
     activeTab === 'comments' ? caseId : null,
@@ -116,6 +133,18 @@ export default function ClientDocumentModal({ doc, caseId, onClose }: ClientDocu
                   </span>
                 </div>
               )}
+
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50"
+              >
+                {downloading
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Download className="h-3.5 w-3.5" />
+                }
+                {downloading ? 'Downloading…' : 'Download original'}
+              </button>
             </div>
           )}
 

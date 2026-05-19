@@ -994,6 +994,77 @@ Both endpoints use `get_current_user` dependency; role is mapped to canonical `T
 
 ---
 
+### [DONE] STEP-36D — Client Portal: 3-Panel Layout, Onboarding Form View & Inline Editing
+**Date:** 2026-05-18 | **Depends:** STEP-33A, STEP-36B
+
+**Summary:** Transformed the 2-panel client view (chat | documents) into a 3-panel resizable layout: chat (left) | live onboarding details form (centre) | document hub (right). Centre panel shows collected answers grouped by DB section in `order_index` sequence, with full inline click-to-edit capability. Document hub converted to a per-category accordion. Backend extended with three new REST endpoints for questionnaire schema, collected field retrieval, and direct field update.
+
+**Artifacts produced / modified:**
+
+`backend/app/api/routers/cases.py` ✓
+- `GET /cases/{case_id}/questionnaire-schema` — returns all questions for the case's active questionnaire ordered by `order_index`; each item includes `question_key`, `section`, `label` (from `extra_metadata.label` or `_fmt_key(question_key)`), `order_index`, `field_type` (mapped via `_DB_TYPE_MAP`: `select→choice`, `multi_select→multi_choice`, `boolean→choice` with auto Yes/No options, `currency→number`), `options`, and `validation_rules`
+- `GET /cases/{case_id}/collected-fields` — returns `shared_context.client_data` as `{client_data: {...}}`; client-role access guard matches JWT sub to case `client_id`
+- `PATCH /cases/{case_id}/collected-fields` — accepts `{question_key, value}`; fetches current `shared_context`, merges updated key, writes back via SQLAlchemy `sa_update`; preserves all other JSONB keys; returns updated `client_data`
+- `QuestionSchemaItem` Pydantic model extended: added `field_type: str`, `options: list[str] | None`, `validation_rules: dict[str, Any] | None`
+- `UpdateCollectedFieldRequest` Pydantic model added
+- `from sqlalchemy import select, update as sa_update` import updated
+
+`frontend/src/routes/ClientPortal.tsx` ✓
+- 3-panel resizable layout: `leftWidth` (default 380 px), `centerWidth` (default 360 px); right panel is flex-1
+- `ResizeDivider` component — 5 px strip, `cursor-col-resize`, hover reveals blue line + 5-dot grip; document-level `mousemove`/`mouseup` listeners managed in `useEffect`
+- `startResize` memoised with `useCallback([leftWidth, centerWidth])`
+- Fetches `collectedData` via `useCollectedFields`, `schemaData` via `useQuestionnaireSchema`
+- `questionnairePct` change in chatStore triggers `queryClient.invalidateQueries` on `collected-fields` so the form refreshes after each answer without polling
+- `OnboardingFormView` receives `caseId`, `clientData`, `schema`, `isLoading` (removed `onCorrect` / `isQuestionnaireComplete` — edit is always available)
+- Removed `setPendingCorrection` / `handleCorrect` (Option 3 re-ask approach fully reverted)
+
+`frontend/src/features/client/OnboardingFormView.tsx` ✓ — new component
+- Groups answered fields into sections by iterating the `schema` array (preserves DB `order_index` order); unknown keys appended to an "other" section
+- `SYSTEM_KEYS = Set(['selected_products','version','created_at','updated_at'])` excluded from display
+- Section headers: snake_case → Title Case via `sectionTitle()`
+- Inline edit state: `editingKey`, `editValue` (string), `editMultiValues` (string[]), `editError`
+- `startEdit(questionKey)`: initialises edit state from current value; multi_choice fields populate `editMultiValues` from stored array; number fields stringify raw value (commas stripped on save)
+- Edit input rendered by `field_type`:
+  - `choice` → `<ChoiceInput>` (`<select>` pre-seeded with all options, current value pre-selected)
+  - `multi_choice` → `<MultiChoiceInput>` (checkbox list, existing selections pre-checked)
+  - `number` → `<input type="number">`
+  - `date` → `<input type="text" placeholder="DD/MM/YYYY">`
+  - others → `<input type="text">`
+- `validateField(value, item)`: client-side validation mirrors backend `validate_value`; checks `min_length` (only when explicitly in rules — no default-1 fallback), `max_length`, `alphanumeric` + `max_alphanumeric`, `min_digits` / `max_digits`, `postal_code` regex, `min_age` (DOB date parse), `future_date`; multi_choice requires ≥ 1 selection
+- Validation error rendered inline in red below the input; API call blocked until error-free
+- Number values parsed back to `float` before saving to preserve numeric JSONB type
+- "Correct" pencil button: `invisible group-hover:visible` — only visible on row hover; rendered for every collected field; not gated by questionnaire completion
+- Enter key saves; Escape key cancels
+- Signature fields (`question_key` containing `"signature"`): display and edit input both rendered in `Dancing Script` cursive font (1.25 rem, navy `#1e3a5f`); edit placeholder reads "Sign here…"
+- Summary bar shows total fields collected count
+
+`frontend/src/features/client/ClientDocumentHub.tsx` ✓
+- Replaced flat grid of `DocumentUploadCard` components with per-category accordion
+- `AccordionItem`: header shows FolderOpen/CheckCircle/AlertTriangle icon + category title + document count badge + ChevronDown chevron; body contains document list + upload drop zone
+- `openCategories: Set<string>` state; `hasOpenedRef` prevents re-expansion on re-render; first data load auto-opens categories that already have documents
+
+`frontend/src/hooks/useDocuments.ts` ✓
+- `QuestionSchemaItem` interface extended: `field_type: string`, `options?: string[] | null`, `validation_rules?: Record<string, unknown> | null`
+- `useQuestionnaireSchema(caseId)`: fetches `/cases/{caseId}/questionnaire-schema`, `staleTime: 60_000`
+- `useCollectedFields(caseId)`: fetches `/cases/{caseId}/collected-fields`, `staleTime: Infinity` (invalidated on `questionnairePct` change only)
+- `useUpdateCollectedField(caseId)`: `PATCH /cases/{caseId}/collected-fields`; `onSuccess` invalidates `collected-fields` query key
+
+`frontend/src/store/chatStore.ts` ✓
+- `pendingCorrection`, `setPendingCorrection`, `clearPendingCorrection` removed (Option 3 re-ask approach reverted)
+- `clearMessages` no longer resets `pendingCorrection`
+
+`frontend/src/features/client/ConversationalChat.tsx` ✓
+- Removed `pendingCorrection` import and auto-submit `useEffect` (Option 3 reverted)
+
+`frontend/index.html` ✓
+- Added Google Fonts preconnect + `Dancing Script` (weight 600) link for signature field rendering
+
+**Bugs fixed in this step:**
+- Datetime mismatch in `ConversationCoordinator._persist_field`: `answered_at` used timezone-aware `datetime.now(timezone.utc)` while DB columns are `TIMESTAMP WITHOUT TIME ZONE`; fixed to `datetime.now(timezone.utc).replace(tzinfo=None)`
+- `validateField` default `minLen = 1` fallback caused incorrect "Must be at least 1 character(s)." error on fields whose validation relies solely on `min_digits` / `max_digits` (e.g. phone number); fixed to only enforce `min_length` when explicitly present in `validation_rules`
+
+---
+
 ## Phase 8 — Testing & Refinement
 
 ### [ ] STEP-37 — Unit Tests (Agents, Services, Skills)

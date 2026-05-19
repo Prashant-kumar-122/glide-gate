@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,6 +16,7 @@ from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
+from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.models.clients import Client
 from app.models.documents import Document
 from app.services.orchestration.agent_orchestration_service import orchestration_service
@@ -131,6 +132,29 @@ class ResumeResponse(BaseModel):
     case_id: UUID
     message: str
     stage: str
+
+
+class CollectedFieldsOut(BaseModel):
+    client_data: dict[str, Any]
+
+
+class QuestionSchemaItem(BaseModel):
+    question_key: str
+    section: str
+    label: str
+    order_index: int
+    field_type: str
+    options: list[str] | None = None
+    validation_rules: dict[str, Any] | None = None
+
+
+class QuestionnaireSchemaOut(BaseModel):
+    fields: list[QuestionSchemaItem]
+
+
+class UpdateCollectedFieldRequest(BaseModel):
+    question_key: str
+    value: Any
 
 
 class ProductOut(BaseModel):
@@ -395,6 +419,134 @@ async def get_case_summary(
         kyc_status=ctx.get("kyc_status"),
         escalated=escalated,
     )
+
+
+@router.get("/{case_id}/questionnaire-schema", response_model=QuestionnaireSchemaOut)
+async def get_questionnaire_schema(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> QuestionnaireSchemaOut:
+    """Return all questions (key + section + label) for the questionnaire bound to this case."""
+    # Verify case access
+    case_row = await db.execute(
+        select(OnboardingCase.client_id).where(OnboardingCase.id == case_id)
+    )
+    client_id = case_row.scalar_one_or_none()
+    if client_id is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
+        raise NotFoundError("OnboardingCase", str(case_id))
+
+    # Resolve questionnaire: prefer the one linked via the case's session
+    questionnaire_id: UUID | None = None
+    session_row = await db.execute(
+        select(OnboardingQuestionSession.questionnaire_id)
+        .where(OnboardingQuestionSession.case_id == case_id)
+        .limit(1)
+    )
+    questionnaire_id = session_row.scalar_one_or_none()
+
+    # Fall back to the active questionnaire
+    if questionnaire_id is None:
+        q_row = await db.execute(
+            select(OnboardingQuestionnaire.id)
+            .where(OnboardingQuestionnaire.is_active.is_(True))
+            .limit(1)
+        )
+        questionnaire_id = q_row.scalar_one_or_none()
+
+    if questionnaire_id is None:
+        return QuestionnaireSchemaOut(fields=[])
+
+    oq_result = await db.execute(
+        select(OnboardingQuestion)
+        .where(OnboardingQuestion.questionnaire_id == questionnaire_id)
+        .order_by(OnboardingQuestion.order_index)
+    )
+    questions = oq_result.scalars().all()
+
+    _DB_TYPE_MAP = {
+        "text": "text", "number": "number", "date": "date",
+        "select": "choice", "multi_select": "multi_choice",
+        "boolean": "choice", "currency": "number",
+    }
+
+    fields = []
+    for q in questions:
+        label = (q.extra_metadata or {}).get("label") or _fmt_key(q.question_key)
+        field_type = _DB_TYPE_MAP.get(q.question_type, "text")
+        options = list(q.options) if q.options else None
+        if q.question_type == "boolean":
+            options = ["Yes", "No"]
+        fields.append(
+            QuestionSchemaItem(
+                question_key=q.question_key,
+                section=q.section,
+                label=label,
+                order_index=q.order_index,
+                field_type=field_type,
+                options=options,
+                validation_rules=dict(q.validation_rules) if q.validation_rules else None,
+            )
+        )
+    return QuestionnaireSchemaOut(fields=fields)
+
+
+def _fmt_key(key: str) -> str:
+    """snake_case → Title Case Words, strip common prefixes."""
+    return key.replace("_", " ").strip().title()
+
+
+@router.get("/{case_id}/collected-fields", response_model=CollectedFieldsOut)
+async def get_collected_fields(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> CollectedFieldsOut:
+    result = await db.execute(
+        select(OnboardingCase.shared_context, OnboardingCase.client_id).where(OnboardingCase.id == case_id)
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    shared_ctx, client_id = row
+    if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    client_data = (shared_ctx or {}).get("client_data", {})
+    return CollectedFieldsOut(client_data=client_data)
+
+
+@router.patch("/{case_id}/collected-fields", response_model=CollectedFieldsOut)
+async def update_collected_field(
+    case_id: UUID,
+    body: UpdateCollectedFieldRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> CollectedFieldsOut:
+    result = await db.execute(
+        select(OnboardingCase.client_id, OnboardingCase.shared_context)
+        .where(OnboardingCase.id == case_id)
+    )
+    row = result.one_or_none()
+    if row is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    client_id, shared_ctx = row
+    if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
+        raise NotFoundError("OnboardingCase", str(case_id))
+
+    shared_ctx = dict(shared_ctx or {})
+    client_data = dict(shared_ctx.get("client_data", {}))
+    client_data[body.question_key] = body.value
+    shared_ctx["client_data"] = client_data
+
+    await db.execute(
+        sa_update(OnboardingCase)
+        .where(OnboardingCase.id == case_id)
+        .values(shared_context=shared_ctx)
+    )
+    await db.commit()
+    return CollectedFieldsOut(client_data=client_data)
 
 
 @router.post("/{case_id}/resume", status_code=status.HTTP_202_ACCEPTED, response_model=ResumeResponse)

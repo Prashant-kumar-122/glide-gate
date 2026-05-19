@@ -131,7 +131,6 @@ export default function ConversationalChat({ caseId }: ConversationalChatProps) 
     }
   }
 
-  // Clear options if the user starts typing manually
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value)
     if (pendingOptions.length > 0) clearPendingOptions()

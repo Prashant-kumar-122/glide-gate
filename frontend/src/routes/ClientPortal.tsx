@@ -1,21 +1,90 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { ChevronDown, Plus } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import ConversationalChat from '@/features/client/ConversationalChat'
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
 import ClientProgressBar from '@/features/client/ClientProgressBar'
+import OnboardingFormView from '@/features/client/OnboardingFormView'
 import CreateCaseModal from '@/features/client/CreateCaseModal'
-import { useCases, useCaseProgress } from '@/hooks/useDocuments'
+import { useCases, useCaseProgress, useCollectedFields, useQuestionnaireSchema } from '@/hooks/useDocuments'
 import { useWorkspaceSocket } from '@/hooks/useWorkspaceSocket'
 import { useChatStore } from '@/store/chatStore'
 import { useChatHistory, useGreeting } from '@/hooks/useClientChat'
+
+const MIN_COL = 240
+const MAX_COL = 700
+
+function ResizeDivider({ onMouseDown }: { onMouseDown: (e: React.MouseEvent) => void }) {
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      className="group relative z-10 flex w-[5px] shrink-0 cursor-col-resize items-center justify-center bg-transparent select-none"
+    >
+      {/* visible line */}
+      <div className="absolute inset-y-0 left-[2px] w-px bg-gray-200 group-hover:bg-blue-400 group-active:bg-blue-500 transition-colors" />
+      {/* grip dots */}
+      <div className="relative flex flex-col gap-[3px] opacity-0 group-hover:opacity-100 transition-opacity">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-1 w-1 rounded-full bg-blue-400" />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function ClientPortal() {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
+  // ── Column resize ─────────────────────────────────────────────────────────
+  const [leftWidth, setLeftWidth] = useState(380)
+  const [centerWidth, setCenterWidth] = useState(360)
+  const resizing = useRef<'left' | 'center' | null>(null)
+  const startX = useRef(0)
+  const startWidth = useRef(0)
+
+  const startResize = useCallback(
+    (which: 'left' | 'center') => (e: React.MouseEvent) => {
+      e.preventDefault()
+      resizing.current = which
+      startX.current = e.clientX
+      startWidth.current = which === 'left' ? leftWidth : centerWidth
+    },
+    [leftWidth, centerWidth],
+  )
+
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!resizing.current) return
+      const delta = e.clientX - startX.current
+      const next = Math.max(MIN_COL, Math.min(MAX_COL, startWidth.current + delta))
+      if (resizing.current === 'left') setLeftWidth(next)
+      else setCenterWidth(next)
+    }
+    function onUp() { resizing.current = null }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+  }, [])
+
+  const queryClient = useQueryClient()
   const { data: cases, isLoading: casesLoading } = useCases()
   const { data: summary, isLoading: summaryLoading } = useCaseProgress(activeCaseId)
   const { data: history } = useChatHistory(activeCaseId)
+  const { data: collectedData, isLoading: collectedLoading } = useCollectedFields(activeCaseId)
+  const { data: schemaData } = useQuestionnaireSchema(activeCaseId)
+
+  // Invalidate collected fields immediately when questionnaire progress changes
+  const questionnairePct = useChatStore((s) => s.questionnairePct)
+
+  useEffect(() => {
+    if (activeCaseId) {
+      queryClient.invalidateQueries({ queryKey: ['cases', activeCaseId, 'collected-fields'] })
+    }
+  }, [questionnairePct, activeCaseId, queryClient])
 
   const clearMessages = useChatStore((s) => s.clearMessages)
   const addMessage = useChatStore((s) => s.addMessage)
@@ -147,11 +216,14 @@ export default function ClientPortal() {
         />
       )}
 
-      {/* Main portal — side-by-side layout */}
+      {/* Main portal — three-panel resizable layout */}
       {!casesLoading && activeCaseId && (
         <div className="flex flex-1 overflow-hidden">
           {/* Left: progress + chat */}
-          <div className="flex w-[440px] shrink-0 flex-col border-r border-gray-200 bg-white">
+          <div
+            className="flex shrink-0 flex-col bg-white"
+            style={{ width: leftWidth }}
+          >
             <div className="border-b border-gray-100 px-4 py-3">
               <ClientProgressBar summary={summary} isLoading={summaryLoading} />
             </div>
@@ -160,15 +232,40 @@ export default function ClientPortal() {
             </div>
           </div>
 
+          <ResizeDivider onMouseDown={startResize('left')} />
+
+          {/* Center: collected answers form (readonly) */}
+          <div
+            className="flex shrink-0 flex-col bg-white"
+            style={{ width: centerWidth }}
+          >
+            <div className="shrink-0 border-b border-gray-200 px-4 py-3">
+              <h2 className="text-sm font-semibold text-gray-900">Onboarding Details</h2>
+              <p className="mt-0.5 text-xs text-gray-400">
+                Answers collected from your conversation
+              </p>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <OnboardingFormView
+                caseId={activeCaseId}
+                clientData={collectedData?.client_data ?? {}}
+                schema={schemaData?.fields ?? []}
+                isLoading={collectedLoading}
+              />
+            </div>
+          </div>
+
+          <ResizeDivider onMouseDown={startResize('center')} />
+
           {/* Right: documents */}
           <div className="flex flex-1 flex-col overflow-hidden bg-gray-50">
-            <div className="border-b border-gray-200 bg-white px-6 py-3">
+            <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-3">
               <h2 className="text-sm font-semibold text-gray-900">My Documents</h2>
               <p className="mt-0.5 text-xs text-gray-400">
                 Upload and track your onboarding documents
               </p>
             </div>
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-5">
               <ClientDocumentHub caseId={activeCaseId} />
             </div>
           </div>
