@@ -6,10 +6,10 @@ import ValidationPromptEditor from '@/features/admin/ValidationPromptEditor'
 import CheckpointRulesEditor from '@/features/admin/CheckpointRulesEditor'
 
 const TABS = [
-  { id: 'provider', label: 'LLM Provider', icon: Settings },
-  { id: 'deterministic', label: 'Deterministic Controls', icon: Sliders },
-  { id: 'prompts', label: 'Validation Prompts', icon: FileText },
-  { id: 'rules', label: 'Checkpoint Rules', icon: Shield },
+  { id: 'provider', label: 'LLM Provider', shortLabel: 'LLM', icon: Settings },
+  { id: 'deterministic', label: 'Deterministic Controls', shortLabel: 'Controls', icon: Sliders },
+  { id: 'prompts', label: 'Validation Prompts', shortLabel: 'Prompts', icon: FileText },
+  { id: 'rules', label: 'Checkpoint Rules', shortLabel: 'Rules', icon: Shield },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -20,16 +20,44 @@ export default function AdminConfig() {
   return (
     <div className="flex h-[calc(100vh-48px)] flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white px-6 py-4">
+      <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
         <h1 className="text-sm font-semibold text-gray-900">Admin Configuration</h1>
         <p className="mt-0.5 text-[11px] text-gray-400">
           LLM provider, deterministic controls, validation prompts, and checkpoint rules
         </p>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Vertical tab nav */}
-        <nav className="w-52 shrink-0 border-r border-gray-200 bg-white p-3">
+      <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
+        {/* ── Mobile: horizontal scrollable tab bar ───────────────────────── */}
+        <div
+          className="flex shrink-0 overflow-x-auto border-b border-gray-200 bg-white md:hidden"
+          role="tablist"
+          aria-label="Admin configuration tabs"
+        >
+          {TABS.map(({ id, shortLabel, icon: Icon }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={active === id}
+              onClick={() => setActive(id)}
+              className={[
+                'flex shrink-0 flex-col items-center gap-1 px-5 py-3 text-[11px] font-semibold transition-colors',
+                active === id
+                  ? 'border-b-2 border-blue-600 text-blue-700'
+                  : 'text-gray-400 hover:text-gray-600',
+              ].join(' ')}
+            >
+              <Icon className="h-4 w-4" />
+              {shortLabel}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Desktop: vertical tab nav sidebar ───────────────────────────── */}
+        <nav
+          className="hidden w-52 shrink-0 border-r border-gray-200 bg-white p-3 md:block"
+          aria-label="Admin configuration navigation"
+        >
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -47,8 +75,8 @@ export default function AdminConfig() {
           ))}
         </nav>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        {/* Content area */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
           {active === 'provider' && <LLMProviderConfig />}
           {active === 'deterministic' && <DeterministicControls />}
           {active === 'prompts' && <ValidationPromptEditor />}
