@@ -153,6 +153,8 @@ export default function ClientPortal() {
   const { data: schemaData } = useQuestionnaireSchema(activeCaseId)
 
   const questionnairePct = useChatStore((s) => s.questionnairePct)
+  const questionnaireDone =
+    questionnairePct >= 60 || (summary?.questionnaire_pct ?? 0) >= 60
 
   useEffect(() => {
     if (activeCaseId) {
@@ -310,7 +312,7 @@ export default function ClientPortal() {
                   <ClientProgressBar summary={summary} isLoading={summaryLoading} />
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <ConversationalChat caseId={activeCaseId} />
+                  <ConversationalChat caseId={activeCaseId} questionnaireDone={questionnaireDone} />
                 </div>
               </div>
             )}
@@ -360,7 +362,7 @@ export default function ClientPortal() {
                 <ClientProgressBar summary={summary} isLoading={summaryLoading} />
               </div>
               <div className="flex-1 overflow-hidden">
-                <ConversationalChat caseId={activeCaseId} />
+                <ConversationalChat caseId={activeCaseId} questionnaireDone={questionnaireDone} />
               </div>
             </div>
 
