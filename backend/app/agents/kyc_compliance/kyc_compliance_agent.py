@@ -179,6 +179,9 @@ class KYCComplianceAgent(BaseAgent):
                     "risk_band": risk_score.risk_band,
                     "required_documents": checkpoint.required_documents,
                     "selected_products": task.payload.get("selected_products", []),
+                    # Forward client_data so ProductOnboarding has it for
+                    # suitability assessment and risk profiling steps.
+                    "client_data": task.payload.get("client_data", {}),
                 },
             ))
 

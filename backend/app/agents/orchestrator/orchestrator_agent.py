@@ -200,6 +200,23 @@ class OrchestratorAgent(BaseAgent):
             )
         )
 
+        # Notify Contact Centre so representatives have an AI-generated call
+        # summary ready if the client phones in about the escalation.
+        await self.send_task(
+            TaskPacket(
+                from_agent=self.agent_id,
+                to_agent=AgentID.CONTACT_CENTRE,
+                task_type=TaskType.SUMMARISE_CALL,
+                case_id=case_id,
+                client_id=task.client_id,
+                priority="HIGH",
+                payload={
+                    "onboarding_state": {"stage": "ESCALATED", "escalation_reason": reason},
+                    "client_data": task.payload.get("client_data", {}),
+                },
+            )
+        )
+
         # Persist HumanReview record in background (owns its own DB session)
         asyncio.create_task(
             self._persist_human_review(case_id, task.client_id, reason, task.payload)
@@ -299,5 +316,22 @@ class OrchestratorAgent(BaseAgent):
                     client_id=task.client_id,
                     priority="NORMAL",
                     payload={"type": "ONBOARDING_COMPLETE"},
+                )
+            )
+
+            # Push a final status snapshot to the Contact Centre agent so
+            # representatives have an up-to-date summary if the client calls.
+            await self.send_task(
+                TaskPacket(
+                    from_agent=self.agent_id,
+                    to_agent=AgentID.CONTACT_CENTRE,
+                    task_type=TaskType.GET_CLIENT_STATUS,
+                    case_id=task.case_id,
+                    client_id=task.client_id,
+                    priority="LOW",
+                    payload={
+                        "onboarding_state": {"stage": "COMPLETE"},
+                        "client_data": task.payload.get("client_data", {}),
+                    },
                 )
             )

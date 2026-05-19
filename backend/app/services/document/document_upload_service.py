@@ -205,7 +205,7 @@ class DocumentUploadService:
             f"mime={mime_type} size={storage_result.stored_bytes}B"
         )
 
-        # Step 5 — fire-and-forget DIA pipeline (classify + OCR)
+        # Step 5 — fire-and-forget DIA pipeline (classify + OCR via agent bus)
         asyncio.create_task(
             _trigger_document_intelligence(
                 document_id=doc.id,
@@ -215,6 +215,16 @@ class DocumentUploadService:
                 category=category,
             ),
             name=f"dia-{doc.id}",
+        )
+
+        # Step 5a — auto-trigger AI completeness validation so results appear
+        # in the UI without requiring a manual "Run AI Check".
+        # The explicit POST /documents/{id}/validate endpoint remains available
+        # for advisors to re-run validation on demand.
+        from app.services.validation.validation_orchestrator import run_validate_in_background
+        asyncio.create_task(
+            run_validate_in_background(doc.id),
+            name=f"validate-auto-{doc.id}",
         )
 
         # Step 5b — if this is a resubmission, compute version diff asynchronously
