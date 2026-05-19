@@ -30,7 +30,7 @@ export default function SignupForm() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <label htmlFor="first_name" className="text-sm font-medium text-gray-700">First name</label>
           <input
@@ -101,7 +101,7 @@ export default function SignupForm() {
       <button
         type="submit"
         disabled={signup.isPending}
-        className="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="mt-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
       >
         {signup.isPending ? 'Creating account…' : 'Create account'}
       </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ReactFlow,
   Background,
@@ -10,6 +10,7 @@ import {
 } from '@xyflow/react'
 import type { Node, Edge, NodeTypes, OnNodeClick } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { List, X } from 'lucide-react'
 
 import { useTraceStore } from '@/store/traceStore'
 import { AgentNode } from './AgentNode'
@@ -18,7 +19,6 @@ import { MessageLog } from './MessageLog'
 import { useAgentTraceSocket } from './useAgentTraceSocket'
 import { AGENT_IDS, AGENT_LABELS, AGENT_POSITIONS, STATIC_EDGES, AGENT_NODE_MAP } from './agentPositions'
 import { useAgentTrace } from '@/hooks/useAgentTrace'
-import { useCases } from '@/hooks/useDocuments'
 
 const NODE_TYPES: NodeTypes = { agentNode: AgentNode }
 
@@ -41,10 +41,14 @@ function makeStaticEdges(): Edge[] {
   }))
 }
 
-export default function AgentTraceCanvas() {
+interface AgentTraceCanvasProps {
+  activeCaseId: string | null
+}
+
+export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(makeInitialNodes())
   const [edges, setEdges] = useEdgesState(makeStaticEdges())
-  const [activeCaseId, setActiveCaseId] = useState<string | null>(null)
+  const [showPanel, setShowPanel] = useState(false)
 
   const nodeStates = useTraceStore((s) => s.nodeStates)
   const edgeQueue = useTraceStore((s) => s.edgeQueue)
@@ -53,17 +57,9 @@ export default function AgentTraceCanvas() {
   const setSelectedAgent = useTraceStore((s) => s.setSelectedAgent)
   const setNodeState = useTraceStore((s) => s.setNodeState)
 
-  const { data: cases } = useCases()
   const { data: traceData } = useAgentTrace(activeCaseId)
 
   useAgentTraceSocket(activeCaseId)
-
-  // Auto-select first case
-  useEffect(() => {
-    if (cases && cases.length > 0 && !activeCaseId) {
-      setActiveCaseId(cases[0].id)
-    }
-  }, [cases, activeCaseId])
 
   // Sync node colours with traceStore
   useEffect(() => {
@@ -85,7 +81,6 @@ export default function AgentTraceCanvas() {
       agentTasks[task.to_agent].push(task)
     }
 
-    // Orchestrator state derived from the full task set
     const allStatuses = traceData.tasks.map((t) => t.status)
     const anyEscalated = allStatuses.some((s) => s === 'ESCALATED')
     const anyInProgress = allStatuses.some((s) => s === 'IN_PROGRESS' || s === 'PENDING')
@@ -136,6 +131,7 @@ export default function AgentTraceCanvas() {
   const onNodeClick = useCallback<OnNodeClick>(
     (_evt, node) => {
       setSelectedAgent(node.id === selectedAgent ? null : node.id)
+      setShowPanel(true)
     },
     [selectedAgent, setSelectedAgent],
   )
@@ -151,47 +147,22 @@ export default function AgentTraceCanvas() {
     [nodeStates],
   )
 
-  function caseDisplayName(c: { case_name?: string; selected_products: string[]; client_name?: string; id: string }) {
-    if (c.case_name) return c.case_name
-    if (c.selected_products.length > 0)
-      return c.selected_products
-        .map((p: string) => p.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()))
-        .join(' & ')
-    return c.client_name ?? c.id.slice(0, 8)
-  }
-
-  const caseOptions = useMemo(
-    () =>
-      cases?.map((c) => ({
-        id: c.id,
-        label: `${caseDisplayName(c)} — ${c.current_stage}`,
-      })) ?? [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cases],
-  )
-
   return (
     <div className="flex h-full">
-      {/* React Flow canvas */}
-      <div className="relative flex-1">
-        {/* Case selector toolbar */}
-        <div className="absolute left-3 top-3 z-10 flex items-center gap-2 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 shadow-sm backdrop-blur-sm">
-          <span className="text-[11px] font-medium text-gray-500">Trace case:</span>
-          <select
-            className="max-w-[220px] truncate bg-transparent text-[11px] text-gray-700 outline-none"
-            value={activeCaseId ?? ''}
-            onChange={(e) => setActiveCaseId(e.target.value || null)}
-          >
-            <option value="">Select a case…</option>
-            {caseOptions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* ── React Flow canvas ─────────────────────────────────────────────── */}
+      <div className="relative flex-1 overflow-hidden">
 
-        {/* Legend */}
+        {/* Mobile: "Log" button — top-right floating */}
+        <button
+          onClick={() => setShowPanel(true)}
+          className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-[11px] font-medium text-gray-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-white lg:hidden"
+          aria-label="Open message log"
+        >
+          <List className="h-3.5 w-3.5" />
+          Log
+        </button>
+
+        {/* Status legend — bottom-left floating card */}
         <div className="absolute bottom-16 left-3 z-10 flex flex-col gap-1 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-[9px] shadow-sm backdrop-blur-sm">
           {(
             [
@@ -220,12 +191,46 @@ export default function AgentTraceCanvas() {
         >
           <Background color="#e5e7eb" gap={16} />
           <Controls />
-          <MiniMap nodeColor={miniMapNodeColor} className="!bottom-4 !right-4" />
+          <MiniMap nodeColor={miniMapNodeColor} className="hidden sm:block !bottom-4 !right-4" />
         </ReactFlow>
       </div>
 
-      {/* Right panel: agent detail + message log */}
-      <div className="flex w-80 shrink-0 flex-col border-l border-gray-200 bg-white">
+      {/* ── Right panel: agent detail + message log ───────────────────────── */}
+
+      {/* Mobile backdrop */}
+      {showPanel && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={() => setShowPanel(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Panel:
+          Mobile  — fixed overlay from right, toggled by showPanel
+          sm+     — fixed 320px overlay
+          lg+     — static inline sidebar, always visible */}
+      <div
+        className={[
+          'fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-gray-200 bg-white shadow-xl',
+          'transition-transform duration-300 ease-in-out sm:w-80',
+          showPanel ? 'translate-x-0' : 'translate-x-full',
+          'lg:relative lg:inset-auto lg:z-auto lg:w-80 lg:translate-x-0 lg:shadow-none lg:transition-none',
+        ].join(' ')}
+        aria-label="Agent log panel"
+      >
+        {/* Mobile panel header with close button */}
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-2.5 lg:hidden">
+          <p className="text-xs font-semibold text-gray-700">Agent Log</p>
+          <button
+            onClick={() => setShowPanel(false)}
+            className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600"
+            aria-label="Close agent log"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
         {selectedAgent ? (
           <AgentDetailPopover
             agentId={selectedAgent}

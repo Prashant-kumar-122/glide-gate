@@ -76,14 +76,25 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
 
   return (
     <>
-      {/* Backdrop (mobile only) */}
+      {/* Backdrop — covers whole screen on mobile, sits behind the drawer panel */}
       <div
-        className="fixed inset-0 z-30 bg-black/20 lg:hidden"
+        className="fixed inset-0 z-30 bg-black/30 lg:hidden"
         onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
       />
 
-      {/* Drawer panel */}
-      <aside className="flex w-96 shrink-0 flex-col border-l border-gray-200 bg-white shadow-xl">
+      {/* Drawer panel
+          Mobile: fixed full-width overlay sliding in from the right
+          sm+:    fixed 384px panel from right edge
+          lg+:    static inline sidebar in the flex row */}
+      <aside
+        className={[
+          'fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-gray-200 bg-white shadow-xl',
+          'sm:w-96',
+          'lg:relative lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0',
+        ].join(' ')}
+        aria-label="Document detail panel"
+      >
         {/* Drawer header */}
         <div className="flex items-start justify-between border-b border-gray-200 px-4 py-3">
           <div className="flex items-start gap-2">
@@ -107,6 +118,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
           <button
             onClick={() => setDrawerOpen(false)}
             className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600"
+            aria-label="Close document details"
           >
             <X className="h-4 w-4" />
           </button>
@@ -119,7 +131,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
               key={t.key}
               onClick={() => setActiveTab(t.key)}
               className={[
-                'flex-1 px-2 py-2.5 text-xs font-medium transition-colors',
+                'flex-1 px-1 py-2.5 text-[11px] font-medium transition-colors sm:text-xs',
                 activeTab === t.key
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-500 hover:text-gray-700',
@@ -188,7 +200,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
                   <button
                     onClick={handleDownload}
                     disabled={downloading}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50"
                   >
                     {downloading
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

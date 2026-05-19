@@ -35,6 +35,14 @@ const EMPTY_FORM: CreateCheckpointRuleRequest = {
   reason_template: '',
 }
 
+function DimChip({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <span className={['rounded px-1.5 py-0.5 text-[10px] font-medium', color].join(' ')}>
+      {label}: {value}
+    </span>
+  )
+}
+
 export default function CheckpointRulesEditor() {
   const { data: rules, isLoading } = useCheckpointRules()
   const createRule = useCreateCheckpointRule()
@@ -47,10 +55,7 @@ export default function CheckpointRulesEditor() {
 
   function handleAdd() {
     if (!form.description.trim()) return
-    const docs = docsInput
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
+    const docs = docsInput.split(',').map((s) => s.trim()).filter(Boolean)
     createRule.mutate(
       { ...form, required_documents: docs },
       {
@@ -72,9 +77,12 @@ export default function CheckpointRulesEditor() {
     resetRules.mutate()
   }
 
+  const ruleList = rules ?? []
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Checkpoint Rules</h3>
           <p className="mt-0.5 text-xs text-gray-500">
@@ -84,7 +92,7 @@ export default function CheckpointRulesEditor() {
         <button
           onClick={handleReset}
           disabled={resetRules.isPending}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
         >
           {resetRules.isPending ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -95,7 +103,7 @@ export default function CheckpointRulesEditor() {
         </button>
       </div>
 
-      {/* Rules table */}
+      {/* Rules list */}
       <div className="overflow-hidden rounded-xl border border-gray-200">
         {isLoading ? (
           <div className="flex items-center justify-center py-8 text-xs text-gray-400">
@@ -103,36 +111,38 @@ export default function CheckpointRulesEditor() {
             Loading rules…
           </div>
         ) : (
-          <table className="w-full text-xs">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                  Description
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                  Action
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                  Dimensions
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                  Source
-                </th>
-                <th className="w-10 px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {(rules ?? []).map((rule) => (
-                <tr key={rule.rule_id} className="hover:bg-gray-50">
-                  <td className="max-w-xs px-4 py-3">
-                    <p className="font-medium text-gray-800">{rule.description}</p>
-                    {rule.required_documents.length > 0 && (
-                      <p className="mt-0.5 text-[10px] text-gray-400">
-                        Docs: {rule.required_documents.join(', ')}
+          <>
+            {/* ── Mobile: card per rule (< md) ─────────────────────────────── */}
+            <div className="divide-y divide-gray-100 md:hidden">
+              {ruleList.length === 0 && (
+                <p className="py-8 text-center text-xs text-gray-400">No rules defined.</p>
+              )}
+              {ruleList.map((rule) => (
+                <div key={rule.rule_id} className="p-4">
+                  {/* Top row: description + delete */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium leading-snug text-gray-800">
+                        {rule.description}
                       </p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
+                      {rule.required_documents.length > 0 && (
+                        <p className="mt-1 text-[10px] text-gray-400">
+                          Docs: {rule.required_documents.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDelete(rule.rule_id)}
+                      disabled={rule.is_builtin || deleteRule.isPending}
+                      className="shrink-0 rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label="Delete rule"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Second row: action badge + source */}
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <span
                       className={[
                         'rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
@@ -141,9 +151,18 @@ export default function CheckpointRulesEditor() {
                     >
                       {ACTION_LABEL[rule.action] ?? rule.action}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
+                    {rule.is_builtin ? (
+                      <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                        <Shield className="h-3 w-3" /> Built-in
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-indigo-600">Custom</span>
+                    )}
+                  </div>
+
+                  {/* Third row: dimension chips */}
+                  {(rule.risk_level || rule.product_type || rule.account_value_band || rule.jurisdiction) ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
                       {rule.risk_level && (
                         <DimChip label="Risk" value={rule.risk_level} color="text-red-600 bg-red-50" />
                       )}
@@ -156,33 +175,99 @@ export default function CheckpointRulesEditor() {
                       {rule.jurisdiction && (
                         <DimChip label="Juris." value={rule.jurisdiction} color="text-teal-600 bg-teal-50" />
                       )}
-                      {!rule.risk_level && !rule.product_type && !rule.account_value_band && !rule.jurisdiction && (
-                        <span className="text-[10px] text-gray-400">Any</span>
-                      )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {rule.is_builtin ? (
-                      <span className="flex items-center gap-1 text-[10px] text-gray-400">
-                        <Shield className="h-3 w-3" /> Built-in
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-indigo-600">Custom</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleDelete(rule.rule_id)}
-                      disabled={rule.is_builtin || deleteRule.isPending}
-                      className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </td>
-                </tr>
+                  ) : (
+                    <p className="mt-1.5 text-[10px] text-gray-400">All dimensions: Any</p>
+                  )}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* ── Desktop: scrollable table (md+) ──────────────────────────── */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[600px] text-xs">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                      Description
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                      Action
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                      Dimensions
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                      Source
+                    </th>
+                    <th className="w-10 px-4 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {ruleList.map((rule) => (
+                    <tr key={rule.rule_id} className="hover:bg-gray-50">
+                      <td className="max-w-xs px-4 py-3">
+                        <p className="font-medium text-gray-800">{rule.description}</p>
+                        {rule.required_documents.length > 0 && (
+                          <p className="mt-0.5 text-[10px] text-gray-400">
+                            Docs: {rule.required_documents.join(', ')}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={[
+                            'rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
+                            ACTION_COLORS[rule.action] ?? 'bg-gray-50 text-gray-600 ring-gray-200',
+                          ].join(' ')}
+                        >
+                          {ACTION_LABEL[rule.action] ?? rule.action}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {rule.risk_level && (
+                            <DimChip label="Risk" value={rule.risk_level} color="text-red-600 bg-red-50" />
+                          )}
+                          {rule.product_type && (
+                            <DimChip label="Product" value={rule.product_type} color="text-purple-600 bg-purple-50" />
+                          )}
+                          {rule.account_value_band && (
+                            <DimChip label="Band" value={rule.account_value_band} color="text-blue-600 bg-blue-50" />
+                          )}
+                          {rule.jurisdiction && (
+                            <DimChip label="Juris." value={rule.jurisdiction} color="text-teal-600 bg-teal-50" />
+                          )}
+                          {!rule.risk_level && !rule.product_type && !rule.account_value_band && !rule.jurisdiction && (
+                            <span className="text-[10px] text-gray-400">Any</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {rule.is_builtin ? (
+                          <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                            <Shield className="h-3 w-3" /> Built-in
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-indigo-600">Custom</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDelete(rule.rule_id)}
+                          disabled={rule.is_builtin || deleteRule.isPending}
+                          className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Delete rule"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -190,8 +275,8 @@ export default function CheckpointRulesEditor() {
       {showAdd ? (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
           <p className="mb-3 text-xs font-semibold text-blue-700">New Checkpoint Rule</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 space-y-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="col-span-1 space-y-1 sm:col-span-2">
               <label className="text-[10px] font-medium text-gray-600">
                 Description <span className="text-red-400">*</span>
               </label>
@@ -217,9 +302,7 @@ export default function CheckpointRulesEditor() {
                 className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none"
               >
                 {ACTIONS.map((a) => (
-                  <option key={a} value={a}>
-                    {ACTION_LABEL[a]}
-                  </option>
+                  <option key={a} value={a}>{ACTION_LABEL[a]}</option>
                 ))}
               </select>
             </div>
@@ -228,17 +311,11 @@ export default function CheckpointRulesEditor() {
               <label className="text-[10px] font-medium text-gray-600">Risk Level</label>
               <select
                 value={form.risk_level ?? ''}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, risk_level: e.target.value || null }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, risk_level: e.target.value || null }))}
                 className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none"
               >
                 <option value="">Any</option>
-                {RISK_LEVELS.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
+                {RISK_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
 
@@ -247,9 +324,7 @@ export default function CheckpointRulesEditor() {
               <input
                 type="text"
                 value={form.product_type ?? ''}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, product_type: e.target.value || null }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, product_type: e.target.value || null }))}
                 placeholder="e.g. cash_account"
                 className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400"
               />
@@ -265,11 +340,7 @@ export default function CheckpointRulesEditor() {
                 className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none"
               >
                 <option value="">Any</option>
-                {ACCOUNT_BANDS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
+                {ACCOUNT_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
 
@@ -286,7 +357,7 @@ export default function CheckpointRulesEditor() {
               />
             </div>
 
-            <div className="col-span-2 space-y-1">
+            <div className="col-span-1 space-y-1 sm:col-span-2">
               <label className="text-[10px] font-medium text-gray-600">
                 Required Documents{' '}
                 <span className="text-gray-400">(comma-separated)</span>
@@ -317,11 +388,7 @@ export default function CheckpointRulesEditor() {
               Add Rule
             </button>
             <button
-              onClick={() => {
-                setShowAdd(false)
-                setForm(EMPTY_FORM)
-                setDocsInput('')
-              }}
+              onClick={() => { setShowAdd(false); setForm(EMPTY_FORM); setDocsInput('') }}
               className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
             >
               Cancel
@@ -338,21 +405,5 @@ export default function CheckpointRulesEditor() {
         </button>
       )}
     </div>
-  )
-}
-
-function DimChip({
-  label,
-  value,
-  color,
-}: {
-  label: string
-  value: string
-  color: string
-}) {
-  return (
-    <span className={['rounded px-1.5 py-0.5 text-[10px] font-medium', color].join(' ')}>
-      {label}: {value}
-    </span>
   )
 }
