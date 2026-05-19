@@ -57,6 +57,7 @@ async def seed(session: AsyncSession) -> None:
         },
         assigned_advisor_id=UUID("f0000000-0001-0001-0001-000000000001"),
         sla_deadline=sla,
+        percentage=0.0,
         extra_metadata={"demo_case": True, "scenario": "scenario_a"},
     )
     session.add(case)
