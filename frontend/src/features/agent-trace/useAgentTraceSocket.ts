@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { getSocket } from '@/lib/socket'
 import { useTraceStore } from '@/store/traceStore'
 import type { AgentEdgeEvent, TraceMessage } from '@/store/traceStore'
@@ -24,18 +24,12 @@ export function useAgentTraceSocket(caseId: string | null) {
   const enqueueEdge = useTraceStore((s) => s.enqueueEdge)
   const appendMessage = useTraceStore((s) => s.appendMessage)
   const reset = useTraceStore((s) => s.reset)
-  const joinedRoom = useRef<string | null>(null)
 
   useEffect(() => {
     if (!caseId) return
     const socket = getSocket()
 
-    if (joinedRoom.current && joinedRoom.current !== caseId) {
-      socket.emit('leave_case_room', { case_id: joinedRoom.current })
-      reset()
-    }
     socket.emit('join_case_room', { case_id: caseId })
-    joinedRoom.current = caseId
 
     function onAgentMessage(data: {
       from_agent?: string
@@ -159,7 +153,7 @@ export function useAgentTraceSocket(caseId: string | null) {
       socket.off(EV.CASE_STAGE_CHANGED, onStageChanged)
       socket.off(EV.PROGRESS_UPDATE, onProgressUpdate)
       socket.emit('leave_case_room', { case_id: caseId })
-      joinedRoom.current = null
+      reset()
     }
   }, [caseId, setNodeState, enqueueEdge, appendMessage, reset])
 }

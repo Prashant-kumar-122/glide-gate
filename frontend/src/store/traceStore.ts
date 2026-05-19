@@ -51,7 +51,11 @@ export const useTraceStore = create<TraceStore>((set) => ({
         : { messageLog: [...s.messageLog, msg] },
     ),
   initMessages: (msgs) =>
-    set((s) => ({ messageLog: msgs.filter((m) => !s.messageLog.some((e) => e.id === m.id)) })),
+    set((s) => {
+      const existingIds = new Set(s.messageLog.map((m) => m.id))
+      const incoming = msgs.filter((m) => !existingIds.has(m.id))
+      return incoming.length > 0 ? { messageLog: [...s.messageLog, ...incoming] } : s
+    }),
   setSelectedAgent: (agentId) => set({ selectedAgent: agentId }),
   reset: () => set({ nodeStates: {}, edgeQueue: [], messageLog: [], selectedAgent: null }),
 }))
