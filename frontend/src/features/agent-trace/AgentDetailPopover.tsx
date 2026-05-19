@@ -45,7 +45,7 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
              t.from_agent === agentId || t.to_agent === agentId,
     ) ?? []
   )
-    .slice(-5)
+    .slice()
     .reverse()
 
   return (
@@ -80,9 +80,9 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
       {recentTasks.length > 0 ? (
         <div>
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-            Recent Tasks
+            Tasks ({recentTasks.length})
           </p>
-          <ul className="space-y-1.5">
+          <ul className="max-h-48 space-y-1.5 overflow-y-auto">
             {recentTasks.map((task) => (
               <li key={task.id} className="flex items-center gap-2 rounded-lg bg-gray-50 px-2 py-1.5">
                 {STATUS_ICON[task.status] ?? <Loader className="h-3.5 w-3.5 text-gray-400" />}

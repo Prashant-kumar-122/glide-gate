@@ -28,6 +28,7 @@ interface TraceStore {
   enqueueEdge: (event: AgentEdgeEvent) => void
   dequeueEdge: (eventId: string) => void
   appendMessage: (msg: TraceMessage) => void
+  initMessages: (msgs: TraceMessage[]) => void
   setSelectedAgent: (agentId: string | null) => void
   reset: () => void
 }
@@ -44,7 +45,13 @@ export const useTraceStore = create<TraceStore>((set) => ({
   dequeueEdge: (eventId) =>
     set((s) => ({ edgeQueue: s.edgeQueue.filter((e) => e.id !== eventId) })),
   appendMessage: (msg) =>
-    set((s) => ({ messageLog: [...s.messageLog, msg] })),
+    set((s) =>
+      s.messageLog.some((m) => m.id === msg.id)
+        ? s
+        : { messageLog: [...s.messageLog, msg] },
+    ),
+  initMessages: (msgs) =>
+    set((s) => ({ messageLog: msgs.filter((m) => !s.messageLog.some((e) => e.id === m.id)) })),
   setSelectedAgent: (agentId) => set({ selectedAgent: agentId }),
   reset: () => set({ nodeStates: {}, edgeQueue: [], messageLog: [], selectedAgent: null }),
 }))
