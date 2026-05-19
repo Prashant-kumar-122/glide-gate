@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from loguru import logger
 
-from app.agents.base.a2a_types import AgentID, TaskPacket, TaskResponse, TaskType
+from app.agents.base.a2a_types import AgentID, OnboardingStage, TaskPacket, TaskResponse, TaskType
 from app.agents.product_onboarding.product_onboarding_agent import ProductOnboardingAgent
 from app.websocket.socket_emitter import socket_emitter
 
@@ -145,19 +146,36 @@ class ParallelProductLauncher:
             },
         )
 
+        # Persist each product task as IN_PROGRESS before running, mirroring the
+        # standard dispatch_loop so these tasks appear in the agent_tasks table.
+        started_at = datetime.utcnow()
+        for pkt in packets:
+            await self._bus._save_task_in_progress(pkt, started_at)
+
         raw = await asyncio.gather(
             *[agent.timed_process(pkt) for agent, pkt in zip(agents, packets)],
             return_exceptions=True,
         )
 
         results: list[TaskResponse] = []
-        for product_code, outcome in zip(product_codes, raw):
+        any_critical_failure = False
+        for pkt, product_code, outcome in zip(packets, product_codes, raw):
             if isinstance(outcome, Exception):
                 logger.error(
                     f"[ParallelLauncher] {product_code} raised exception: {outcome}"
                 )
+                any_critical_failure = True
+                failed = TaskResponse(
+                    task_id=pkt.id,
+                    from_agent=AgentID.PRODUCT_ONBOARDING,
+                    status="FAILED",
+                    errors=[str(outcome)],
+                    duration_ms=0,
+                )
+                await self._bus._update_task_completed(pkt.id, failed)
             else:
                 results.append(outcome)
+                await self._bus._update_task_completed(pkt.id, outcome)
                 logger.info(
                     f"[ParallelLauncher] {product_code} → {outcome.status} "
                     f"({outcome.duration_ms}ms)"
@@ -178,5 +196,27 @@ class ParallelProductLauncher:
                 ],
             },
         )
+
+        # Once all product tracks have settled, advance the workflow.
+        # A critical exception escalates; otherwise move to REVIEW so the
+        # CollaborationAgent can open the multi-party review room.
+        if packets:
+            first = packets[0]
+            next_stage = (
+                OnboardingStage.ESCALATED if any_critical_failure else OnboardingStage.REVIEW
+            )
+            await self._bus.publish(TaskPacket(
+                from_agent=AgentID.PRODUCT_ONBOARDING,
+                to_agent=AgentID.ORCHESTRATOR,
+                task_type=TaskType.ADVANCE_STAGE,
+                case_id=first.case_id,
+                client_id=first.client_id,
+                priority="NORMAL",
+                payload={
+                    "to_stage": next_stage,
+                    "product_codes": product_codes,
+                    "all_tracks_done": True,
+                },
+            ))
 
         return results

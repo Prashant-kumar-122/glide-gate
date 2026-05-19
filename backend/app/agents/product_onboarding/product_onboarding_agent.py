@@ -6,7 +6,6 @@ from typing import Any
 
 from app.agents.base.a2a_types import (
     AgentID,
-    OnboardingStage,
     TaskPacket,
     TaskResponse,
     TaskType,
@@ -255,25 +254,9 @@ class ProductOnboardingAgent(BaseAgent):
         if self._bus is None:
             return
 
-        all_tracks_done = task.payload.get("all_tracks_done", False)
-
-        await self.send_task(TaskPacket(
-            from_agent=self.agent_id,
-            to_agent=AgentID.ORCHESTRATOR,
-            task_type=TaskType.ADVANCE_STAGE,
-            case_id=task.case_id,
-            client_id=task.client_id,
-            priority="NORMAL",
-            payload={
-                "to_stage": OnboardingStage.REVIEW if all_tracks_done else OnboardingStage.PARALLEL_PRODUCTS,
-                "product_code": product_code,
-                "track_status": track_status,
-                "steps_completed": len([s for s in completed_steps if s.get("status") == "COMPLETED"]),
-                "total_steps": total_steps,
-                "all_tracks_done": all_tracks_done,
-            },
-        ))
-
+        # Stage advance (PARALLEL_PRODUCTS → REVIEW) is handled by
+        # ParallelProductLauncher after all tracks settle, so individual
+        # product agents only emit the per-track notification here.
         await self.send_task(TaskPacket(
             from_agent=self.agent_id,
             to_agent=AgentID.NOTIFICATION,

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from app.agents.base.a2a_types import AgentID, TaskPacket, TaskResponse, TaskType
+from app.agents.base.a2a_types import AgentID, OnboardingStage, TaskPacket, TaskResponse, TaskType
 from app.agents.base.base_agent import BaseAgent
 
 
@@ -89,6 +89,22 @@ class CollaborationAgent(BaseAgent):
         self.logger.info(
             f"Created collaboration room={room.room_id} for case={task.case_id} "
             f"participants={len(participants)}"
+        )
+
+        # Advance the workflow to COMPLETE once the review room is open.
+        await self.send_task(
+            TaskPacket(
+                from_agent=self.agent_id,
+                to_agent=AgentID.ORCHESTRATOR,
+                task_type=TaskType.ADVANCE_STAGE,
+                case_id=task.case_id,
+                client_id=task.client_id,
+                priority="NORMAL",
+                payload={
+                    "to_stage": OnboardingStage.COMPLETE,
+                    "room_id": str(room.room_id),
+                },
+            )
         )
 
         return TaskResponse(
