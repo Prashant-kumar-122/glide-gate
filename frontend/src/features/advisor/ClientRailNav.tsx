@@ -1,4 +1,4 @@
-import { Briefcase, Wifi, WifiOff, X } from 'lucide-react'
+import { Briefcase, Wifi, WifiOff } from 'lucide-react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import ProgressBar from '@/components/ProgressBar'
 import { useCases } from '@/hooks/useDocuments'
@@ -12,6 +12,7 @@ const STAGE_LABELS: Record<string, string> = {
   COMPLETE: 'Complete',
   ESCALATED: 'Escalated',
 }
+
 
 interface CaseItemProps {
   c: CaseOut
@@ -69,6 +70,8 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
               ? 'success'
               : c.current_stage === 'ESCALATED'
               ? 'warning'
+              : isSelected
+              ? 'default'
               : 'default'
           }
         />
@@ -81,58 +84,26 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
   )
 }
 
-interface ClientRailNavProps {
-  isMobileOpen?: boolean
-  onMobileClose?: () => void
-}
-
-export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: ClientRailNavProps) {
+export default function ClientRailNav() {
   const { selectedCaseId, socketConnected, setSelectedClient, uploadBadgeCounts } =
     useWorkspaceStore()
   const { data: cases, isLoading, isError } = useCases()
 
-  function handleSelect(clientId: string, caseId: string) {
-    setSelectedClient(clientId, caseId)
-    onMobileClose?.()
-  }
-
   return (
-    <aside
-      className={[
-        // Mobile: fixed slide-in drawer from the left edge
-        'fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-gray-200 bg-gray-50 shadow-xl',
-        'transition-transform duration-300 ease-in-out',
-        isMobileOpen ? 'translate-x-0' : '-translate-x-full',
-        // Desktop (lg+): reset to static sidebar in the normal flex flow
-        'lg:relative lg:inset-auto lg:z-auto lg:w-64 lg:translate-x-0 lg:shadow-none lg:transition-none',
-      ].join(' ')}
-      aria-label="Cases sidebar"
-    >
+    <aside className="flex w-64 shrink-0 flex-col border-r border-gray-200 bg-gray-50">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
         <div className="flex items-center gap-2">
           <Briefcase className="h-4 w-4 text-gray-500" />
           <span className="text-sm font-semibold text-gray-700">Cases</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span title={socketConnected ? 'Live' : 'Disconnected'}>
-            {socketConnected ? (
-              <Wifi className="h-4 w-4 text-green-500" />
-            ) : (
-              <WifiOff className="h-4 w-4 text-gray-400" />
-            )}
-          </span>
-          {/* Close button — mobile only */}
-          {onMobileClose && (
-            <button
-              onClick={onMobileClose}
-              className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600 lg:hidden"
-              aria-label="Close cases panel"
-            >
-              <X className="h-4 w-4" />
-            </button>
+        <span title={socketConnected ? 'Live' : 'Disconnected'}>
+          {socketConnected ? (
+            <Wifi className="h-4 w-4 text-green-500" />
+          ) : (
+            <WifiOff className="h-4 w-4 text-gray-400" />
           )}
-        </div>
+        </span>
       </div>
 
       {/* Client list */}
@@ -161,7 +132,7 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
             c={c}
             isSelected={selectedCaseId === c.id}
             badgeCount={uploadBadgeCounts[c.id] ?? 0}
-            onSelect={() => handleSelect(c.client_id, c.id)}
+            onSelect={() => setSelectedClient(c.client_id, c.id)}
           />
         ))}
       </div>

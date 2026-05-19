@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Wifi, WifiOff, Users, ChevronLeft } from 'lucide-react'
+import { Wifi, WifiOff, Users } from 'lucide-react'
 import { getSocket } from '@/lib/socket'
 import { useCCStore } from '@/store/ccStore'
 import { useAllCases, useClientDetail } from '@/hooks/useAllCases'
@@ -44,7 +44,6 @@ function useCCSocket(onRefresh: React.MutableRefObject<() => void>) {
 export default function ContactCentre() {
   const qc = useQueryClient()
   const { selectedClientId, socketStatus } = useCCStore()
-  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
 
   const { data: cases = [], isLoading, isError } = useAllCases()
   const selectedCase = cases.find((c) => c.id === selectedClientId) ?? null
@@ -66,26 +65,11 @@ export default function ContactCentre() {
 
   useCCSocket(onRefreshRef)
 
-  // Auto-switch to detail view on mobile when a client is selected
-  useEffect(() => {
-    if (selectedClientId) setMobileView('detail')
-  }, [selectedClientId])
-
   return (
     <div className="flex h-[calc(100vh-49px)] flex-col overflow-hidden">
       {/* Top bar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
         <div className="flex items-center gap-2">
-          {/* Mobile back button — visible only in detail view */}
-          {mobileView === 'detail' && (
-            <button
-              onClick={() => setMobileView('list')}
-              className="mr-1 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 md:hidden"
-              aria-label="Back to client list"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          )}
           <Users className="h-4 w-4 text-gray-500" />
           <h1 className="text-sm font-semibold text-gray-800">Contact Centre</h1>
           {cases.length > 0 && (
@@ -100,35 +84,19 @@ export default function ContactCentre() {
           ) : (
             <WifiOff className="h-3.5 w-3.5 text-gray-400" />
           )}
-          <span className="hidden sm:inline">{socketStatus === 'connected' ? 'Live' : 'Reconnecting…'}</span>
+          <span>{socketStatus === 'connected' ? 'Live' : 'Reconnecting…'}</span>
         </div>
       </div>
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Client list:
-            Mobile — full width, hidden when detail view is active
-            md+    — fixed 320px sidebar, always visible */}
-        <div
-          className={[
-            'shrink-0 flex-col border-r border-gray-200 bg-white',
-            mobileView === 'list' ? 'flex w-full' : 'hidden',
-            'md:flex md:w-80',
-          ].join(' ')}
-        >
+        {/* Left: searchable client list */}
+        <div className="flex w-80 shrink-0 flex-col border-r border-gray-200 bg-white">
           <ClientStatusTable cases={cases} isLoading={isLoading} isError={isError} />
         </div>
 
-        {/* Client detail:
-            Mobile — full width, hidden when list view is active
-            md+    — flex-1, always visible */}
-        <div
-          className={[
-            'flex-col overflow-hidden bg-gray-50',
-            mobileView === 'detail' ? 'flex flex-1' : 'hidden',
-            'md:flex md:flex-1',
-          ].join(' ')}
-        >
+        {/* Right: selected client detail */}
+        <div className="flex flex-1 flex-col overflow-hidden bg-gray-50">
           <ClientDetailPanel
             summary={summary}
             summaryLoading={summaryLoading && !!selectedClientId}
