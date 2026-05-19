@@ -13,6 +13,7 @@ import DocumentRow from '@/components/DocumentRow'
 import UploadButton from '@/components/UploadButton'
 import ParallelProductTracks from './ParallelProductTracks'
 import { useDocuments, useCaseProgress, useUploadDocument } from '@/hooks/useDocuments'
+import { useComments } from '@/hooks/useComments'
 import type { DocumentOut } from '@/lib/api'
 
 const CATEGORIES: { key: string; label: string; icon: ReactNode }[] = [
@@ -42,6 +43,12 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
   const { data: docs, isLoading: docsLoading } = useDocuments(caseId)
   const { data: summary, isLoading: summaryLoading } = useCaseProgress(caseId)
   const uploadMutation = useUploadDocument(caseId)
+  const { data: comments = [] } = useComments(caseId)
+
+  const commentCountByDoc = comments.reduce<Record<string, number>>((acc, c) => {
+    if (c.documentId) acc[c.documentId] = (acc[c.documentId] ?? 0) + 1
+    return acc
+  }, {})
 
   const byCategory = groupByCategory(docs ?? [])
 
@@ -144,6 +151,7 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
                           updatedAt: doc.updated_at,
                           hasValidationResult: doc.has_validation_result,
                           hasDiff: doc.has_diff,
+                          commentCount: commentCountByDoc[doc.id] ?? 0,
                         }}
                         caseId={caseId}
                       />

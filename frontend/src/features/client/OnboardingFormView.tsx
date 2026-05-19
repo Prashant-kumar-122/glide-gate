@@ -5,6 +5,12 @@ import { useUpdateCollectedField } from '@/hooks/useDocuments'
 
 const SYSTEM_KEYS = new Set(['selected_products', 'version', 'created_at', 'updated_at'])
 
+// Fields the client cannot edit — add question_key values here to lock a field
+const NON_EDITABLE_KEYS = new Set<string>([
+  'full_name_signature',
+  'final_confirmation',
+])
+
 function hasValue(v: unknown): boolean {
   if (v === null || v === undefined) return false
   if (typeof v === 'string' && v.trim() === '') return false
@@ -334,7 +340,7 @@ export default function OnboardingFormView({
                         <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
                           {label}
                         </p>
-                        {!isEditing && (
+                        {!isEditing && !NON_EDITABLE_KEYS.has(question_key) && (
                           <button
                             onClick={() => startEdit(question_key)}
                             title={`Correct ${label}`}
