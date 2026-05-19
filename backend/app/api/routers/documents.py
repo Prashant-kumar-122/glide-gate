@@ -6,6 +6,8 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi.responses import StreamingResponse
+import io
 from pydantic import BaseModel, computed_field
 from sqlalchemy import select, update as sa_update, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +20,7 @@ from app.database import AsyncSessionLocal
 from app.models.cases import OnboardingCase
 from app.models.documents import Document
 from app.services.document.document_upload_service import document_upload_service
+from app.services.document.document_storage_adapter import storage_adapter
 from app.services.validation.validation_orchestrator import run_validate_in_background
 
 router = APIRouter(tags=["documents"])
@@ -310,6 +313,38 @@ async def update_document_status(
         asyncio.create_task(_update_case_percentage_for_docs(doc.case_id))
 
     return DocumentOut.model_validate(doc)
+
+
+@router.get(
+    "/documents/{document_id}/download",
+    tags=["documents"],
+)
+async def download_document(
+    document_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> StreamingResponse:
+    doc = await _get_doc_or_404(document_id, db)
+
+    if not doc.storage_path:
+        raise NotFoundError("File not found for this document")
+
+    try:
+        file_bytes = await storage_adapter.retrieve(doc.storage_path)
+    except FileNotFoundError:
+        raise NotFoundError("File not found on storage backend")
+
+    filename = doc.original_filename or f"document-{document_id}"
+    mime_type = doc.mime_type or "application/octet-stream"
+
+    return StreamingResponse(
+        io.BytesIO(file_bytes),
+        media_type=mime_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(file_bytes)),
+        },
+    )
 
 
 @router.get(

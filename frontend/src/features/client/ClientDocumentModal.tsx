@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
-import { X, FileText, Loader2, MessageCircle } from 'lucide-react'
+import { X, FileText, Loader2 } from 'lucide-react'
 import StatusBadge from '@/components/StatusBadge'
-import RoleBadge from '@/components/RoleBadge'
-import { useComments } from '@/hooks/useComments'
+import CommentThread from '@/components/CommentThread'
+import { useComments, useAddComment } from '@/hooks/useComments'
 import type { DocumentOut } from '@/lib/api'
 
 type Tab = 'overview' | 'comments'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
-  { key: 'comments', label: 'Advisor Notes' },
+  { key: 'comments', label: 'Comments' },
 ]
 
 interface ClientDocumentModalProps {
@@ -25,6 +25,7 @@ export default function ClientDocumentModal({ doc, caseId, onClose }: ClientDocu
     activeTab === 'comments' ? caseId : null,
     doc.id,
   )
+  const addCommentMutation = useAddComment(caseId)
 
   // Close on Escape
   useEffect(() => {
@@ -123,28 +124,19 @@ export default function ClientDocumentModal({ doc, caseId, onClose }: ClientDocu
               <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
               </div>
-            ) : comments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-                <MessageCircle className="h-8 w-8 text-gray-200" />
-                <p className="text-sm text-gray-400">No advisor notes yet</p>
-              </div>
             ) : (
-              <div className="flex flex-col gap-4">
-                {comments.map((c) => (
-                  <div key={c.id} className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-gray-700">{c.authorName}</span>
-                      <RoleBadge role={c.authorRole} size="sm" />
-                      <span className="ml-auto text-[10px] text-gray-400">
-                        {new Date(c.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                      {c.body}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <CommentThread
+                comments={comments}
+                currentRole="Client"
+                hideVisibility
+                onAddComment={(body) =>
+                  addCommentMutation.mutate({
+                    body,
+                    visibility: 'ALL',
+                    document_id: doc.id,
+                  })
+                }
+              />
             )
           )}
         </div>

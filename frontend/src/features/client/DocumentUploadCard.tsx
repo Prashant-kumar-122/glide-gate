@@ -34,7 +34,7 @@ interface DocumentUploadCardProps {
   category: string
   documents: DocumentOut[]
   commentCountByDoc?: Record<string, number>
-  onUpload: (file: File) => void
+  onUpload: (file: File, parentDocId?: string) => void
   onDocumentClick: (doc: DocumentOut) => void
   isUploading?: boolean
 }
@@ -49,10 +49,13 @@ export default function DocumentUploadCard({
 }: DocumentUploadCardProps) {
   const [dragging, setDragging] = useState(false)
 
+  // The most recently uploaded doc in this category becomes the parent of the next upload
+  const latestDoc = documents[documents.length - 1]
+
   function processFiles(fileList: FileList | null) {
     if (!fileList || isUploading) return
     const file = Array.from(fileList).find((f) => ALLOWED_MIME.includes(f.type))
-    if (file) onUpload(file)
+    if (file) onUpload(file, latestDoc?.id)
   }
 
   function openPicker() {
@@ -119,42 +122,49 @@ export default function DocumentUploadCard({
         </div>
       )}
 
-      {/* Upload zone */}
-      <div
-        onDragOver={(e) => {
-          e.preventDefault()
-          if (!isUploading) setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragging(false)
-          processFiles(e.dataTransfer.files)
-        }}
-        onClick={openPicker}
-        role="button"
-        tabIndex={isUploading ? -1 : 0}
-        onKeyDown={(e) => e.key === 'Enter' && openPicker()}
-        className={[
-          'flex flex-col items-center gap-1 rounded-xl border-2 border-dashed py-3 text-center transition-colors',
-          dragging
-            ? 'border-blue-400 bg-blue-50 cursor-copy'
-            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer',
-          isUploading ? 'cursor-not-allowed opacity-60' : '',
-        ].join(' ')}
-      >
-        {isUploading ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" />
-        ) : (
-          <Upload
-            className={['h-4 w-4', dragging ? 'text-blue-500' : 'text-gray-400'].join(' ')}
-          />
-        )}
-        <p className="text-xs font-medium text-gray-600">
-          {isUploading ? 'Uploading…' : documents.length > 0 ? 'Upload new version' : 'Upload document'}
-        </p>
-        <p className="text-[10px] text-gray-400">PDF, Word, or image · drag & drop or click</p>
-      </div>
+      {/* Upload zone — hidden once the latest version is approved */}
+      {latestDoc?.status === 'APPROVED' ? (
+        <div className="flex items-center justify-center gap-1.5 rounded-xl border border-green-200 bg-green-50 py-3 text-xs font-medium text-green-700">
+          <CheckCircle className="h-3.5 w-3.5" />
+          Document approved
+        </div>
+      ) : (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            if (!isUploading) setDragging(true)
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            processFiles(e.dataTransfer.files)
+          }}
+          onClick={openPicker}
+          role="button"
+          tabIndex={isUploading ? -1 : 0}
+          onKeyDown={(e) => e.key === 'Enter' && openPicker()}
+          className={[
+            'flex flex-col items-center gap-1 rounded-xl border-2 border-dashed py-3 text-center transition-colors',
+            dragging
+              ? 'border-blue-400 bg-blue-50 cursor-copy'
+              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer',
+            isUploading ? 'cursor-not-allowed opacity-60' : '',
+          ].join(' ')}
+        >
+          {isUploading ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" />
+          ) : (
+            <Upload
+              className={['h-4 w-4', dragging ? 'text-blue-500' : 'text-gray-400'].join(' ')}
+            />
+          )}
+          <p className="text-xs font-medium text-gray-600">
+            {isUploading ? 'Uploading…' : documents.length > 0 ? 'Upload new version' : 'Upload document'}
+          </p>
+          <p className="text-[10px] text-gray-400">PDF, Word, or image · drag & drop or click</p>
+        </div>
+      )}
     </div>
   )
 }

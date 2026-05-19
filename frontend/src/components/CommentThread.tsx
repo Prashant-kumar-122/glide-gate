@@ -18,6 +18,7 @@ interface CommentThreadProps {
   currentRole?: TeamRole
   onAddComment?: (body: string, visibility: Comment['visibility']) => void
   readOnly?: boolean
+  hideVisibility?: boolean
 }
 
 const VISIBILITY_LABELS: Record<Comment['visibility'], string> = {
@@ -47,6 +48,7 @@ export default function CommentThread({
   comments,
   onAddComment,
   readOnly = false,
+  hideVisibility = false,
 }: CommentThreadProps) {
   const [draft, setDraft] = useState('')
   const [visibility, setVisibility] = useState<Comment['visibility']>('ALL')
@@ -78,14 +80,17 @@ export default function CommentThread({
             className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
           />
           <div className="flex items-center justify-between">
-            <select
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value as Comment['visibility'])}
-              className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 focus:outline-none"
-            >
-              <option value="ALL">Everyone</option>
-              <option value="ADVISOR_ONLY">Advisor only</option>
-            </select>
+            {!hideVisibility && (
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value as Comment['visibility'])}
+                className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 focus:outline-none"
+              >
+                <option value="ALL">Everyone</option>
+                <option value="ADVISOR_ONLY">Advisor only</option>
+              </select>
+            )}
+            {hideVisibility && <span />}
             <button
               onClick={handleSubmit}
               disabled={!draft.trim()}

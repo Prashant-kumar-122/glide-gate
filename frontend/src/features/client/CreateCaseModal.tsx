@@ -11,6 +11,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
   const [caseName, setCaseName] = useState('')
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [advisorId, setAdvisorId] = useState<string>('')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const { data: products, isLoading: productsLoading } = useProducts()
   const { data: advisors, isLoading: advisorsLoading } = useAdvisors()
@@ -25,12 +26,19 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!caseName.trim() || selectedProducts.length === 0) return
-    const newCase = await initiate.mutateAsync({
-      case_name: caseName.trim(),
-      selected_products: selectedProducts,
-      assigned_advisor_id: advisorId || null,
-    })
-    onCreated(newCase.id)
+    setErrorMessage(null)
+    try {
+      const newCase = await initiate.mutateAsync({
+        case_name: caseName.trim(),
+        selected_products: selectedProducts,
+        assigned_advisor_id: advisorId || null,
+      })
+      onCreated(newCase.id)
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setErrorMessage(detail ?? 'Something went wrong. Please try again.')
+    }
   }
 
   const ready = caseName.trim().length > 0 && selectedProducts.length > 0
@@ -141,9 +149,9 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
           </div>
 
           {/* Error */}
-          {initiate.isError && (
+          {errorMessage && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
-              Something went wrong. Please try again.
+              {errorMessage}
             </p>
           )}
 

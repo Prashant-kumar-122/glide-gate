@@ -30,17 +30,6 @@ const STAGE_BADGE: Record<string, string> = {
   ESCALATED: 'bg-red-100 text-red-700',
 }
 
-function stageToProgress(stage: string): number {
-  const map: Record<string, number> = {
-    INTAKE: 15,
-    KYC: 35,
-    PARALLEL_PRODUCTS: 60,
-    REVIEW: 80,
-    COMPLETE: 100,
-    ESCALATED: 75,
-  }
-  return map[stage] ?? 0
-}
 
 interface Props {
   cases: CaseOut[]
@@ -110,7 +99,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
 
         {filtered.map((c) => {
           const isSelected = selectedClientId === c.id
-          const progress = stageToProgress(c.current_stage)
+          const progress = Math.round(c.percentage ?? 0)
           const badgeClass = STAGE_BADGE[c.current_stage] ?? 'bg-gray-100 text-gray-600'
           const stageLabel = STAGE_LABELS[c.current_stage] ?? c.current_stage
           const isEscalated = c.current_stage === 'ESCALATED' || c.status === 'ESCALATED'
