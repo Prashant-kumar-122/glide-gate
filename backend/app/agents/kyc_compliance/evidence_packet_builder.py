@@ -50,13 +50,21 @@ class EvidencePacketBuilder:
         )
 
     def _summarise_profile(self, d: dict[str, Any]) -> dict[str, Any]:
+        try:
+            annual_income = float(d.get("annual_income") or 0)
+        except (TypeError, ValueError):
+            annual_income = 0.0
+        try:
+            net_worth = float(d.get("net_worth") or 0)
+        except (TypeError, ValueError):
+            net_worth = 0.0
         return {
             "full_name": d.get("full_name"),
             "nationality": d.get("nationality"),
             "tax_residency": d.get("tax_residency"),
             "employment_status": d.get("employment_status"),
-            "annual_income_band": self._income_band(float(d.get("annual_income") or 0)),
-            "net_worth_band": self._wealth_band(float(d.get("net_worth") or 0)),
+            "annual_income_band": self._income_band(annual_income),
+            "net_worth_band": self._wealth_band(net_worth),
             "source_of_funds": d.get("source_of_funds"),
             "investment_experience": d.get("investment_experience"),
             "risk_tolerance": d.get("risk_tolerance"),

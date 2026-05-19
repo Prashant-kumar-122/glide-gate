@@ -114,7 +114,10 @@ class CheckpointRuleEngine:
         nationality = (client_data.get("nationality") or "").lower()
         is_high_risk_nationality = nationality in _HIGH_RISK_NATIONALITIES
 
-        ca_initial = float(client_data.get("ca_initial_deposit") or 0)
+        try:
+            ca_initial = float(client_data.get("ca_initial_deposit") or 0)
+        except (TypeError, ValueError):
+            ca_initial = 0.0
         account_band = "LARGE" if ca_initial > 1_000_000 else "NORMAL"
 
         decisions: list[CheckpointDecision] = []
