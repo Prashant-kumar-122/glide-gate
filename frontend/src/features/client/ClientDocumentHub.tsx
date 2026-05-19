@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, Upload, CheckCircle, AlertTriangle, FileText, FolderOpen } from 'lucide-react'
+import { ChevronDown, Upload, CheckCircle, AlertTriangle, FileText, FolderOpen, MessageCircle } from 'lucide-react'
 import StatusBadge from '@/components/StatusBadge'
 import ClientDocumentModal from './ClientDocumentModal'
 import { useClientDocuments, useClientUpload } from '@/hooks/useClientDocuments'
@@ -55,7 +55,9 @@ function groupByCategory(docs: DocumentOut[]): Record<string, DocumentOut[]> {
 interface AccordionItemProps {
   category: string
   documents: DocumentOut[]
-  onUpload: (file: File) => void
+  commentCountByDoc: Record<string, number>
+  onUpload: (file: File, parentDocId?: string) => void
+  onDocumentClick: (doc: DocumentOut) => void
   isUploading?: boolean
   open: boolean
   onToggle: () => void
@@ -64,25 +66,27 @@ interface AccordionItemProps {
 function AccordionItem({
   category,
   documents,
+  commentCountByDoc,
   onUpload,
+  onDocumentClick,
   isUploading,
   open,
   onToggle,
 }: AccordionItemProps) {
   const [dragging, setDragging] = useState(false)
 
-  function processFiles(fileList: FileList | null) {
+  function processFiles(fileList: FileList | null, parentDocId?: string) {
     if (!fileList || isUploading) return
     const file = Array.from(fileList).find((f) => ALLOWED_MIME.includes(f.type))
-    if (file) onUpload(file)
+    if (file) onUpload(file, parentDocId)
   }
 
-  function openPicker() {
+  function openPicker(parentDocId?: string) {
     if (isUploading) return
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = ALLOWED_MIME.join(',')
-    input.onchange = (e) => processFiles((e.target as HTMLInputElement).files)
+    input.onchange = (e) => processFiles((e.target as HTMLInputElement).files, parentDocId)
     input.click()
   }
 
@@ -142,7 +146,8 @@ function AccordionItem({
               {documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2"
+                  onClick={() => onDocumentClick(doc)}
+                  className="group flex cursor-pointer items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex min-w-0 items-center gap-2">
                     <FileText className="h-3 w-3 shrink-0 text-gray-400" />
@@ -151,48 +156,63 @@ function AccordionItem({
                       <span className="shrink-0 text-[10px] text-gray-400">v{doc.version}</span>
                     )}
                   </div>
-                  <StatusBadge status={doc.status} size="sm" />
+                  <div className="flex shrink-0 items-center gap-2">
+                    {(commentCountByDoc[doc.id] ?? 0) > 0 && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+                        <MessageCircle className="h-2.5 w-2.5" />
+                        {commentCountByDoc[doc.id]}
+                      </span>
+                    )}
+                    <StatusBadge status={doc.status} size="sm" />
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
           {/* Upload zone */}
-          <div
-            onDragOver={(e) => {
-              e.preventDefault()
-              if (!isUploading) setDragging(true)
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault()
-              setDragging(false)
-              processFiles(e.dataTransfer.files)
-            }}
-            onClick={openPicker}
-            role="button"
-            tabIndex={isUploading ? -1 : 0}
-            onKeyDown={(e) => e.key === 'Enter' && openPicker()}
-            className={[
-              'flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-3 text-center transition-colors',
-              dragging
-                ? 'border-blue-400 bg-blue-50 cursor-copy'
-                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer',
-              isUploading ? 'cursor-not-allowed opacity-60' : '',
-            ].join(' ')}
-          >
-            {isUploading ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" />
-            ) : (
-              <Upload className={['h-3.5 w-3.5', dragging ? 'text-blue-500' : 'text-gray-400'].join(' ')} />
-            )}
-            <div>
-              <p className="text-xs font-medium text-gray-600">
-                {isUploading ? 'Uploading…' : documents.length > 0 ? 'Upload new version' : 'Upload document'}
-              </p>
-              <p className="text-[10px] text-gray-400">PDF, Word, or image · drag & drop or click</p>
+          {documents[documents.length - 1]?.status === 'APPROVED' ? (
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
+              <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>Document approved — no further uploads needed</span>
             </div>
-          </div>
+          ) : (
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                if (!isUploading) setDragging(true)
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragging(false)
+                processFiles(e.dataTransfer.files)
+              }}
+              onClick={() => openPicker()}
+              role="button"
+              tabIndex={isUploading ? -1 : 0}
+              onKeyDown={(e) => e.key === 'Enter' && openPicker()}
+              className={[
+                'flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-3 text-center transition-colors',
+                dragging
+                  ? 'border-blue-400 bg-blue-50 cursor-copy'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer',
+                isUploading ? 'cursor-not-allowed opacity-60' : '',
+              ].join(' ')}
+            >
+              {isUploading ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" />
+              ) : (
+                <Upload className={['h-3.5 w-3.5', dragging ? 'text-blue-500' : 'text-gray-400'].join(' ')} />
+              )}
+              <div>
+                <p className="text-xs font-medium text-gray-600">
+                  {isUploading ? 'Uploading…' : documents.length > 0 ? 'Upload new version' : 'Upload document'}
+                </p>
+                <p className="text-[10px] text-gray-400">PDF, Word, or image · drag & drop or click</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
