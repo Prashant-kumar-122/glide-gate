@@ -87,6 +87,18 @@ export interface ProductTrack {
   steps_completed: number
 }
 
+export interface OcrField {
+  key: string
+  value: string
+  confidence: number
+}
+
+export interface OcrResult {
+  fields: OcrField[]
+  raw_text: string
+  extraction_quality: number
+}
+
 export interface DocumentOut {
   id: string
   name: string
@@ -102,6 +114,7 @@ export interface DocumentOut {
   parent_doc_id?: string
   validation_result?: ValidationResult
   diff_result?: DiffResult
+  ocr_result?: OcrResult | null
   created_at: string
   updated_at: string
 }
