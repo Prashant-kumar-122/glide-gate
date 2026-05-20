@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User } from 'lucide-react'
 import { useChatStore } from '@/store/chatStore'
-import { useSendMessage } from '@/hooks/useClientChat'
 import type { ChatMessage } from '@/store/chatStore'
+import { useSendMessage } from '@/hooks/useClientChat'
 
 function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === 'user'
@@ -89,15 +89,17 @@ function OptionChips({ options, onSelect }: OptionChipsProps) {
 
 interface ConversationalChatProps {
   caseId: string | null
+  questionnaireDone?: boolean
 }
 
-export default function ConversationalChat({ caseId }: ConversationalChatProps) {
+export default function ConversationalChat({ caseId, questionnaireDone = false }: ConversationalChatProps) {
   const [input, setInput] = useState('')
   const [streamingText, setStreamingText] = useState('')
   const messages = useChatStore((s) => s.messages)
   const typingIndicator = useChatStore((s) => s.typingIndicator)
   const pendingOptions = useChatStore((s) => s.pendingOptions)
   const clearPendingOptions = useChatStore((s) => s.clearPendingOptions)
+  const isComplete = questionnaireDone
   const bottomRef = useRef<HTMLDivElement>(null)
   const sendMessage = useSendMessage(caseId)
 
@@ -106,7 +108,7 @@ export default function ConversationalChat({ caseId }: ConversationalChatProps) 
   }, [messages, typingIndicator, streamingText, pendingOptions])
 
   function submitText(text: string) {
-    if (!text.trim() || !caseId || sendMessage.isPending) return
+    if (!text.trim() || !caseId || sendMessage.isPending || isComplete) return
     setInput('')
     sendMessage.mutate({
       text: text.trim(),
@@ -194,29 +196,40 @@ export default function ConversationalChat({ caseId }: ConversationalChatProps) 
 
       {/* Input area */}
       <div className="border-t border-gray-100 p-3">
-        {!caseId && (
-          <p className="pb-2 text-center text-xs text-gray-400">
-            Select a case above to start chatting
-          </p>
+        {isComplete ? (
+          <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-center">
+            <p className="text-sm font-medium text-green-700">All questions answered</p>
+            <p className="mt-0.5 text-xs text-green-500">
+              You can review your answers in the Details panel
+            </p>
+          </div>
+        ) : (
+          <>
+            {!caseId && (
+              <p className="pb-2 text-center text-xs text-gray-400">
+                Select a case above to start chatting
+              </p>
+            )}
+            <div className="flex gap-2">
+              <textarea
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+                rows={2}
+                disabled={!caseId || sendMessage.isPending}
+                className="flex-1 resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-50"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!caseId || !input.trim() || sendMessage.isPending}
+                className="flex items-center justify-center self-end rounded-xl bg-blue-600 p-2.5 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </>
         )}
-        <div className="flex gap-2">
-          <textarea
-            value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
-            rows={2}
-            disabled={!caseId || sendMessage.isPending}
-            className="flex-1 resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-50"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!caseId || !input.trim() || sendMessage.isPending}
-            className="flex items-center justify-center self-end rounded-xl bg-blue-600 p-2.5 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
       </div>
     </div>
   )
