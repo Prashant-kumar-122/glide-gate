@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft, ArrowRight, CheckCircle, Upload, Star, Users, Building2,
-  Globe, Zap, FileText, Loader, Sparkles, X,
+  Globe, Zap, FileText, Loader, Sparkles, X, ChevronDown, ChevronLeft,
+  ChevronRight, AlertCircle, Calendar,
 } from 'lucide-react'
 import {
   useProducts, useQuestionnaireSchema, useCollectedFields,
@@ -23,6 +24,7 @@ function formatSectionTitle(section: string): string {
     risk: 'Risk Profile',
     employment: 'Employment Details',
     identity: 'Identity Verification',
+    background: 'Background Information',
   }
   return overrides[section] ?? section.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
@@ -35,8 +37,102 @@ function sectionIcon(section: string) {
     risk: Zap,
     employment: FileText,
     identity: CheckCircle,
+    background: FileText,
   }
   return map[section] ?? FileText
+}
+
+// ── Validation helpers ────────────────────────────────────────────────────────
+
+function isRequired(field: QuestionSchemaItem): boolean {
+  return (field.validation_rules as Record<string, unknown>)?.required === true
+}
+
+// Normalise a value for comparison: lowercase, replace hyphens/spaces with underscore
+function normalise(v: unknown): string {
+  return typeof v === 'string' ? v.toLowerCase().replace(/[-\s]+/g, '_') : String(v ?? '')
+}
+
+function isFieldVisible(field: QuestionSchemaItem, data: Record<string, unknown>): boolean {
+  const si = field.show_if
+  if (!si) return true
+  const current = data[si.field]
+  switch (si.operator) {
+    case 'eq':
+      return normalise(current) === normalise(si.value)
+    case 'in':
+      return Array.isArray(si.value) &&
+        (si.value as unknown[]).some((v) => normalise(v) === normalise(current))
+    case 'contains':
+      return Array.isArray(current) &&
+        (current as unknown[]).some((v) => normalise(v) === normalise(si.value))
+    case 'gt':
+      return typeof current === 'number' && current > (si.value as number)
+    default:
+      return true
+  }
+}
+
+function validateFieldValue(field: QuestionSchemaItem, value: unknown): string | null {
+  const rules = (field.validation_rules ?? {}) as Record<string, unknown>
+
+  if (rules.required) {
+    if (value === undefined || value === null || value === '')
+      return 'This field is required.'
+    if (Array.isArray(value) && value.length === 0)
+      return 'Please select at least one option.'
+  }
+
+  if (value === undefined || value === null || value === '') return null
+
+  if (field.field_type === 'multi_choice') return null
+
+  const v = String(value).trim()
+
+  if (typeof rules.min_length === 'number' && v.length < rules.min_length)
+    return `Must be at least ${rules.min_length} character(s).`
+  if (typeof rules.max_length === 'number' && v.length > rules.max_length)
+    return `Must be ${rules.max_length} characters or fewer.`
+
+  if (rules.alphanumeric) {
+    if (!/^[a-zA-Z0-9]+$/.test(v))
+      return 'Must contain only letters and numbers — no spaces or special characters.'
+    if (typeof rules.max_alphanumeric === 'number' && v.length > rules.max_alphanumeric)
+      return `Must be ${rules.max_alphanumeric} characters or fewer.`
+  }
+
+  if (rules.min_digits !== undefined || rules.max_digits !== undefined) {
+    const digits = v.replace(/\D/g, '')
+    if (typeof rules.min_digits === 'number' && digits.length < rules.min_digits)
+      return `Must contain at least ${rules.min_digits} digits.`
+    if (typeof rules.max_digits === 'number' && digits.length > rules.max_digits)
+      return `Must contain no more than ${rules.max_digits} digits.`
+  }
+
+  if (rules.postal_code) {
+    if (!/^[a-zA-Z0-9][\s\-a-zA-Z0-9]{2,9}$/.test(v))
+      return 'Please enter a valid postal code (e.g. 10001 or SW1A 1AA).'
+  }
+
+  if (rules.min_age !== undefined && field.field_type === 'date') {
+    const d = new Date(v)
+    if (isNaN(d.getTime())) return 'Please enter a valid date.'
+    const today = new Date()
+    const age =
+      today.getFullYear() -
+      d.getFullYear() -
+      (today.getMonth() * 100 + today.getDate() < d.getMonth() * 100 + d.getDate() ? 1 : 0)
+    if (typeof rules.min_age === 'number' && age < rules.min_age)
+      return `You must be at least ${rules.min_age} years old to open an account.`
+  }
+
+  if (rules.future_date && field.field_type === 'date') {
+    const d = new Date(v)
+    if (isNaN(d.getTime())) return 'Please enter a valid date.'
+    if (d <= new Date()) return 'The date must be in the future.'
+  }
+
+  return null
 }
 
 // ── Step definitions ──────────────────────────────────────────────────────────
@@ -56,64 +152,554 @@ function buildSteps(sections: string[]): WizardStep[] {
   ]
 }
 
+// ── Custom date picker ────────────────────────────────────────────────────────
+
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+]
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const DAY_LABELS  = ['Su','Mo','Tu','We','Th','Fr','Sa']
+
+type PickerMode = 'day' | 'month' | 'year'
+
+function DatePickerField({
+  value,
+  onChange,
+  error,
+}: {
+  value: unknown
+  onChange: (v: unknown) => void
+  error?: string
+}) {
+  const strVal = value !== undefined && value !== null ? String(value) : ''
+  const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<PickerMode>('day')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const yearListRef  = useRef<HTMLDivElement>(null)
+
+  const today    = new Date()
+  const selected = strVal ? new Date(strVal + 'T00:00:00') : null
+
+  const [viewYear,  setViewYear]  = useState(() => selected?.getFullYear()  ?? today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(() => selected?.getMonth()     ?? today.getMonth())
+
+  // Close on outside click
+  useEffect(() => {
+    function onOut(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false); setMode('day')
+      }
+    }
+    if (open) document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  // Auto-scroll year list to selected year when entering year mode
+  useEffect(() => {
+    if (mode === 'year' && yearListRef.current) {
+      const btn = yearListRef.current.querySelector<HTMLButtonElement>('[data-selected="true"]')
+      btn?.scrollIntoView({ block: 'center' })
+    }
+  }, [mode])
+
+  function prevStep() {
+    if (mode === 'month') setViewYear((y) => y - 1)
+    else if (mode === 'day') {
+      if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1) }
+      else setViewMonth((m) => m - 1)
+    }
+  }
+  function nextStep() {
+    if (mode === 'month') setViewYear((y) => y + 1)
+    else if (mode === 'day') {
+      if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1) }
+      else setViewMonth((m) => m + 1)
+    }
+  }
+
+  function selectDate(date: Date) {
+    onChange([
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-'))
+    setOpen(false); setMode('day')
+  }
+
+  function isSame(a: Date, b: Date) {
+    return a.getFullYear() === b.getFullYear() &&
+           a.getMonth()    === b.getMonth()    &&
+           a.getDate()     === b.getDate()
+  }
+
+  // Day-grid cells
+  const firstDow     = new Date(viewYear, viewMonth, 1).getDay()
+  const daysInMonth  = new Date(viewYear, viewMonth + 1, 0).getDate()
+  const prevMonthDays = new Date(viewYear, viewMonth, 0).getDate()
+  const cells: { date: Date; thisMonth: boolean }[] = []
+  for (let i = firstDow - 1; i >= 0; i--)
+    cells.push({ date: new Date(viewYear, viewMonth - 1, prevMonthDays - i), thisMonth: false })
+  for (let d = 1; d <= daysInMonth; d++)
+    cells.push({ date: new Date(viewYear, viewMonth, d), thisMonth: true })
+  while (cells.length < 42)
+    cells.push({ date: new Date(viewYear, viewMonth + 1, cells.length - firstDow - daysInMonth + 1), thisMonth: false })
+
+  const displayValue = selected
+    ? `${MONTH_NAMES[selected.getMonth()]} ${selected.getDate()}, ${selected.getFullYear()}`
+    : ''
+
+  const hasError = !!error
+  const ALL_YEARS = Array.from({ length: 131 }, (_, i) => today.getFullYear() - 120 + i)
+
+  return (
+    <div className="space-y-1.5">
+      <div ref={containerRef} className="relative">
+
+        {/* Trigger */}
+        <button
+          type="button"
+          onClick={() => { setOpen((o) => !o); setMode('day') }}
+          className={[
+            'w-full flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-2',
+            hasError  ? 'border-red-400 focus:ring-red-400'
+            : open    ? 'border-blue-500 ring-2 ring-blue-500'
+            : 'border-gray-300 focus:ring-blue-500',
+            displayValue ? 'text-gray-900' : 'text-gray-400',
+          ].join(' ')}
+        >
+          <span>{displayValue || 'Select a date…'}</span>
+          <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+        </button>
+
+        {open && (
+          <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
+
+            {/* ── Header ── */}
+            <div className="flex items-center justify-between mb-3">
+              {mode !== 'year' && (
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+
+              <div className={`flex items-center gap-1 ${mode === 'year' ? 'w-full justify-center' : 'flex-1 justify-center'}`}>
+                {/* Month button — hidden in year mode */}
+                {mode !== 'year' && (
+                  <button
+                    type="button"
+                    onClick={() => setMode((m) => m === 'month' ? 'day' : 'month')}
+                    className={[
+                      'px-2 py-1 rounded-lg text-sm font-semibold transition-colors',
+                      mode === 'month'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-800 hover:bg-gray-100',
+                    ].join(' ')}
+                  >
+                    {MONTH_NAMES[viewMonth]}
+                  </button>
+                )}
+                {/* Year button */}
+                <button
+                  type="button"
+                  onClick={() => setMode((m) => m === 'year' ? 'day' : 'year')}
+                  className={[
+                    'px-2 py-1 rounded-lg text-sm font-semibold transition-colors',
+                    mode === 'year'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-800 hover:bg-gray-100',
+                  ].join(' ')}
+                >
+                  {viewYear}
+                </button>
+              </div>
+
+              {mode !== 'year' && (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* ── Month grid ── */}
+            {mode === 'month' && (
+              <div className="grid grid-cols-3 gap-1.5 py-1">
+                {MONTH_SHORT.map((m, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => { setViewMonth(i); setMode('day') }}
+                    className={[
+                      'py-2 rounded-xl text-sm font-medium transition-all',
+                      viewMonth === i
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-700 hover:bg-gray-100',
+                    ].join(' ')}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── Year grid ── */}
+            {mode === 'year' && (
+              <div
+                ref={yearListRef}
+                className="grid grid-cols-4 gap-1 max-h-52 overflow-y-auto py-1 pr-0.5"
+              >
+                {ALL_YEARS.map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    data-selected={y === viewYear ? 'true' : 'false'}
+                    onClick={() => { setViewYear(y); setMode('day') }}
+                    className={[
+                      'py-1.5 rounded-xl text-xs font-medium transition-all',
+                      y === viewYear
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : y === today.getFullYear()
+                        ? 'ring-1 ring-blue-400 text-blue-600'
+                        : 'text-gray-700 hover:bg-gray-100',
+                    ].join(' ')}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── Day grid ── */}
+            {mode === 'day' && (
+              <>
+                <div className="grid grid-cols-7 mb-1">
+                  {DAY_LABELS.map((d) => (
+                    <div key={d} className="text-center text-[10px] font-semibold text-gray-400 py-1">{d}</div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-y-0.5">
+                  {cells.map(({ date, thisMonth }, i) => {
+                    const isSel   = selected ? isSame(date, selected) : false
+                    const isToday = isSame(date, today)
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => selectDate(date)}
+                        className={[
+                          'h-8 w-8 mx-auto flex items-center justify-center rounded-lg text-xs font-medium transition-all',
+                          isSel
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : isToday && thisMonth
+                            ? 'ring-2 ring-blue-400 text-blue-600 font-semibold'
+                            : thisMonth
+                            ? 'text-gray-800 hover:bg-gray-100'
+                            : 'text-gray-300 hover:bg-gray-50',
+                        ].join(' ')}
+                      >
+                        {date.getDate()}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* ── Footer ── */}
+            {mode === 'day' && (
+              <div className="mt-3 pt-2.5 border-t border-gray-100 flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={() => { onChange(''); setOpen(false) }}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { selectDate(today); setViewYear(today.getFullYear()); setViewMonth(today.getMonth()) }}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Today
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {error && <FieldError message={error} />}
+    </div>
+  )
+}
+
+// ── Custom select dropdown ────────────────────────────────────────────────────
+
+function CustomSelectField({
+  options,
+  value,
+  onChange,
+  error,
+}: {
+  options: string[]
+  value: unknown
+  onChange: (v: unknown) => void
+  error?: string
+}) {
+  const strVal = value !== undefined && value !== null ? String(value) : ''
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onOut(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', onOut)
+    return () => document.removeEventListener('mousedown', onOut)
+  }, [open])
+
+  const hasError = !!error
+
+  return (
+    <div className="space-y-1.5">
+      <div ref={containerRef} className="relative">
+
+        {/* Trigger */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={[
+            'w-full flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-2',
+            hasError  ? 'border-red-400 focus:ring-red-400'
+            : open    ? 'border-blue-500 ring-2 ring-blue-500'
+            : 'border-gray-300 focus:ring-blue-500',
+            strVal ? 'text-gray-900' : 'text-gray-400',
+          ].join(' ')}
+        >
+          <span>{strVal || 'Select an option…'}</span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Dropdown list */}
+        {open && (
+          <div className="absolute left-0 top-full mt-1.5 z-50 w-full rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
+            <div className="max-h-56 overflow-y-auto py-1">
+              {options.map((o) => {
+                const isSelected = strVal === o
+                return (
+                  <button
+                    key={o}
+                    type="button"
+                    onClick={() => { onChange(o); setOpen(false) }}
+                    className={[
+                      'w-full flex items-center justify-between px-4 py-2.5 text-sm text-left transition-colors',
+                      isSelected
+                        ? 'bg-blue-50 text-blue-700 font-medium'
+                        : 'text-gray-700 hover:bg-gray-50',
+                    ].join(' ')}
+                  >
+                    <span>{o}</span>
+                    {isSelected && (
+                      <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+      {error && <FieldError message={error} />}
+    </div>
+  )
+}
+
 // ── Field renderer ────────────────────────────────────────────────────────────
 
 function SchemaField({
   field,
   value,
   onChange,
+  error,
 }: {
   field: QuestionSchemaItem
   value: unknown
   onChange: (v: unknown) => void
+  error?: string
 }) {
-  const base = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const hasError = !!error
+  const ringClass = hasError
+    ? 'border-red-400 focus:ring-red-400'
+    : 'border-gray-300 focus:ring-blue-500'
+  const base = `w-full rounded-xl border px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 transition-colors ${ringClass}`
   const strVal = value !== undefined && value !== null ? String(value) : ''
 
+  // ── Choice: radio buttons (≤3 opts) or styled dropdown (4+) ─────────────
   if (field.field_type === 'choice' && field.options?.length) {
+    if (field.options.length <= 3) {
+      return (
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap gap-5">
+            {field.options.map((o) => {
+              const selected = strVal === o
+              return (
+                <label
+                  key={o}
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                >
+                  <div
+                    className={[
+                      'w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
+                      selected
+                        ? 'border-blue-500'
+                        : hasError
+                        ? 'border-red-400'
+                        : 'border-gray-400',
+                    ].join(' ')}
+                  >
+                    {selected && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                  </div>
+                  <span className={`text-sm font-medium ${selected ? 'text-blue-600' : 'text-gray-700'}`}>{o}</span>
+                  <input
+                    type="radio"
+                    name={field.question_key}
+                    value={o}
+                    checked={selected}
+                    onChange={() => onChange(o)}
+                    className="sr-only"
+                  />
+                </label>
+              )
+            })}
+          </div>
+          {error && <FieldError message={error} />}
+        </div>
+      )
+    }
+
+    // Custom dropdown for larger option sets
     return (
-      <select value={strVal} onChange={(e) => onChange(e.target.value)} className={base}>
-        <option value="">Select…</option>
-        {field.options.map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-      </select>
+      <CustomSelectField
+        options={field.options}
+        value={value}
+        onChange={onChange}
+        error={error}
+      />
     )
   }
 
+  // ── Multi-choice: styled card-checkboxes ──────────────────────────────────
   if (field.field_type === 'multi_choice' && field.options?.length) {
     const selected: string[] = Array.isArray(value) ? (value as string[]) : strVal ? [strVal] : []
     return (
-      <div className="space-y-2">
-        {field.options.map((o) => (
-          <label key={o} className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={selected.includes(o)}
-              onChange={(e) => {
-                const next = e.target.checked
-                  ? [...selected, o]
-                  : selected.filter((x) => x !== o)
-                onChange(next)
-              }}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">{o}</span>
-          </label>
-        ))}
+      <div className="space-y-1.5">
+        <div className="space-y-2">
+          {field.options.map((o) => {
+            const checked = selected.includes(o)
+            return (
+              <label
+                key={o}
+                className={[
+                  'flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all',
+                  checked
+                    ? 'border-blue-500 bg-blue-50'
+                    : hasError
+                    ? 'border-red-200 hover:border-red-300 bg-white'
+                    : 'border-gray-200 hover:border-blue-200 bg-white',
+                ].join(' ')}
+              >
+                <div
+                  className={[
+                    'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all',
+                    checked
+                      ? 'border-blue-500 bg-blue-500'
+                      : hasError
+                      ? 'border-red-300'
+                      : 'border-gray-300',
+                  ].join(' ')}
+                >
+                  {checked && (
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <span className={`text-sm font-medium ${checked ? 'text-blue-700' : 'text-gray-700'}`}>{o}</span>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                      ? [...selected, o]
+                      : selected.filter((x) => x !== o)
+                    onChange(next)
+                  }}
+                  className="sr-only"
+                />
+              </label>
+            )
+          })}
+        </div>
+        {error && <FieldError message={error} />}
       </div>
     )
   }
 
-  const inputType = field.field_type === 'number' ? 'number' : field.field_type === 'date' ? 'date' : 'text'
+  // ── Date picker ───────────────────────────────────────────────────────────
+  if (field.field_type === 'date') {
+    return <DatePickerField value={value} onChange={onChange} error={error} />
+  }
+
+  // ── Signature field ───────────────────────────────────────────────────────
+  if (field.question_key === 'full_name_signature') {
+    return (
+      <div className="space-y-1.5">
+        <div className={`relative w-full rounded-xl border bg-gray-50 px-4 py-3 ${hasError ? 'border-red-400' : 'border-gray-300'}`}>
+          <input
+            type="text"
+            value={strVal}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Sign your full name"
+            className="w-full bg-transparent focus:outline-none text-gray-800 text-2xl placeholder:text-gray-300 placeholder:text-lg"
+            style={{ fontFamily: "'Dancing Script', cursive" }}
+          />
+          <div className="absolute bottom-0 left-4 right-4 border-b border-gray-300" />
+        </div>
+        {error && <FieldError message={error} />}
+      </div>
+    )
+  }
+
+  // ── Text / number ─────────────────────────────────────────────────────────
   return (
-    <input
-      type={inputType}
-      value={strVal}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={`Enter ${field.label.toLowerCase()}`}
-      className={base}
-    />
+    <div className="space-y-1.5">
+      <input
+        type={field.field_type === 'number' ? 'number' : 'text'}
+        value={strVal}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={`Enter ${field.label.toLowerCase()}`}
+        className={base}
+      />
+      {error && <FieldError message={error} />}
+    </div>
+  )
+}
+
+function FieldError({ message }: { message: string }) {
+  return (
+    <p className="flex items-center gap-1.5 text-xs font-medium text-red-500">
+      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+      {message}
+    </p>
   )
 }
 
@@ -165,7 +751,6 @@ function ProductCard({
 // ── Review step ───────────────────────────────────────────────────────────────
 
 function ReviewStep({
-  caseId,
   schemaFields,
   localData,
   onSubmit,
@@ -178,7 +763,9 @@ function ReviewStep({
   isSubmitting: boolean
 }) {
   const sections = [...new Set(schemaFields.map((f) => f.section))]
-  const filledCount = schemaFields.filter((f) => localData[f.question_key] !== undefined && localData[f.question_key] !== '').length
+  const filledCount = schemaFields.filter(
+    (f) => localData[f.question_key] !== undefined && localData[f.question_key] !== '',
+  ).length
 
   return (
     <div className="space-y-5">
@@ -213,7 +800,6 @@ function ReviewStep({
         )
       })}
 
-      {/* Declaration */}
       <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
         <p className="text-xs text-gray-500 leading-relaxed">
           By submitting this application, I confirm that all information provided is accurate and
@@ -240,17 +826,28 @@ function ReviewStep({
 // ── Main wizard ───────────────────────────────────────────────────────────────
 
 interface Props {
+  initialCaseId?: string
+  initialSelectedProducts?: string[]
   onComplete: () => void
   onCancel: () => void
 }
 
-export default function OnboardingWizard({ onComplete, onCancel }: Props) {
-  const [step, setStep] = useState(0)
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([])
-  const [caseId, setCaseId] = useState<string | null>(null)
+export default function OnboardingWizard({
+  initialCaseId,
+  initialSelectedProducts,
+  onComplete,
+  onCancel,
+}: Props) {
+  const isResuming = !!initialCaseId
+  const [caseId, setCaseId] = useState<string | null>(initialCaseId ?? null)
+  // When resuming, skip the products step (0) and start at documents (1)
+  const [step, setStep] = useState(isResuming ? 1 : 0)
+
+  const [selectedProducts, setSelectedProducts] = useState<string[]>(initialSelectedProducts ?? [])
   const [prefillCount, setPrefillCount] = useState(0)
   const [showPrefillBanner, setShowPrefillBanner] = useState(false)
   const [localData, setLocalData] = useState<Record<string, unknown>>({})
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [creatingCase, setCreatingCase] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
@@ -270,16 +867,51 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
     }
   }, [collectedData])
 
+  // Clear field errors whenever the user navigates to a new step
+  useEffect(() => {
+    setFieldErrors({})
+  }, [step])
+
   const schemaSections = useMemo(
     () => [...new Set(schemaData?.fields.map((f) => f.section) ?? [])],
     [schemaData],
   )
 
   const steps = useMemo(() => buildSteps(schemaSections), [schemaSections])
+
+
   const totalSteps = steps.length
   const progressPct = Math.round((step / Math.max(totalSteps - 1, 1)) * 100)
-
   const currentStep = steps[step]
+
+  // ── Visible fields for current section ────────────────────────────────────
+
+  const currentSectionFields = useMemo(() => {
+    if (!currentStep || currentStep.id === 'products' || currentStep.id === 'documents' || currentStep.id === 'review') return []
+    return (schemaData?.fields.filter((f) => f.section === currentStep.id) ?? []).filter(
+      (f) => isFieldVisible(f, localData),
+    )
+  }, [currentStep, schemaData, localData])
+
+  // ── Can proceed check ─────────────────────────────────────────────────────
+
+  function canProceed(): boolean {
+    if (step === 0) return selectedProducts.length > 0
+    if (step === 1) return true
+    if (currentStep?.id === 'review') return true
+
+    const requiredFields = currentSectionFields.filter(isRequired)
+    if (requiredFields.length === 0) return true
+
+    return requiredFields.every((f) => {
+      const v = localData[f.question_key]
+      if (v === undefined || v === null || v === '') return false
+      if (Array.isArray(v) && v.length === 0) return false
+      return true
+    })
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────
 
   async function handleProductsContinue() {
     if (selectedProducts.length === 0) return
@@ -304,10 +936,30 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
 
   async function handleSectionContinue() {
     if (!caseId) return
-    const section = currentStep.id
-    const sectionFields = schemaData?.fields.filter((f) => f.section === section) ?? []
+
+    // Validate all visible fields in this section
+    const errors: Record<string, string> = {}
+    for (const field of currentSectionFields) {
+      const err = validateFieldValue(field, localData[field.question_key])
+      if (err) errors[field.question_key] = err
+      if (field.question_key === 'full_name_signature' && !errors['full_name_signature']) {
+        const sig = String(localData['full_name_signature'] ?? '').trim()
+        const firstName = String(localData['first_name'] ?? '').trim()
+        const lastName = String(localData['last_name'] ?? '').trim()
+        const fullName = `${firstName} ${lastName}`.trim()
+        if (sig && fullName && sig.toLowerCase() !== fullName.toLowerCase()) {
+          errors['full_name_signature'] = `Signature must match your full name: ${fullName}`
+        }
+      }
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+
+    // Persist dirty fields
     const initial = collectedData?.client_data ?? {}
-    const dirty = sectionFields
+    const dirty = currentSectionFields
       .map((f) => f.question_key)
       .filter((k) => {
         const cur = localData[k]
@@ -327,9 +979,12 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
     if (!caseId) return
     setIsSubmitting(true)
     try {
-      await api.post(`/cases/${caseId}/resume`)
+      await Promise.all([
+        api.patch(`/cases/${caseId}/percentage`, { percentage: 60 }),
+        api.patch(`/cases/${caseId}/status`, { status: 'REVIEW' }),
+      ])
     } catch {
-      // Submission failed gracefully — case data is saved regardless
+      // Case data is saved regardless
     } finally {
       setIsSubmitting(false)
       onComplete()
@@ -349,11 +1004,19 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
     if (count > 0) setShowPrefillBanner(true)
   }
 
-  function canProceed(): boolean {
-    if (step === 0) return selectedProducts.length > 0
-    if (step === 1) return true // documents step — always optional
-    return true
+  function handleFieldChange(key: string, value: unknown) {
+    setLocalData((prev) => ({ ...prev, [key]: value }))
+    // Clear error for this field once the user starts editing
+    if (fieldErrors[key]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+    }
   }
+
+  // ── Content renderer ───────────────────────────────────────────────────────
 
   function renderContent() {
     if (!currentStep) return null
@@ -459,7 +1122,7 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
         )
       }
 
-      const sectionFields = schemaData?.fields.filter((f) => f.section === currentStep.id) ?? []
+      const hasErrors = Object.keys(fieldErrors).length > 0
 
       return (
         <div className="space-y-5">
@@ -482,24 +1145,41 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
             </div>
           )}
 
-          {sectionFields.length === 0 ? (
+          {/* Validation error banner */}
+          {hasErrors && (
+            <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <span className="text-xs font-medium text-red-700">
+                Please fill in all required fields before continuing.
+              </span>
+            </div>
+          )}
+
+          {currentSectionFields.length === 0 ? (
             <p className="text-sm text-gray-400 py-4">No fields for this section.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-              {sectionFields.map((field) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+              {currentSectionFields.map((field) => (
                 <div
                   key={field.question_key}
-                  className={field.field_type === 'multi_choice' ? 'sm:col-span-2' : ''}
+                  className={
+                    field.field_type === 'multi_choice' ||
+                    (field.field_type === 'choice' && (field.options?.length ?? 0) <= 3)
+                      ? 'sm:col-span-2'
+                      : ''
+                  }
                 >
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                    {field.label}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {field.question_text || field.label}
+                    {isRequired(field) && (
+                      <span className="ml-0.5 text-red-500">*</span>
+                    )}
                   </label>
                   <SchemaField
                     field={field}
                     value={localData[field.question_key]}
-                    onChange={(v) =>
-                      setLocalData((prev) => ({ ...prev, [field.question_key]: v }))
-                    }
+                    onChange={(v) => handleFieldChange(field.question_key, v)}
+                    error={fieldErrors[field.question_key]}
                   />
                 </div>
               ))}
@@ -511,6 +1191,8 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
 
     return null
   }
+
+  const ready = canProceed()
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-gray-50">
@@ -649,13 +1331,12 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
                 <span className="text-xs text-gray-400">Auto-saved</span>
               )}
 
-              {/* Don't show Continue on review step — it has its own Submit button */}
               {currentStep?.id !== 'review' && (
                 step === 0 ? (
                   <button
                     onClick={handleProductsContinue}
-                    disabled={!canProceed() || creatingCase}
-                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={!ready || creatingCase}
+                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {creatingCase ? (
                       <><Loader className="w-4 h-4 animate-spin" />Creating…</>
@@ -670,8 +1351,12 @@ export default function OnboardingWizard({ onComplete, onCancel }: Props) {
                         ? () => setStep((s) => s + 1)
                         : handleSectionContinue
                     }
-                    disabled={!canProceed()}
-                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className={[
+                      'flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors',
+                      ready
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 opacity-60',
+                    ].join(' ')}
                   >
                     Continue <ArrowRight className="w-4 h-4" />
                   </button>

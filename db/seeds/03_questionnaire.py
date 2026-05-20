@@ -180,7 +180,7 @@ QUESTIONS: list[dict] = [
         "question_type": "text",
         "options": [],
         "validation_rules": {"required": False},
-        "show_if": {"field": "employment_status", "operator": "in", "value": ["employed", "self_employed"]},
+        "show_if": {"field": "employment_status", "operator": "in", "value": ["Employed", "Self-Employed"]},
         "order_index": 13,
     },
     {
@@ -190,7 +190,7 @@ QUESTIONS: list[dict] = [
         "question_type": "text",
         "options": [],
         "validation_rules": {"required": False},
-        "show_if": {"field": "employment_status", "operator": "in", "value": ["employed", "self_employed"]},
+        "show_if": {"field": "employment_status", "operator": "in", "value": ["Employed", "Self-Employed"]},
         "order_index": 14,
     },
     {
@@ -200,7 +200,7 @@ QUESTIONS: list[dict] = [
         "question_type": "text",
         "options": [],
         "validation_rules": {"required": False},
-        "show_if": {"field": "employment_status", "operator": "in", "value": ["employed", "self_employed"]},
+        "show_if": {"field": "employment_status", "operator": "in", "value": ["Employed", "Self-Employed"]},
         "order_index": 15,
     },
     # ── Section 4: financial_information (5 questions) ──────────────────────

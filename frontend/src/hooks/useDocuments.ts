@@ -152,14 +152,22 @@ export function useAdvisors() {
   })
 }
 
+export interface ShowIf {
+  field: string
+  operator: 'eq' | 'in' | 'contains' | 'gt'
+  value: unknown
+}
+
 export interface QuestionSchemaItem {
   question_key: string
   section: string
   label: string
+  question_text: string
   order_index: number
   field_type: string
   options?: string[] | null
   validation_rules?: Record<string, unknown> | null
+  show_if?: ShowIf | null
 }
 
 export function useQuestionnaireSchema(caseId: string | null) {

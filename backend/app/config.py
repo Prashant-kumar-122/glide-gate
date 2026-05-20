@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     )
 
     # ── Database ─────────────────────────────────────────────────────────────
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/glide_gate"
-    DATABASE_URL_SYNC: str = "postgresql://postgres:password@localhost:5432/glide_gate"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/glide_gate"
+    DATABASE_URL_SYNC: str = "postgresql://postgres:postgres@localhost:5432/glide_gate"
 
     # ── AI Providers ─────────────────────────────────────────────────────────
     ANTHROPIC_API_KEY: str = ""

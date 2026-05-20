@@ -1,11 +1,12 @@
 import { Building2, Clock, CheckCircle, Plus, FileText, Layers } from 'lucide-react'
 import { useCases } from '@/hooks/useDocuments'
 import CaseCard from '@/features/client/CaseCard'
+import type { CaseOut } from '@/lib/api'
 
 interface Props {
   firstName: string
   onOpenNewAccount: () => void
-  onOpenCase: (id: string) => void
+  onOpenCase: (c: CaseOut) => void
 }
 
 export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase }: Props) {
@@ -67,7 +68,7 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {inProgress.map((c) => (
-              <CaseCard key={c.id} caseData={c} onClick={() => onOpenCase(c.id)} />
+              <CaseCard key={c.id} caseData={c} onClick={() => onOpenCase(c)} />
             ))}
           </div>
         </div>
@@ -82,7 +83,7 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {completed.map((c) => (
-              <CaseCard key={c.id} caseData={c} onClick={() => onOpenCase(c.id)} />
+              <CaseCard key={c.id} caseData={c} onClick={() => onOpenCase(c)} />
             ))}
           </div>
         </div>

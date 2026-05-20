@@ -7,7 +7,7 @@ function formatStageLabel(stage: string): string {
     INTAKE: 'In Progress',
     KYC: 'KYC Review',
     PARALLEL_PRODUCTS: 'Documents Review',
-    REVIEW: 'Final Review',
+    REVIEW: 'Under Review',
     COMPLETE: 'Completed',
     ESCALATED: 'Escalated',
   }
@@ -57,8 +57,8 @@ export default function CaseCard({ caseData, onClick }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={['text-xs font-semibold px-2.5 py-1 rounded-full', stageBadgeClass(caseData.current_stage)].join(' ')}>
-            {formatStageLabel(caseData.current_stage)}
+          <span className={['text-xs font-semibold px-2.5 py-1 rounded-full', stageBadgeClass(caseData.status)].join(' ')}>
+            {formatStageLabel(caseData.status)}
           </span>
           <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
         </div>

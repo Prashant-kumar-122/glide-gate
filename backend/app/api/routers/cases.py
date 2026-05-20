@@ -142,10 +142,12 @@ class QuestionSchemaItem(BaseModel):
     question_key: str
     section: str
     label: str
+    question_text: str
     order_index: int
     field_type: str
     options: list[str] | None = None
     validation_rules: dict[str, Any] | None = None
+    show_if: dict[str, Any] | None = None
 
 
 class QuestionnaireSchemaOut(BaseModel):
@@ -474,7 +476,7 @@ async def get_questionnaire_schema(
 
     fields = []
     for q in questions:
-        label = (q.extra_metadata or {}).get("label") or _fmt_key(q.question_key)
+        label = q.question_text or (q.extra_metadata or {}).get("label") or _fmt_key(q.question_key)
         field_type = _DB_TYPE_MAP.get(q.question_type, "text")
         options = list(q.options) if q.options else None
         if q.question_type == "boolean":
@@ -484,10 +486,12 @@ async def get_questionnaire_schema(
                 question_key=q.question_key,
                 section=q.section,
                 label=label,
+                question_text=q.question_text,
                 order_index=q.order_index,
                 field_type=field_type,
                 options=options,
                 validation_rules=dict(q.validation_rules) if q.validation_rules else None,
+                show_if=dict(q.show_if) if q.show_if else None,
             )
         )
     return QuestionnaireSchemaOut(fields=fields)
@@ -547,6 +551,58 @@ async def update_collected_field(
     )
     await db.commit()
     return CollectedFieldsOut(client_data=client_data)
+
+
+class PatchPercentageRequest(BaseModel):
+    percentage: float
+
+
+class PatchPercentageResponse(BaseModel):
+    case_id: UUID
+    percentage: float
+
+
+@router.patch("/{case_id}/percentage", response_model=PatchPercentageResponse)
+async def patch_case_percentage(
+    case_id: UUID,
+    body: PatchPercentageRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_role("client", "advisor", "admin")),
+) -> PatchPercentageResponse:
+    await _get_case_or_404(case_id, db)
+    await db.execute(
+        sa_update(OnboardingCase)
+        .where(OnboardingCase.id == case_id)
+        .values(percentage=body.percentage)
+    )
+    await db.commit()
+    return PatchPercentageResponse(case_id=case_id, percentage=body.percentage)
+
+
+class PatchStatusRequest(BaseModel):
+    status: str
+
+
+class PatchStatusResponse(BaseModel):
+    case_id: UUID
+    status: str
+
+
+@router.patch("/{case_id}/status", response_model=PatchStatusResponse)
+async def patch_case_status(
+    case_id: UUID,
+    body: PatchStatusRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_role("client", "advisor", "admin")),
+) -> PatchStatusResponse:
+    await _get_case_or_404(case_id, db)
+    await db.execute(
+        sa_update(OnboardingCase)
+        .where(OnboardingCase.id == case_id)
+        .values(status=body.status)
+    )
+    await db.commit()
+    return PatchStatusResponse(case_id=case_id, status=body.status)
 
 
 @router.post("/{case_id}/resume", status_code=status.HTTP_202_ACCEPTED, response_model=ResumeResponse)
