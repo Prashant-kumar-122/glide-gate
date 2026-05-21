@@ -840,8 +840,8 @@ export default function OnboardingWizard({
 }: Props) {
   const isResuming = !!initialCaseId
   const [caseId, setCaseId] = useState<string | null>(initialCaseId ?? null)
-  // When resuming, skip the products step (0) and start at documents (1)
   const [step, setStep] = useState(isResuming ? 1 : 0)
+  const resumeStepApplied = useRef(false)
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>(initialSelectedProducts ?? [])
   const [prefillCount, setPrefillCount] = useState(0)
@@ -878,6 +878,36 @@ export default function OnboardingWizard({
   )
 
   const steps = useMemo(() => buildSteps(schemaSections), [schemaSections])
+
+  // When resuming, jump to the first incomplete section instead of always landing on documents
+  useEffect(() => {
+    if (!isResuming || resumeStepApplied.current) return
+    if (!schemaData || !collectedData || schemaSections.length === 0) return
+
+    resumeStepApplied.current = true
+    const fieldData = collectedData.client_data ?? {}
+
+    for (let i = 0; i < schemaSections.length; i++) {
+      const section = schemaSections[i]
+      const fields = schemaData.fields.filter((f) => f.section === section)
+      const visibleFields = fields.filter((f) => isFieldVisible(f, fieldData))
+      const requiredFields = visibleFields.filter(isRequired)
+
+      const isComplete = requiredFields.every((f) => {
+        const v = fieldData[f.question_key]
+        return !(v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0))
+      })
+
+      if (!isComplete) {
+        // Step 0 = products, 1 = documents, 2+ = schema sections
+        setStep(2 + i)
+        return
+      }
+    }
+
+    // All sections filled → go straight to review
+    setStep(steps.length - 1)
+  }, [isResuming, schemaData, collectedData, schemaSections, steps])
 
 
   const totalSteps = steps.length
