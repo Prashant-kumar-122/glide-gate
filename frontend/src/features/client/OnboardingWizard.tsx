@@ -828,7 +828,7 @@ function ReviewStep({
 interface Props {
   initialCaseId?: string
   initialSelectedProducts?: string[]
-  onComplete: () => void
+  onComplete: (caseId: string) => void
   onCancel: () => void
 }
 
@@ -981,13 +981,13 @@ export default function OnboardingWizard({
     try {
       await Promise.all([
         api.patch(`/cases/${caseId}/percentage`, { percentage: 60 }),
-        api.patch(`/cases/${caseId}/status`, { status: 'REVIEW' }),
+        api.patch(`/cases/${caseId}/status`, { status: 'REVIEW', current_stage: 'PARALLEL_PRODUCTS' }),
       ])
     } catch {
       // Case data is saved regardless
     } finally {
       setIsSubmitting(false)
-      onComplete()
+      onComplete(caseId)
     }
   }
 

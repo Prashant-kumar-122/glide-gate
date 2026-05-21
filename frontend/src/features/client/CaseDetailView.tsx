@@ -1,8 +1,10 @@
-import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react'
-import { useCaseProgress } from '@/hooks/useDocuments'
+import { useState } from 'react'
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText, ClipboardList } from 'lucide-react'
+import { useCaseProgress, useQuestionnaireSchema, useCollectedFields } from '@/hooks/useDocuments'
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
+import OnboardingFormView from '@/features/client/OnboardingFormView'
 
-const STAGES = ['INTAKE', 'KYC', 'PARALLEL_PRODUCTS', 'REVIEW', 'COMPLETE'] as const
+const STAGES = ['INTAKE', 'PARALLEL_PRODUCTS', 'KYC', 'REVIEW', 'COMPLETE'] as const
 
 const STAGE_LABELS: Record<string, string> = {
   INTAKE: 'Application',
@@ -19,17 +21,28 @@ function formatProductNames(products: string[]): string {
     .join(' · ')
 }
 
+type Tab = 'application' | 'documents'
+
 interface Props {
   caseId: string
   onBack: () => void
 }
 
 export default function CaseDetailView({ caseId, onBack }: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>('application')
+
   const { data: summary, isLoading } = useCaseProgress(caseId)
+  const { data: schemaData, isLoading: schemaLoading } = useQuestionnaireSchema(caseId)
+  const { data: collectedData, isLoading: collectedLoading } = useCollectedFields(caseId)
 
   const activeStageIndex = STAGES.indexOf(
     (summary?.current_stage ?? 'INTAKE') as (typeof STAGES)[number],
   )
+
+  const tabs: { id: Tab; label: string; icon: typeof ClipboardList }[] = [
+    { id: 'application', label: 'Application', icon: ClipboardList },
+    { id: 'documents',   label: 'Documents',   icon: FileText },
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,7 +100,6 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
               const isLast = idx === STAGES.length - 1
               return (
                 <div key={stage} className="flex items-center flex-1 min-w-0">
-                  {/* Step dot + label */}
                   <div className="flex flex-col items-center gap-1.5 shrink-0">
                     <div
                       className={[
@@ -116,7 +128,6 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
                       {STAGE_LABELS[stage]}
                     </span>
                   </div>
-                  {/* Connector line */}
                   {!isLast && (
                     <div
                       className={[
@@ -149,7 +160,7 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
           )}
         </div>
 
-        {/* Escalation / action banner */}
+        {/* Escalation banner */}
         {summary?.escalated && (
           <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
             <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
@@ -159,19 +170,41 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
           </div>
         )}
 
-        {/* Documents */}
+        {/* Tabs */}
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-            <FileText className="w-4 h-4 text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-900">Documents</h2>
-            {summary && (
-              <span className="text-xs text-gray-400">
-                {summary.documents_approved} of {summary.documents_total} approved
-              </span>
-            )}
+          {/* Tab bar */}
+          <div className="flex border-b border-gray-200">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={[
+                  'flex flex-1 items-center justify-center gap-2 py-3.5 text-sm font-medium border-b-2 transition-colors',
+                  activeTab === id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300',
+                ].join(' ')}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
           </div>
+
+          {/* Tab content */}
           <div className="p-5">
-            <ClientDocumentHub caseId={caseId} />
+            {activeTab === 'application' && (
+              <OnboardingFormView
+                caseId={caseId}
+                clientData={collectedData?.client_data ?? {}}
+                schema={schemaData?.fields ?? []}
+                isLoading={schemaLoading || collectedLoading}
+              />
+            )}
+
+            {activeTab === 'documents' && (
+              <ClientDocumentHub caseId={caseId} />
+            )}
           </div>
         </div>
       </div>
