@@ -43,16 +43,16 @@ export default function UserMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
-          <div className="border-b border-gray-100 px-3 py-2">
-            <p className="truncate text-sm font-medium text-gray-900">{fullName}</p>
+        <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-gray-100 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+          <div className="border-b border-gray-100 px-3 py-2 dark:border-gray-700">
+            <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{fullName}</p>
             <p className="truncate text-xs capitalize text-gray-400">{user.role}</p>
           </div>
 
           <Link
             to="/profile"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
           >
             <User className="h-4 w-4 text-gray-400" />
             View Profile
@@ -60,7 +60,7 @@ export default function UserMenu() {
 
           <button
             onClick={handleSignOut}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
           >
             <LogOut className="h-4 w-4" />
             Sign Out

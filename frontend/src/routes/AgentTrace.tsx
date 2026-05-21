@@ -3,7 +3,6 @@ import { ChevronDown } from 'lucide-react'
 import AgentTraceCanvas from '@/features/agent-trace/AgentTraceCanvas'
 import { useCases } from '@/hooks/useDocuments'
 
-// ── Case dropdown in the page header (normal DOM flow = no overflow issues) ───
 interface TraceSelectProps {
   options: { id: string; label: string }[]
   value: string | null
@@ -27,7 +26,7 @@ function TraceSelect({ options, value, onChange }: TraceSelectProps) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex max-w-[180px] items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 transition-colors hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 sm:max-w-xs"
+        className="flex max-w-[180px] items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 transition-colors hover:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 sm:max-w-xs dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
       >
         <span className="truncate">{active?.label ?? 'Select a case…'}</span>
         <ChevronDown
@@ -39,7 +38,7 @@ function TraceSelect({ options, value, onChange }: TraceSelectProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 max-h-64 w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
+        <div className="absolute right-0 top-full z-50 mt-1 max-h-64 w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-800">
           {options.map((o) => (
             <button
               key={o.id}
@@ -47,8 +46,8 @@ function TraceSelect({ options, value, onChange }: TraceSelectProps) {
               className={[
                 'w-full px-4 py-2.5 text-left text-sm transition-colors',
                 o.id === value
-                  ? 'bg-blue-50 font-semibold text-blue-700'
-                  : 'text-gray-700 hover:bg-gray-50',
+                  ? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                  : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700',
               ].join(' ')}
             >
               {o.label}
@@ -60,12 +59,10 @@ function TraceSelect({ options, value, onChange }: TraceSelectProps) {
   )
 }
 
-// ── Route ─────────────────────────────────────────────────────────────────────
 export default function AgentTrace() {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null)
   const { data: cases } = useCases()
 
-  // Auto-select first case on load
   useEffect(() => {
     if (cases && cases.length > 0 && !activeCaseId) {
       setActiveCaseId(cases[0].id)
@@ -92,10 +89,10 @@ export default function AgentTrace() {
 
   return (
     <div className="flex h-[calc(100vh-48px)] flex-col">
-      {/* Header — case selector lives here, in normal document flow */}
-      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6 dark:border-gray-700 dark:bg-gray-800">
         <div>
-          <h1 className="text-sm font-semibold text-gray-900">Agent Trace Canvas</h1>
+          <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Agent Trace Canvas</h1>
           <p className="hidden text-[11px] text-gray-400 sm:block">
             Live A2A message flow · 8 agent nodes · Real-time state machine
           </p>

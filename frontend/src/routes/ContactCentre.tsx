@@ -66,7 +66,6 @@ export default function ContactCentre() {
 
   useCCSocket(onRefreshRef)
 
-  // Auto-switch to detail view on mobile when a client is selected
   useEffect(() => {
     if (selectedClientId) setMobileView('detail')
   }, [selectedClientId])
@@ -74,22 +73,21 @@ export default function ContactCentre() {
   return (
     <div className="flex h-[calc(100vh-49px)] flex-col overflow-hidden">
       {/* Top bar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6 dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center gap-2">
-          {/* Mobile back button — visible only in detail view */}
           {mobileView === 'detail' && (
             <button
               onClick={() => setMobileView('list')}
-              className="mr-1 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 md:hidden"
+              className="mr-1 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 md:hidden dark:text-gray-400 dark:hover:bg-gray-700"
               aria-label="Back to client list"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
           )}
-          <Users className="h-4 w-4 text-gray-500" />
-          <h1 className="text-sm font-semibold text-gray-800">Contact Centre</h1>
+          <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Centre</h1>
           {cases.length > 0 && (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">
               {cases.length}
             </span>
           )}
@@ -106,12 +104,9 @@ export default function ContactCentre() {
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Client list:
-            Mobile — full width, hidden when detail view is active
-            md+    — fixed 320px sidebar, always visible */}
         <div
           className={[
-            'shrink-0 flex-col border-r border-gray-200 bg-white',
+            'shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800',
             mobileView === 'list' ? 'flex w-full' : 'hidden',
             'md:flex md:w-80',
           ].join(' ')}
@@ -119,12 +114,9 @@ export default function ContactCentre() {
           <ClientStatusTable cases={cases} isLoading={isLoading} isError={isError} />
         </div>
 
-        {/* Client detail:
-            Mobile — full width, hidden when list view is active
-            md+    — flex-1, always visible */}
         <div
           className={[
-            'flex-col overflow-hidden bg-gray-50',
+            'flex-col overflow-hidden bg-gray-50 dark:bg-gray-900',
             mobileView === 'detail' ? 'flex flex-1' : 'hidden',
             'md:flex md:flex-1',
           ].join(' ')}

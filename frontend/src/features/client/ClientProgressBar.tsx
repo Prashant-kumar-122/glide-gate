@@ -12,8 +12,6 @@ const CLIENT_STAGE_LABELS: Record<string, string> = {
   ESCALATED: 'Under Review',
 }
 
-// Weight breakdown: 60% questionnaire, 10% KYC, 30% documents
-// Cumulative thresholds: INTAKE ends at 60, KYC ends at 70, docs end at 100
 const INTAKE_MAX = 60
 const KYC_MAX = 70
 
@@ -26,7 +24,7 @@ export default function ClientProgressBar({ summary, isLoading }: ClientProgress
   const questionnairePct = useChatStore((s) => s.questionnairePct)
 
   if (isLoading) {
-    return <div className="h-24 animate-pulse rounded-2xl bg-gray-100" />
+    return <div className="h-24 animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-700" />
   }
 
   const stage = summary?.current_stage ?? 'INTAKE'
@@ -34,17 +32,13 @@ export default function ClientProgressBar({ summary, isLoading }: ClientProgress
   let progress: number
   if (stage === 'INTAKE') {
     if (questionnairePct > 0) {
-      // Live SSE: raw questionnaire completion (0-100) → convert to 0-60 bar range
       progress = Math.round((questionnairePct / 100) * INTAKE_MAX)
     } else {
-      // DB fallback: case.percentage already stores the computed 0-60 value
       progress = summary?.questionnaire_pct ?? 0
     }
   } else if (stage === 'KYC') {
-    // 60–70%: identity verification
     progress = KYC_MAX
   } else if (stage === 'PARALLEL_PRODUCTS') {
-    // 70–100%: document uploads, dynamic based on approved docs
     const docRatio =
       summary && summary.documents_total > 0
         ? summary.documents_approved / summary.documents_total
@@ -69,20 +63,20 @@ export default function ClientProgressBar({ summary, isLoading }: ClientProgress
       className={[
         'rounded-2xl border p-4',
         isComplete
-          ? 'border-green-200 bg-green-50'
+          ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950'
           : isEscalated
-          ? 'border-amber-200 bg-amber-50'
-          : 'border-blue-100 bg-white',
+          ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950'
+          : 'border-blue-100 bg-white dark:border-gray-700 dark:bg-gray-800',
       ].join(' ')}
     >
       <div className="flex items-start justify-between mb-2">
         <div>
           {summary?.client_name && (
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
               Welcome, {summary.client_name.split(' ')[0]}!
             </p>
           )}
-          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5">
             {isComplete ? (
               <CheckCircle className="h-3.5 w-3.5 text-green-500" />
             ) : isEscalated ? (
@@ -97,7 +91,7 @@ export default function ClientProgressBar({ summary, isLoading }: ClientProgress
           <p
             className={[
               'text-2xl font-bold tabular-nums',
-              isComplete ? 'text-green-600' : isEscalated ? 'text-amber-600' : 'text-blue-600',
+              isComplete ? 'text-green-600 dark:text-green-400' : isEscalated ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400',
             ].join(' ')}
           >
             {progress}%

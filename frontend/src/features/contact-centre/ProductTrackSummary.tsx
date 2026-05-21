@@ -24,7 +24,7 @@ export default function ProductTrackSummary({ tracks }: { tracks: ProductTrack[]
       {tracks.map((t) => (
         <div key={t.product_code} className="flex items-center gap-3">
           <StatusDot status={t.status} />
-          <span className="w-36 shrink-0 truncate text-xs font-medium text-gray-700">
+          <span className="w-36 shrink-0 truncate text-xs font-medium text-gray-700 dark:text-gray-200">
             {PRODUCT_LABELS[t.product_code] ?? t.product_name ?? t.product_code}
           </span>
           <div className="flex-1">
@@ -42,7 +42,7 @@ export default function ProductTrackSummary({ tracks }: { tracks: ProductTrack[]
               }
             />
           </div>
-          <span className="w-8 shrink-0 text-right text-xs tabular-nums text-gray-500">
+          <span className="w-8 shrink-0 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400">
             {t.progress}%
           </span>
         </div>

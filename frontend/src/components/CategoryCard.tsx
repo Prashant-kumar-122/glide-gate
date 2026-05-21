@@ -26,16 +26,16 @@ export default function CategoryCard({
   const pct = totalDocs === 0 ? 0 : Math.round((approvedDocs / totalDocs) * 100)
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
       >
-        {icon && <span className="text-gray-500">{icon}</span>}
+        {icon && <span className="text-gray-500 dark:text-gray-400">{icon}</span>}
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-800">{title}</span>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</span>
             {badge}
           </div>
           <div className="mt-1.5">
@@ -44,7 +44,7 @@ export default function CategoryCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          <span className="text-xs tabular-nums text-gray-500">
+          <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400">
             {approvedDocs}/{totalDocs}
           </span>
           {open ? (
@@ -56,7 +56,7 @@ export default function CategoryCard({
       </button>
 
       {open && children && (
-        <div className="border-t border-gray-100 px-2 py-2 space-y-1">
+        <div className="border-t border-gray-100 px-2 py-2 space-y-1 dark:border-gray-700">
           {children}
         </div>
       )}

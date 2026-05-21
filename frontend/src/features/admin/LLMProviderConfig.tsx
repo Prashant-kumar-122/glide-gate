@@ -58,7 +58,7 @@ export default function LLMProviderConfig() {
   return (
     <div className="max-w-xl space-y-6">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900">LLM Provider</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">LLM Provider</h3>
         <p className="mt-0.5 text-xs text-gray-500">
           Primary AI provider for all agent LLM calls. Fallback chain is configured in code.
         </p>
@@ -66,7 +66,7 @@ export default function LLMProviderConfig() {
 
       {/* Provider selector */}
       <div className="space-y-2">
-        <label className="text-xs font-medium text-gray-700">Provider</label>
+        <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Provider</label>
         <div className="grid grid-cols-2 gap-2">
           {PROVIDERS.map((p) => (
             <button
@@ -78,8 +78,8 @@ export default function LLMProviderConfig() {
               className={[
                 'rounded-lg border px-4 py-3 text-left text-sm font-medium transition-all',
                 provider === p.value
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50',
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500 dark:bg-blue-950 dark:text-blue-300'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-500 dark:hover:bg-gray-700',
               ].join(' ')}
             >
               {p.label}
@@ -90,7 +90,7 @@ export default function LLMProviderConfig() {
 
       {/* Model selector */}
       <div className="space-y-2">
-        <label className="text-xs font-medium text-gray-700">Model</label>
+        <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Model</label>
         <div className="space-y-1.5">
           {selectedProvider?.models.map((m) => (
             <label
@@ -98,8 +98,8 @@ export default function LLMProviderConfig() {
               className={[
                 'flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-all',
                 model === m
-                  ? 'border-blue-300 bg-blue-50'
-                  : 'border-gray-200 hover:bg-gray-50',
+                  ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950'
+                  : 'border-gray-200 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700',
               ].join(' ')}
             >
               <input
@@ -110,7 +110,7 @@ export default function LLMProviderConfig() {
                 onChange={() => setModel(m)}
                 className="accent-blue-600"
               />
-              <span className="font-mono text-xs text-gray-700">{m}</span>
+              <span className="font-mono text-xs text-gray-700 dark:text-gray-200">{m}</span>
             </label>
           ))}
         </div>
@@ -121,7 +121,7 @@ export default function LLMProviderConfig() {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="Or type a custom model ID…"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs text-gray-700 placeholder-gray-300 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs text-gray-700 placeholder-gray-300 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-600"
           />
         </div>
       </div>

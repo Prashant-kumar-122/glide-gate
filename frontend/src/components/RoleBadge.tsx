@@ -16,6 +16,8 @@ export default function RoleBadge({ role, size = 'md' }: RoleBadgeProps) {
         'inline-flex items-center rounded',
         colors.bg,
         colors.text,
+        colors.dark.bg,
+        colors.dark.text,
         sizeClass,
       ].join(' ')}
     >

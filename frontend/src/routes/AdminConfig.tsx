@@ -20,8 +20,8 @@ export default function AdminConfig() {
   return (
     <div className="flex h-[calc(100vh-48px)] flex-col">
       {/* Header */}
-      <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
-        <h1 className="text-sm font-semibold text-gray-900">Admin Configuration</h1>
+      <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4 dark:border-gray-700 dark:bg-gray-800">
+        <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Admin Configuration</h1>
         <p className="mt-0.5 text-[11px] text-gray-400">
           LLM provider, deterministic controls, validation prompts, and checkpoint rules
         </p>
@@ -30,7 +30,7 @@ export default function AdminConfig() {
       <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
         {/* ── Mobile: horizontal scrollable tab bar ───────────────────────── */}
         <div
-          className="flex shrink-0 overflow-x-auto border-b border-gray-200 bg-white md:hidden"
+          className="flex shrink-0 overflow-x-auto border-b border-gray-200 bg-white md:hidden dark:border-gray-700 dark:bg-gray-800"
           role="tablist"
           aria-label="Admin configuration tabs"
         >
@@ -43,8 +43,8 @@ export default function AdminConfig() {
               className={[
                 'flex shrink-0 flex-col items-center gap-1 px-5 py-3 text-[11px] font-semibold transition-colors',
                 active === id
-                  ? 'border-b-2 border-blue-600 text-blue-700'
-                  : 'text-gray-400 hover:text-gray-600',
+                  ? 'border-b-2 border-blue-600 text-blue-700 dark:text-blue-400'
+                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300',
               ].join(' ')}
             >
               <Icon className="h-4 w-4" />
@@ -55,7 +55,7 @@ export default function AdminConfig() {
 
         {/* ── Desktop: vertical tab nav sidebar ───────────────────────────── */}
         <nav
-          className="hidden w-52 shrink-0 border-r border-gray-200 bg-white p-3 md:block"
+          className="hidden w-52 shrink-0 border-r border-gray-200 bg-white p-3 md:block dark:border-gray-700 dark:bg-gray-800"
           aria-label="Admin configuration navigation"
         >
           {TABS.map(({ id, label, icon: Icon }) => (
@@ -65,8 +65,8 @@ export default function AdminConfig() {
               className={[
                 'mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-medium transition-all',
                 active === id
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700',
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200',
               ].join(' ')}
             >
               <Icon className="h-4 w-4 shrink-0" />

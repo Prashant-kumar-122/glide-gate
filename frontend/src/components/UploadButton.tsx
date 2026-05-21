@@ -60,8 +60,8 @@ export default function UploadButton({
       className={[
         'relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 transition-colors',
         dragging
-          ? 'border-blue-400 bg-blue-50'
-          : 'border-gray-300 bg-gray-50 hover:border-gray-400',
+          ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-950'
+          : 'border-gray-300 bg-gray-50 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500',
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
       ].join(' ')}
       onClick={() => !disabled && inputRef.current?.click()}
@@ -86,7 +86,7 @@ export default function UploadButton({
       )}
 
       <div className="text-center">
-        <p className="text-sm font-medium text-gray-700">{label}</p>
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{label}</p>
         <p className="text-xs text-gray-400">PDF, Word, or image &middot; drag &amp; drop or click</p>
       </div>
     </div>

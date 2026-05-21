@@ -36,28 +36,28 @@ const STATE_STYLES: Record<
   { wrapper: string; icon: string; dot: string; badge: string }
 > = {
   idle: {
-    wrapper: 'border-gray-300 bg-white',
-    icon: 'text-gray-400',
-    dot: 'bg-gray-300',
-    badge: 'bg-gray-100 text-gray-500',
+    wrapper: 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800',
+    icon: 'text-gray-400 dark:text-gray-500',
+    dot: 'bg-gray-300 dark:bg-gray-600',
+    badge: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
   },
   active: {
-    wrapper: 'border-blue-400 bg-blue-50',
-    icon: 'text-blue-600',
-    dot: 'bg-blue-500 animate-pulse',
-    badge: 'bg-blue-100 text-blue-700',
+    wrapper: 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-950',
+    icon: 'text-blue-600 dark:text-blue-400',
+    dot: 'bg-blue-500 animate-pulse dark:bg-blue-400',
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
   },
   escalated: {
-    wrapper: 'border-amber-400 bg-amber-50',
-    icon: 'text-amber-600',
-    dot: 'bg-amber-500 animate-pulse',
-    badge: 'bg-amber-100 text-amber-700',
+    wrapper: 'border-amber-400 bg-amber-50 dark:border-amber-500 dark:bg-amber-950',
+    icon: 'text-amber-600 dark:text-amber-400',
+    dot: 'bg-amber-500 animate-pulse dark:bg-amber-400',
+    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
   },
   complete: {
-    wrapper: 'border-green-400 bg-green-50',
-    icon: 'text-green-600',
-    dot: 'bg-green-500',
-    badge: 'bg-green-100 text-green-700',
+    wrapper: 'border-green-400 bg-green-50 dark:border-green-500 dark:bg-green-950',
+    icon: 'text-green-600 dark:text-green-400',
+    dot: 'bg-green-500 dark:bg-green-400',
+    badge: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   },
 }
 
@@ -87,7 +87,7 @@ export function AgentNode({ data, selected }: NodeProps) {
 
       <Icon className={['h-5 w-5 transition-colors', s.icon].join(' ')} />
 
-      <span className="text-center text-[11px] font-semibold leading-tight text-gray-700">
+      <span className="text-center text-[11px] font-semibold leading-tight text-gray-700 dark:text-gray-200">
         {label}
       </span>
 

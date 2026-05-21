@@ -18,15 +18,15 @@ function SliderField({ label, description, value, min, max, step, onChange }: Sl
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <label className="text-xs font-medium text-gray-700">{label}</label>
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</label>
           <div className="group relative">
-            <Info className="h-3 w-3 text-gray-300" />
-            <div className="absolute left-5 top-0 z-10 hidden w-52 rounded-lg border border-gray-200 bg-white p-2 text-[10px] text-gray-500 shadow-md group-hover:block">
+            <Info className="h-3 w-3 text-gray-300 dark:text-gray-600" />
+            <div className="absolute left-5 top-0 z-10 hidden w-52 rounded-lg border border-gray-200 bg-white p-2 text-[10px] text-gray-500 shadow-md group-hover:block dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
               {description}
             </div>
           </div>
         </div>
-        <span className="font-mono text-xs tabular-nums text-gray-600">{value.toFixed(2)}</span>
+        <span className="font-mono text-xs tabular-nums text-gray-600 dark:text-gray-400">{value.toFixed(2)}</span>
       </div>
       <input
         type="range"
@@ -37,7 +37,7 @@ function SliderField({ label, description, value, min, max, step, onChange }: Sl
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="h-1.5 w-full cursor-pointer accent-blue-600"
       />
-      <div className="flex justify-between text-[9px] text-gray-300">
+      <div className="flex justify-between text-[9px] text-gray-300 dark:text-gray-600">
         <span>{min}</span>
         <span>{max}</span>
       </div>
@@ -59,10 +59,10 @@ function NumField({ label, description, value, min, max, step, onChange }: NumFi
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-1.5">
-        <label className="text-xs font-medium text-gray-700">{label}</label>
+        <label className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</label>
         <div className="group relative">
-          <Info className="h-3 w-3 text-gray-300" />
-          <div className="absolute left-5 top-0 z-10 hidden w-52 rounded-lg border border-gray-200 bg-white p-2 text-[10px] text-gray-500 shadow-md group-hover:block">
+          <Info className="h-3 w-3 text-gray-300 dark:text-gray-600" />
+          <div className="absolute left-5 top-0 z-10 hidden w-52 rounded-lg border border-gray-200 bg-white p-2 text-[10px] text-gray-500 shadow-md group-hover:block dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
             {description}
           </div>
         </div>
@@ -74,7 +74,7 @@ function NumField({ label, description, value, min, max, step, onChange }: NumFi
         step={step}
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value, 10))}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs text-gray-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+        className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs text-gray-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
       />
     </div>
   )
@@ -131,7 +131,7 @@ export default function DeterministicControls() {
   return (
     <div className="max-w-xl space-y-6">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900">Deterministic Controls</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Deterministic Controls</h3>
         <p className="mt-0.5 text-xs text-gray-500">
           Fine-tune LLM behaviour for consistent, reproducible outputs.
         </p>
@@ -201,8 +201,8 @@ export default function DeterministicControls() {
 
         <div>
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-700">Cache TTL (seconds)</label>
-            <span className="font-mono text-xs tabular-nums text-gray-600">
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Cache TTL (seconds)</label>
+            <span className="font-mono text-xs tabular-nums text-gray-600 dark:text-gray-400">
               {vals.cache_ttl}s ({Math.round(vals.cache_ttl / 60)}m)
             </span>
           </div>
@@ -215,7 +215,7 @@ export default function DeterministicControls() {
             onChange={(e) => set('cache_ttl', parseInt(e.target.value, 10))}
             className="mt-1.5 h-1.5 w-full cursor-pointer accent-blue-600"
           />
-          <div className="flex justify-between text-[9px] text-gray-300">
+          <div className="flex justify-between text-[9px] text-gray-300 dark:text-gray-600">
             <span>0s (off)</span>
             <span>3600s (1 hr)</span>
           </div>

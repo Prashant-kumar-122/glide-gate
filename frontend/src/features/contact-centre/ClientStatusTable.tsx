@@ -22,12 +22,12 @@ function caseDisplayName(c: CaseOut): string {
 }
 
 const STAGE_BADGE: Record<string, string> = {
-  INTAKE: 'bg-gray-100 text-gray-600',
-  KYC: 'bg-blue-100 text-blue-700',
-  PARALLEL_PRODUCTS: 'bg-indigo-100 text-indigo-700',
-  REVIEW: 'bg-amber-100 text-amber-700',
-  COMPLETE: 'bg-green-100 text-green-700',
-  ESCALATED: 'bg-red-100 text-red-700',
+  INTAKE: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  KYC: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  PARALLEL_PRODUCTS: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
+  REVIEW: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+  COMPLETE: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  ESCALATED: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
 }
 
 
@@ -54,7 +54,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
   return (
     <div className="flex h-full flex-col">
       {/* Search */}
-      <div className="border-b border-gray-200 bg-white px-4 py-3">
+      <div className="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -62,7 +62,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
             placeholder="Search clients, stage, products…"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:bg-gray-700"
           />
         </div>
         {filterText && (
@@ -77,14 +77,14 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
         {isLoading && (
           <div className="space-y-1 p-3">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100" />
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700" />
             ))}
           </div>
         )}
 
         {isError && (
           <div className="p-4">
-            <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600">
+            <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600 dark:bg-red-950 dark:text-red-400">
               Failed to load clients. Is the backend running?
             </p>
           </div>
@@ -92,7 +92,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
 
         {!isLoading && !isError && filtered.length === 0 && (
           <div className="flex flex-col items-center py-16 text-center">
-            <Search className="h-8 w-8 text-gray-200" />
+            <Search className="h-8 w-8 text-gray-200 dark:text-gray-700" />
             <p className="mt-2 text-sm text-gray-400">No cases match your search</p>
           </div>
         )}
@@ -100,7 +100,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
         {filtered.map((c) => {
           const isSelected = selectedClientId === c.id
           const progress = Math.round(c.percentage ?? 0)
-          const badgeClass = STAGE_BADGE[c.current_stage] ?? 'bg-gray-100 text-gray-600'
+          const badgeClass = STAGE_BADGE[c.current_stage] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
           const stageLabel = STAGE_LABELS[c.current_stage] ?? c.current_stage
           const isEscalated = c.current_stage === 'ESCALATED' || c.status === 'ESCALATED'
 
@@ -109,14 +109,14 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
               key={c.id}
               onClick={() => setSelectedClient(c.id)}
               className={[
-                'w-full border-b border-gray-100 px-4 py-3 text-left transition-colors',
-                isSelected ? 'bg-blue-50' : 'bg-white hover:bg-gray-50',
+                'w-full border-b border-gray-100 px-4 py-3 text-left transition-colors dark:border-gray-700',
+                isSelected ? 'bg-blue-50 dark:bg-blue-950' : 'bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700',
               ].join(' ')}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm font-semibold text-gray-900">
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {caseDisplayName(c)}
                     </p>
                     {isEscalated && <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
@@ -133,7 +133,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
                     </span>
                   </div>
                 </div>
-                <span className="text-xs font-semibold tabular-nums text-gray-500">{progress}%</span>
+                <span className="text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">{progress}%</span>
               </div>
 
               <div className="mt-2">
@@ -156,7 +156,7 @@ export default function ClientStatusTable({ cases, isLoading, isError }: Props) 
 
       {/* Footer */}
       {!isLoading && !isError && (
-        <div className="border-t border-gray-100 bg-gray-50 px-4 py-2">
+        <div className="border-t border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900">
           <p className="text-[11px] text-gray-400">
             {cases.length} active case{cases.length !== 1 ? 's' : ''}
           </p>

@@ -45,18 +45,18 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
+        <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Start your onboarding</h2>
-            <p className="mt-0.5 text-sm text-gray-500">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Start your onboarding</h2>
+            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               Let's get you set up — this takes under a minute.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
           >
             <X className="h-5 w-5" />
           </button>
@@ -65,7 +65,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
         <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5">
           {/* Case name */}
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
               <FileText className="h-4 w-4 text-gray-400" />
               Case name
             </label>
@@ -74,21 +74,21 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
               placeholder="e.g. Retirement Planning 2026"
               value={caseName}
               onChange={(e) => setCaseName(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
               required
             />
           </div>
 
           {/* Product selection */}
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
               <Briefcase className="h-4 w-4 text-gray-400" />
               Product type
               <span className="ml-1 text-xs font-normal text-gray-400">(select one or more)</span>
             </label>
             {productsLoading ? (
               <div className="flex items-center gap-2 text-sm text-gray-400">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500 dark:border-gray-600" />
                 Loading products…
               </div>
             ) : (
@@ -103,8 +103,8 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
                       className={[
                         'rounded-xl border px-3 py-2.5 text-left text-sm transition-all',
                         active
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-400'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50',
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-400 dark:bg-blue-950 dark:text-blue-300'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
                       ].join(' ')}
                     >
                       <span className="block font-medium">{p.name}</span>
@@ -122,21 +122,21 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
 
           {/* Advisor selection */}
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+            <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
               <Users className="h-4 w-4 text-gray-400" />
               Advisor
               <span className="ml-1 text-xs font-normal text-gray-400">(optional)</span>
             </label>
             {advisorsLoading ? (
               <div className="flex items-center gap-2 text-sm text-gray-400">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500 dark:border-gray-600" />
                 Loading advisors…
               </div>
             ) : (
               <select
                 value={advisorId}
                 onChange={(e) => setAdvisorId(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
               >
                 <option value="">Assign me to any available advisor</option>
                 {(advisors ?? []).map((a) => (
@@ -150,7 +150,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
 
           {/* Error */}
           {errorMessage && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
               {errorMessage}
             </p>
           )}

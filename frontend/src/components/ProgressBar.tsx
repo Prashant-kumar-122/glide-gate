@@ -32,12 +32,12 @@ export default function ProgressBar({
   return (
     <div className="w-full">
       {(label || showPercent) && (
-        <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
+        <div className="mb-1 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
           {label && <span>{label}</span>}
           {showPercent && <span className="tabular-nums">{clamped}%</span>}
         </div>
       )}
-      <div className={['w-full rounded-full bg-gray-200', SIZE_MAP[size]].join(' ')}>
+      <div className={['w-full rounded-full bg-gray-200 dark:bg-gray-700', SIZE_MAP[size]].join(' ')}>
         <div
           className={['rounded-full transition-all duration-500', barColor, SIZE_MAP[size]].join(' ')}
           style={{ width: `${clamped}%` }}

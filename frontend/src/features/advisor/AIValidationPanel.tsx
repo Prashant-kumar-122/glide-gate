@@ -14,21 +14,21 @@ function VerdictIcon({ verdict, size = 'sm' }: VerdictIconProps) {
 }
 
 const VERDICT_BG: Record<FindingResult['verdict'], string> = {
-  pass: 'bg-green-50 border-green-200',
-  warn: 'bg-amber-50 border-amber-200',
-  fail: 'bg-red-50 border-red-200',
+  pass: 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800',
+  warn: 'bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800',
+  fail: 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
 }
 
 const VERDICT_TEXT: Record<FindingResult['verdict'], string> = {
-  pass: 'text-green-700',
-  warn: 'text-amber-700',
-  fail: 'text-red-700',
+  pass: 'text-green-700 dark:text-green-300',
+  warn: 'text-amber-700 dark:text-amber-300',
+  fail: 'text-red-700 dark:text-red-300',
 }
 
 const OVERALL_BADGE: Record<FindingResult['verdict'], string> = {
-  pass: 'bg-green-100 text-green-800 ring-green-300',
-  warn: 'bg-amber-100 text-amber-800 ring-amber-300',
-  fail: 'bg-red-100 text-red-800 ring-red-300',
+  pass: 'bg-green-100 text-green-800 ring-green-300 dark:bg-green-900 dark:text-green-200 dark:ring-green-700',
+  warn: 'bg-amber-100 text-amber-800 ring-amber-300 dark:bg-amber-900 dark:text-amber-200 dark:ring-amber-700',
+  fail: 'bg-red-100 text-red-800 ring-red-300 dark:bg-red-900 dark:text-red-200 dark:ring-red-700',
 }
 
 interface AIValidationPanelProps {
@@ -56,7 +56,7 @@ export default function AIValidationPanel({
     <div className="flex flex-col gap-3">
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-800">AI Validation</h4>
+        <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">AI Validation</h4>
         {onRunValidation && (
           <button
             onClick={onRunValidation}
@@ -74,7 +74,7 @@ export default function AIValidationPanel({
       </div>
 
       {!result && !isRunning && (
-        <div className="rounded-lg border border-dashed border-gray-200 py-8 text-center">
+        <div className="rounded-lg border border-dashed border-gray-200 py-8 text-center dark:border-gray-700">
           <p className="text-xs text-gray-400">No validation result yet.</p>
           {onRunValidation && (
             <p className="mt-1 text-xs text-gray-400">Click "Run AI Check" to start.</p>
@@ -85,7 +85,7 @@ export default function AIValidationPanel({
       {isRunning && !result && (
         <div className="flex flex-col items-center gap-2 py-8">
           <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
-          <p className="text-xs text-gray-500">AI is reviewing the document…</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">AI is reviewing the document…</p>
         </div>
       )}
 
@@ -126,7 +126,7 @@ export default function AIValidationPanel({
                   <p className={['text-xs font-semibold', VERDICT_TEXT[f.verdict]].join(' ')}>
                     {f.field}
                   </p>
-                  <p className="mt-0.5 text-xs text-gray-600">{f.message}</p>
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">{f.message}</p>
                   {f.confidence !== undefined && (
                     <p className="mt-0.5 text-[10px] text-gray-400">
                       Confidence: {Math.round(f.confidence * 100)}%
