@@ -581,6 +581,7 @@ async def patch_case_percentage(
 
 class PatchStatusRequest(BaseModel):
     status: str
+    current_stage: str | None = None
 
 
 class PatchStatusResponse(BaseModel):
@@ -596,10 +597,13 @@ async def patch_case_status(
     _user: dict = Depends(require_role("client", "advisor", "admin")),
 ) -> PatchStatusResponse:
     await _get_case_or_404(case_id, db)
+    values: dict = {"status": body.status}
+    if body.current_stage is not None:
+        values["current_stage"] = body.current_stage
     await db.execute(
         sa_update(OnboardingCase)
         .where(OnboardingCase.id == case_id)
-        .values(status=body.status)
+        .values(**values)
     )
     await db.commit()
     return PatchStatusResponse(case_id=case_id, status=body.status)

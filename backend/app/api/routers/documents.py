@@ -148,7 +148,7 @@ async def _get_doc_or_404(doc_id: UUID, db: AsyncSession) -> Document:
 
 
 async def _update_case_percentage_for_docs(case_id: UUID) -> None:
-    """Recompute the document portion (70-100%) of the case percentage column."""
+    """Recompute percentage from approved docs and advance stage to KYC when all are approved."""
     try:
         async with AsyncSessionLocal() as db:
             total_result = await db.execute(
@@ -164,13 +164,23 @@ async def _update_case_percentage_for_docs(case_id: UUID) -> None:
             approved = approved_result.scalar() or 0
 
             doc_ratio = (approved / total) if total > 0 else 0.0
-            # Documents contribute the 70-100% band of the overall progress bar
-            new_pct = round(70.0 + doc_ratio * 30.0, 1)
+            # Documents contribute the 60-90% band; 90% reserved for KYC completion
+            new_pct = round(60.0 + doc_ratio * 30.0, 1)
+
+            # Fetch current stage so we don't regress an already-advanced case
+            stage_result = await db.execute(
+                select(OnboardingCase.current_stage).where(OnboardingCase.id == case_id)
+            )
+            current_stage = stage_result.scalar_one_or_none()
+
+            new_values: dict = {"percentage": new_pct}
+            if total > 0 and approved == total and current_stage == "PARALLEL_PRODUCTS":
+                new_values["current_stage"] = "KYC"
 
             await db.execute(
                 sa_update(OnboardingCase)
                 .where(OnboardingCase.id == case_id)
-                .values(percentage=new_pct)
+                .values(**new_values)
             )
             await db.commit()
     except Exception as exc:
