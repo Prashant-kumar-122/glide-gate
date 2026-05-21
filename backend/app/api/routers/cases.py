@@ -553,6 +553,64 @@ async def update_collected_field(
     return CollectedFieldsOut(client_data=client_data)
 
 
+class PatchProductsRequest(BaseModel):
+    selected_products: list[str]
+
+
+class PatchProductsResponse(BaseModel):
+    case_id: UUID
+    selected_products: list[str]
+
+
+@router.patch("/{case_id}/products", response_model=PatchProductsResponse)
+async def patch_case_products(
+    case_id: UUID,
+    body: PatchProductsRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> PatchProductsResponse:
+    case = await _get_case_or_404(case_id, db)
+    _assert_case_access(case, current_user)
+
+    if not body.selected_products:
+        raise ConflictError("At least one product must be selected")
+
+    product_rows = await db.execute(
+        select(Product).where(Product.product_code.in_(body.selected_products))
+    )
+    products = product_rows.scalars().all()
+    found_codes = {p.product_code for p in products}
+    unknown = set(body.selected_products) - found_codes
+    if unknown:
+        raise ConflictError(f"Unknown product codes: {sorted(unknown)}")
+
+    new_codes = set(body.selected_products)
+    old_codes = set(case.selected_products)
+
+    # Remove CaseProduct rows for de-selected products (only safe while PENDING)
+    for cp in list(case.case_products):
+        if cp.product_code not in new_codes and cp.status == "PENDING":
+            await db.delete(cp)
+
+    # Add CaseProduct rows for newly selected products
+    existing_codes = {cp.product_code for cp in case.case_products if cp.product_code in new_codes}
+    for product in products:
+        if product.product_code not in existing_codes and product.product_code not in old_codes:
+            db.add(CaseProduct(
+                case_id=case.id,
+                product_id=product.id,
+                product_code=product.product_code,
+            ))
+
+    await db.execute(
+        sa_update(OnboardingCase)
+        .where(OnboardingCase.id == case_id)
+        .values(selected_products=body.selected_products)
+    )
+    await db.commit()
+    return PatchProductsResponse(case_id=case_id, selected_products=body.selected_products)
+
+
 class PatchPercentageRequest(BaseModel):
     percentage: float
 

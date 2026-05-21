@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import {
   useProducts, useQuestionnaireSchema, useCollectedFields,
-  useUpdateCollectedField, useInitiateCase, useCases,
+  useUpdateCollectedField, useInitiateCase, useUpdateCaseProducts, useCases,
 } from '@/hooks/useDocuments'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
@@ -859,6 +859,7 @@ export default function OnboardingWizard({
   const { data: collectedData } = useCollectedFields(caseId)
   const updateField = useUpdateCollectedField(caseId)
   const initiateCase = useInitiateCase()
+  const updateCaseProducts = useUpdateCaseProducts(caseId)
 
   // Initialise local form data from collected-fields when they load
   useEffect(() => {
@@ -945,6 +946,22 @@ export default function OnboardingWizard({
 
   async function handleProductsContinue() {
     if (selectedProducts.length === 0) return
+
+    // Resuming an existing case — update products then advance
+    if (caseId) {
+      setCreatingCase(true)
+      setCreateError(null)
+      try {
+        await updateCaseProducts.mutateAsync(selectedProducts)
+        setStep(1)
+      } catch {
+        setCreateError('Failed to update products. Please try again.')
+      } finally {
+        setCreatingCase(false)
+      }
+      return
+    }
+
     setCreatingCase(true)
     setCreateError(null)
     try {
