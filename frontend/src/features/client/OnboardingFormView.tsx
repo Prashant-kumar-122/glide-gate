@@ -114,7 +114,7 @@ function ChoiceInput({ options, value, onChange }: ChoiceInputProps) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      className="w-full rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-blue-500 dark:text-gray-100"
     >
       {options.map((opt) => (
         <option key={opt} value={opt}>
@@ -136,16 +136,16 @@ function MultiChoiceInput({ options, values, onChange }: MultiChoiceInputProps) 
     onChange(values.includes(opt) ? values.filter((v) => v !== opt) : [...values, opt])
   }
   return (
-    <div className="space-y-1.5 rounded-lg border border-blue-300 bg-white px-3 py-2">
+    <div className="space-y-1.5 rounded-lg border border-blue-300 bg-white px-3 py-2 dark:bg-gray-800 dark:border-blue-500">
       {options.map((opt) => (
         <label key={opt} className="flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
             checked={values.includes(opt)}
             onChange={() => toggle(opt)}
-            className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-500"
           />
-          <span className="text-sm text-gray-800">{opt}</span>
+          <span className="text-sm text-gray-800 dark:text-gray-200">{opt}</span>
         </label>
       ))}
     </div>
@@ -386,9 +386,12 @@ export default function OnboardingFormView({
                               value={editValue}
                               onChange={(e) => { setEditValue(e.target.value); setEditError(null) }}
                               onKeyDown={handleEditKeyDown}
-                              className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className={[
+                                'w-full rounded-lg border border-blue-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-blue-500 dark:text-gray-100',
+                                isSignature(question_key) ? 'text-blue-900 dark:text-blue-200' : '',
+                              ].join(' ')}
                               style={isSignature(question_key)
-                                ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem', color: '#1e3a5f' }
+                                ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem' }
                                 : { fontSize: '0.875rem' }
                               }
                             />
@@ -424,9 +427,14 @@ export default function OnboardingFormView({
                           isSignature(question_key) ? 'bg-white dark:bg-gray-800' : '',
                         ].join(' ')}>
                           <p
-                            className="break-words text-gray-800 dark:text-gray-100"
+                            className={[
+                              'break-words',
+                              isSignature(question_key)
+                                ? 'text-blue-900 dark:text-blue-200'
+                                : 'text-gray-800 dark:text-gray-100',
+                            ].join(' ')}
                             style={isSignature(question_key)
-                              ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem', lineHeight: '1.6', color: '#1e3a5f' }
+                              ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem', lineHeight: '1.6' }
                               : { fontSize: '0.875rem' }
                             }
                           >
