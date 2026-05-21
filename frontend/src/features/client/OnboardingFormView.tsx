@@ -317,7 +317,7 @@ export default function OnboardingFormView({
           {readOnly && (
             <div className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
               <Lock className="h-3 w-3" />
-              Editing locked during KYC review
+              Editing locked during KYC review or once completed
             </div>
           )}
         </div>

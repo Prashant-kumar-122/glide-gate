@@ -1,6 +1,7 @@
 import { format } from 'date-fns'
-import { ChevronRight, Clock, CheckCircle } from 'lucide-react'
+import { ChevronRight, Clock, CheckCircle, BadgeCheck } from 'lucide-react'
 import type { CaseOut } from '@/lib/api'
+import { useAccount } from '@/hooks/useDocuments'
 
 function formatStageLabel(stage: string): string {
   const labels: Record<string, string> = {
@@ -33,6 +34,7 @@ interface Props {
 export default function CaseCard({ caseData, onClick }: Props) {
   const isComplete = caseData.current_stage === 'COMPLETE'
   const pct = Math.min(100, Math.max(0, caseData.percentage ?? 0))
+  const { data: account } = useAccount(caseData.id, isComplete)
 
   return (
     <button
@@ -54,6 +56,12 @@ export default function CaseCard({ caseData, onClick }: Props) {
           </div>
           {caseData.case_name && (
             <p className="text-xs text-gray-400 truncate">{caseData.case_name}</p>
+          )}
+          {account && (
+            <p className="flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400 truncate mt-0.5">
+              <BadgeCheck className="w-3 h-3 shrink-0" />
+              Account Number: {account.account_number}
+            </p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">

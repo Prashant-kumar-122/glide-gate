@@ -19,6 +19,7 @@ from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Produ
 from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.models.clients import Client
 from app.models.documents import Document
+from app.models.accounts import ClientAccount
 from app.services.orchestration.agent_orchestration_service import orchestration_service
 from app.services.orchestration.journey_resumption_service import journey_resumption_service
 
@@ -136,6 +137,14 @@ class ResumeResponse(BaseModel):
 
 class CollectedFieldsOut(BaseModel):
     client_data: dict[str, Any]
+
+
+class ClientAccountOut(BaseModel):
+    account_number: str
+    products: list[str]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class QuestionSchemaItem(BaseModel):
@@ -421,6 +430,25 @@ async def get_case_summary(
         kyc_status=ctx.get("kyc_status"),
         escalated=escalated,
     )
+
+
+@router.get("/{case_id}/account", response_model=ClientAccountOut)
+async def get_case_account(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> ClientAccountOut:
+    """Return the generated account for a completed case."""
+    case = await _get_case_or_404(case_id, db)
+    _assert_case_access(case, current_user)
+
+    result = await db.execute(
+        select(ClientAccount).where(ClientAccount.case_id == case_id)
+    )
+    account = result.scalar_one_or_none()
+    if account is None:
+        raise NotFoundError("ClientAccount", str(case_id))
+    return ClientAccountOut.model_validate(account)
 
 
 @router.get("/{case_id}/questionnaire-schema", response_model=QuestionnaireSchemaOut)

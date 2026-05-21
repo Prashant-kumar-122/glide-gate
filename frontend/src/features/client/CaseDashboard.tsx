@@ -1,7 +1,9 @@
 import { Building2, Clock, CheckCircle, Plus, FileText, Layers } from 'lucide-react'
-import { useCases } from '@/hooks/useDocuments'
+import { useQueries } from '@tanstack/react-query'
+import { useCases, qk } from '@/hooks/useDocuments'
+import { api } from '@/lib/api'
 import CaseCard from '@/features/client/CaseCard'
-import type { CaseOut } from '@/lib/api'
+import type { CaseOut, CaseSummary } from '@/lib/api'
 
 interface Props {
   firstName: string
@@ -12,6 +14,19 @@ interface Props {
 export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase }: Props) {
   const { data: cases = [], isLoading } = useCases()
 
+  const summaryQueries = useQueries({
+    queries: cases.map((c) => ({
+      queryKey: qk.caseSummary(c.id),
+      queryFn: (): Promise<CaseSummary> => api.get(`/cases/${c.id}/summary`).then((r) => r.data),
+      staleTime: 20_000,
+    })),
+  })
+
+  const documentsPending = summaryQueries.reduce((acc, q) => {
+    if (q.data) return acc + Math.max(0, q.data.documents_total - q.data.documents_approved)
+    return acc
+  }, 0)
+
   const inProgress = cases.filter((c) => c.current_stage !== 'COMPLETE')
   const completed = cases.filter((c) => c.current_stage === 'COMPLETE')
 
@@ -19,7 +34,7 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
     { label: 'In Progress',        value: inProgress.length,  icon: Clock,       color: 'text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-300' },
     { label: 'Completed',          value: completed.length,   icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300' },
     { label: 'Total Applications', value: cases.length,       icon: Layers,      color: 'text-violet-600 bg-violet-50 dark:bg-violet-950 dark:text-violet-300' },
-    { label: 'Documents Pending',  value: 0,                  icon: FileText,    color: 'text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-300' },
+    { label: 'Documents Pending',  value: documentsPending,   icon: FileText,    color: 'text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-300' },
   ]
 
   return (

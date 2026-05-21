@@ -6,13 +6,14 @@ import {
   Shield,
   Building,
   FileText,
+  BadgeCheck,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import CategoryCard from '@/components/CategoryCard'
 import DocumentRow from '@/components/DocumentRow'
 import UploadButton from '@/components/UploadButton'
 import ParallelProductTracks from './ParallelProductTracks'
-import { useDocuments, useCaseProgress, useUploadDocument } from '@/hooks/useDocuments'
+import { useDocuments, useCaseProgress, useUploadDocument, useAccount } from '@/hooks/useDocuments'
 import { useComments } from '@/hooks/useComments'
 import type { DocumentOut } from '@/lib/api'
 
@@ -42,6 +43,7 @@ interface DocumentWorkspacePanelProps {
 export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePanelProps) {
   const { data: docs, isLoading: docsLoading } = useDocuments(caseId)
   const { data: summary, isLoading: summaryLoading } = useCaseProgress(caseId)
+  const { data: account } = useAccount(caseId, summary?.current_stage === 'COMPLETE')
   const uploadMutation = useUploadDocument(caseId)
   const { data: comments = [] } = useComments(caseId)
 
@@ -81,6 +83,12 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
                   </span>
                 )}
               </p>
+              {account && (
+                <p className="mt-1 flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                  <BadgeCheck className="w-3 h-3 shrink-0" />
+                  Account Number: {account.account_number}
+                </p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-gray-900 tabular-nums dark:text-gray-100">

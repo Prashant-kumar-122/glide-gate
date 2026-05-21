@@ -35,11 +35,16 @@ export default function UserMenu() {
     <div ref={ref} className="relative ml-auto">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+        className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-gray-300 hover:bg-gray-700 transition-colors"
       >
-        <User className="h-4 w-4" />
-        <span className="max-w-[140px] truncate">{fullName}</span>
-        <ChevronDown className="h-3.5 w-3.5" />
+        <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0">
+          {user.firstName.charAt(0)}
+        </div>
+        <div className="hidden md:block text-left">
+          <div className="text-sm font-medium text-white leading-tight">{fullName}</div>
+          <div className="text-xs text-gray-400 leading-tight">{user.email}</div>
+        </div>
+        <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (

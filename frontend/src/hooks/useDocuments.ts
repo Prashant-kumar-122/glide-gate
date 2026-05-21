@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { DocumentOut, CaseSummary, DiffResult, ValidationResult, CaseOut, ProductOut, AdvisorOut } from '@/lib/api'
+import type { DocumentOut, CaseSummary, DiffResult, ValidationResult, CaseOut, ProductOut, AdvisorOut, ClientAccountOut } from '@/lib/api'
 
 // ── Query keys ────────────────────────────────────────────────────────────────
 
@@ -10,6 +10,7 @@ export const qk = {
   advisors: ['advisors'] as const,
   caseDetail: (id: string) => ['cases', id] as const,
   caseSummary: (id: string) => ['cases', id, 'summary'] as const,
+  caseAccount: (id: string) => ['cases', id, 'account'] as const,
   documents: (caseId: string) => ['cases', caseId, 'documents'] as const,
   document: (docId: string) => ['documents', docId] as const,
   diff: (docId: string) => ['documents', docId, 'diff'] as const,
@@ -40,6 +41,16 @@ export function useCaseProgress(caseId: string | null) {
     queryFn: () => api.get(`/cases/${caseId}/summary`).then((r) => r.data),
     enabled: !!caseId,
     staleTime: 20_000,
+  })
+}
+
+export function useAccount(caseId: string | null, enabled = true) {
+  return useQuery<ClientAccountOut>({
+    queryKey: qk.caseAccount(caseId ?? ''),
+    queryFn: () => api.get(`/cases/${caseId}/account`).then((r) => r.data),
+    enabled: !!caseId && enabled,
+    staleTime: Infinity,
+    retry: false,
   })
 }
 
