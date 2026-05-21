@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, Upload, CheckCircle, AlertTriangle, FileText, FolderOpen, MessageCircle } from 'lucide-react'
+import { ChevronDown, Upload, CheckCircle, AlertTriangle, FileText, FolderOpen, MessageCircle, Lock } from 'lucide-react'
 import StatusBadge from '@/components/StatusBadge'
 import ClientDocumentModal from './ClientDocumentModal'
 import { useClientDocuments, useClientUpload } from '@/hooks/useClientDocuments'
@@ -61,6 +61,7 @@ interface AccordionItemProps {
   isUploading?: boolean
   open: boolean
   onToggle: () => void
+  readOnly?: boolean
 }
 
 function AccordionItem({
@@ -72,6 +73,7 @@ function AccordionItem({
   isUploading,
   open,
   onToggle,
+  readOnly = false,
 }: AccordionItemProps) {
   const [dragging, setDragging] = useState(false)
 
@@ -171,7 +173,12 @@ function AccordionItem({
           )}
 
           {/* Upload zone */}
-          {documents[documents.length - 1]?.status === 'APPROVED' ? (
+          {readOnly ? (
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              <Lock className="h-3.5 w-3.5 shrink-0" />
+              <span>Uploads locked during KYC review</span>
+            </div>
+          ) : documents[documents.length - 1]?.status === 'APPROVED' ? (
             <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
               <CheckCircle className="h-3.5 w-3.5 shrink-0" />
               <span>Document approved — no further uploads needed</span>
@@ -221,9 +228,10 @@ function AccordionItem({
 
 interface ClientDocumentHubProps {
   caseId: string | null
+  readOnly?: boolean
 }
 
-export default function ClientDocumentHub({ caseId }: ClientDocumentHubProps) {
+export default function ClientDocumentHub({ caseId, readOnly = false }: ClientDocumentHubProps) {
   const { data: docs, isLoading } = useClientDocuments(caseId)
   const upload = useClientUpload(caseId ?? '')
   const { data: comments = [] } = useComments(caseId)
@@ -301,6 +309,7 @@ export default function ClientDocumentHub({ caseId }: ClientDocumentHubProps) {
             isUploading={upload.isPending}
             open={openCategories.has(cat)}
             onToggle={() => toggleCategory(cat)}
+            readOnly={readOnly}
           />
         ))}
       </div>

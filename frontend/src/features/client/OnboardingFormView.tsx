@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ClipboardList, Pencil, Check, X } from 'lucide-react'
+import { ClipboardList, Pencil, Check, X, Lock } from 'lucide-react'
 import type { QuestionSchemaItem } from '@/hooks/useDocuments'
 import { useUpdateCollectedField } from '@/hooks/useDocuments'
 
@@ -164,6 +164,7 @@ interface OnboardingFormViewProps {
   clientData: Record<string, unknown>
   schema: QuestionSchemaItem[]
   isLoading?: boolean
+  readOnly?: boolean
 }
 
 export default function OnboardingFormView({
@@ -171,6 +172,7 @@ export default function OnboardingFormView({
   clientData,
   schema,
   isLoading,
+  readOnly = false,
 }: OnboardingFormViewProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -305,11 +307,19 @@ export default function OnboardingFormView({
     <div className="flex h-full flex-col">
       {/* Summary bar */}
       <div className="shrink-0 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold text-blue-700">{totalAnswered}</span>
-          <span className="text-xs text-gray-400">
-            field{totalAnswered !== 1 ? 's' : ''} collected
-          </span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-blue-700">{totalAnswered}</span>
+            <span className="text-xs text-gray-400">
+              field{totalAnswered !== 1 ? 's' : ''} collected
+            </span>
+          </div>
+          {readOnly && (
+            <div className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+              <Lock className="h-3 w-3" />
+              Editing locked during KYC review
+            </div>
+          )}
         </div>
       </div>
 
@@ -340,7 +350,7 @@ export default function OnboardingFormView({
                         <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
                           {label}
                         </p>
-                        {!isEditing && !NON_EDITABLE_KEYS.has(question_key) && (
+                        {!isEditing && !readOnly && !NON_EDITABLE_KEYS.has(question_key) && (
                           <button
                             onClick={() => startEdit(question_key)}
                             title={`Correct ${label}`}
