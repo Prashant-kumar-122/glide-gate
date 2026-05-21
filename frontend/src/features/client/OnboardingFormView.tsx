@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ClipboardList, Pencil, Check, X } from 'lucide-react'
+import { ClipboardList, Pencil, Check, X, Lock } from 'lucide-react'
 import type { QuestionSchemaItem } from '@/hooks/useDocuments'
 import { useUpdateCollectedField } from '@/hooks/useDocuments'
 
@@ -114,7 +114,7 @@ function ChoiceInput({ options, value, onChange }: ChoiceInputProps) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      className="w-full rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-blue-500 dark:text-gray-100"
     >
       {options.map((opt) => (
         <option key={opt} value={opt}>
@@ -136,16 +136,16 @@ function MultiChoiceInput({ options, values, onChange }: MultiChoiceInputProps) 
     onChange(values.includes(opt) ? values.filter((v) => v !== opt) : [...values, opt])
   }
   return (
-    <div className="space-y-1.5 rounded-lg border border-blue-300 bg-white px-3 py-2">
+    <div className="space-y-1.5 rounded-lg border border-blue-300 bg-white px-3 py-2 dark:bg-gray-800 dark:border-blue-500">
       {options.map((opt) => (
         <label key={opt} className="flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
             checked={values.includes(opt)}
             onChange={() => toggle(opt)}
-            className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-500"
           />
-          <span className="text-sm text-gray-800">{opt}</span>
+          <span className="text-sm text-gray-800 dark:text-gray-200">{opt}</span>
         </label>
       ))}
     </div>
@@ -164,6 +164,7 @@ interface OnboardingFormViewProps {
   clientData: Record<string, unknown>
   schema: QuestionSchemaItem[]
   isLoading?: boolean
+  readOnly?: boolean
 }
 
 export default function OnboardingFormView({
@@ -171,6 +172,7 @@ export default function OnboardingFormView({
   clientData,
   schema,
   isLoading,
+  readOnly = false,
 }: OnboardingFormViewProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -305,11 +307,19 @@ export default function OnboardingFormView({
     <div className="flex h-full flex-col">
       {/* Summary bar */}
       <div className="shrink-0 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold text-blue-700">{totalAnswered}</span>
-          <span className="text-xs text-gray-400">
-            field{totalAnswered !== 1 ? 's' : ''} collected
-          </span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-blue-700">{totalAnswered}</span>
+            <span className="text-xs text-gray-400">
+              field{totalAnswered !== 1 ? 's' : ''} collected
+            </span>
+          </div>
+          {readOnly && (
+            <div className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+              <Lock className="h-3 w-3" />
+              Editing locked during KYC review
+            </div>
+          )}
         </div>
       </div>
 
@@ -340,7 +350,7 @@ export default function OnboardingFormView({
                         <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
                           {label}
                         </p>
-                        {!isEditing && !NON_EDITABLE_KEYS.has(question_key) && (
+                        {!isEditing && !readOnly && !NON_EDITABLE_KEYS.has(question_key) && (
                           <button
                             onClick={() => startEdit(question_key)}
                             title={`Correct ${label}`}
@@ -376,9 +386,12 @@ export default function OnboardingFormView({
                               value={editValue}
                               onChange={(e) => { setEditValue(e.target.value); setEditError(null) }}
                               onKeyDown={handleEditKeyDown}
-                              className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className={[
+                                'w-full rounded-lg border border-blue-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-blue-500 dark:text-gray-100',
+                                isSignature(question_key) ? 'text-blue-900 dark:text-blue-200' : '',
+                              ].join(' ')}
                               style={isSignature(question_key)
-                                ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem', color: '#1e3a5f' }
+                                ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem' }
                                 : { fontSize: '0.875rem' }
                               }
                             />
@@ -414,9 +427,14 @@ export default function OnboardingFormView({
                           isSignature(question_key) ? 'bg-white dark:bg-gray-800' : '',
                         ].join(' ')}>
                           <p
-                            className="break-words text-gray-800 dark:text-gray-100"
+                            className={[
+                              'break-words',
+                              isSignature(question_key)
+                                ? 'text-blue-900 dark:text-blue-200'
+                                : 'text-gray-800 dark:text-gray-100',
+                            ].join(' ')}
                             style={isSignature(question_key)
-                              ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem', lineHeight: '1.6', color: '#1e3a5f' }
+                              ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem', lineHeight: '1.6' }
                               : { fontSize: '0.875rem' }
                             }
                           >

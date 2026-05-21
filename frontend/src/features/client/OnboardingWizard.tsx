@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import {
   useProducts, useQuestionnaireSchema, useCollectedFields,
-  useUpdateCollectedField, useInitiateCase, useCases,
+  useUpdateCollectedField, useInitiateCase, useUpdateCaseProducts, useCases,
 } from '@/hooks/useDocuments'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
@@ -611,10 +611,10 @@ function SchemaField({
                 className={[
                   'flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all',
                   checked
-                    ? 'border-blue-500 bg-blue-50'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
                     : hasError
-                    ? 'border-red-200 hover:border-red-300 bg-white'
-                    : 'border-gray-200 hover:border-blue-200 bg-white',
+                    ? 'border-red-200 hover:border-red-300 bg-white dark:bg-gray-800 dark:border-red-700 dark:hover:border-red-600'
+                    : 'border-gray-200 hover:border-blue-200 bg-white dark:bg-gray-800 dark:border-gray-600 dark:hover:border-blue-500',
                 ].join(' ')}
               >
                 <div
@@ -623,8 +623,8 @@ function SchemaField({
                     checked
                       ? 'border-blue-500 bg-blue-500'
                       : hasError
-                      ? 'border-red-300'
-                      : 'border-gray-300',
+                      ? 'border-red-300 dark:border-red-500'
+                      : 'border-gray-300 dark:border-gray-500',
                   ].join(' ')}
                 >
                   {checked && (
@@ -633,7 +633,7 @@ function SchemaField({
                     </svg>
                   )}
                 </div>
-                <span className={`text-sm font-medium ${checked ? 'text-blue-700' : 'text-gray-700'}`}>{o}</span>
+                <span className={`text-sm font-medium ${checked ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>{o}</span>
                 <input
                   type="checkbox"
                   checked={checked}
@@ -663,16 +663,16 @@ function SchemaField({
   if (field.question_key === 'full_name_signature') {
     return (
       <div className="space-y-1.5">
-        <div className={`relative w-full rounded-xl border bg-gray-50 px-4 py-3 ${hasError ? 'border-red-400' : 'border-gray-300'}`}>
+        <div className={`relative w-full rounded-xl border bg-gray-50 px-4 py-3 dark:bg-gray-800 ${hasError ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`}>
           <input
             type="text"
             value={strVal}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Sign your full name"
-            className="w-full bg-transparent focus:outline-none text-gray-800 text-2xl placeholder:text-gray-300 placeholder:text-lg"
+            className="w-full bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 text-2xl placeholder:text-gray-300 dark:placeholder:text-gray-500 placeholder:text-lg"
             style={{ fontFamily: "'Dancing Script', cursive" }}
           />
-          <div className="absolute bottom-0 left-4 right-4 border-b border-gray-300" />
+          <div className="absolute bottom-0 left-4 right-4 border-b border-gray-300 dark:border-gray-600" />
         </div>
         {error && <FieldError message={error} />}
       </div>
@@ -840,8 +840,8 @@ export default function OnboardingWizard({
 }: Props) {
   const isResuming = !!initialCaseId
   const [caseId, setCaseId] = useState<string | null>(initialCaseId ?? null)
-  // When resuming, skip the products step (0) and start at documents (1)
   const [step, setStep] = useState(isResuming ? 1 : 0)
+  const resumeStepApplied = useRef(false)
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>(initialSelectedProducts ?? [])
   const [prefillCount, setPrefillCount] = useState(0)
@@ -859,6 +859,7 @@ export default function OnboardingWizard({
   const { data: collectedData } = useCollectedFields(caseId)
   const updateField = useUpdateCollectedField(caseId)
   const initiateCase = useInitiateCase()
+  const updateCaseProducts = useUpdateCaseProducts(caseId)
 
   // Initialise local form data from collected-fields when they load
   useEffect(() => {
@@ -878,6 +879,36 @@ export default function OnboardingWizard({
   )
 
   const steps = useMemo(() => buildSteps(schemaSections), [schemaSections])
+
+  // When resuming, jump to the first incomplete section instead of always landing on documents
+  useEffect(() => {
+    if (!isResuming || resumeStepApplied.current) return
+    if (!schemaData || !collectedData || schemaSections.length === 0) return
+
+    resumeStepApplied.current = true
+    const fieldData = collectedData.client_data ?? {}
+
+    for (let i = 0; i < schemaSections.length; i++) {
+      const section = schemaSections[i]
+      const fields = schemaData.fields.filter((f) => f.section === section)
+      const visibleFields = fields.filter((f) => isFieldVisible(f, fieldData))
+      const requiredFields = visibleFields.filter(isRequired)
+
+      const isComplete = requiredFields.every((f) => {
+        const v = fieldData[f.question_key]
+        return !(v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0))
+      })
+
+      if (!isComplete) {
+        // Step 0 = products, 1 = documents, 2+ = schema sections
+        setStep(2 + i)
+        return
+      }
+    }
+
+    // All sections filled → go straight to review
+    setStep(steps.length - 1)
+  }, [isResuming, schemaData, collectedData, schemaSections, steps])
 
 
   const totalSteps = steps.length
@@ -915,6 +946,22 @@ export default function OnboardingWizard({
 
   async function handleProductsContinue() {
     if (selectedProducts.length === 0) return
+
+    // Resuming an existing case — update products then advance
+    if (caseId) {
+      setCreatingCase(true)
+      setCreateError(null)
+      try {
+        await updateCaseProducts.mutateAsync(selectedProducts)
+        setStep(1)
+      } catch {
+        setCreateError('Failed to update products. Please try again.')
+      } finally {
+        setCreatingCase(false)
+      }
+      return
+    }
+
     setCreatingCase(true)
     setCreateError(null)
     try {

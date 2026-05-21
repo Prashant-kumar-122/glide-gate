@@ -199,11 +199,12 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
                 clientData={collectedData?.client_data ?? {}}
                 schema={schemaData?.fields ?? []}
                 isLoading={schemaLoading || collectedLoading}
+                readOnly={summary?.current_stage === 'KYC'}
               />
             )}
 
             {activeTab === 'documents' && (
-              <ClientDocumentHub caseId={caseId} />
+              <ClientDocumentHub caseId={caseId} readOnly={summary?.current_stage === 'KYC'} />
             )}
           </div>
         </div>

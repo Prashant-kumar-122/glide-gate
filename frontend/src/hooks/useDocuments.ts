@@ -213,6 +213,17 @@ export function useInitiateCase() {
   })
 }
 
+export function useUpdateCaseProducts(caseId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (selected_products: string[]) =>
+      api.patch(`/cases/${caseId}/products`, { selected_products }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.cases })
+    },
+  })
+}
+
 // Refresh validation result in the document cache
 export function applyValidationResult(
   qc: ReturnType<typeof useQueryClient>,
