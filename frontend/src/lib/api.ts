@@ -305,3 +305,16 @@ export interface CreateCheckpointRuleRequest {
   required_documents?: string[]
   reason_template?: string
 }
+
+// ── Document AI extraction ────────────────────────────────────────────────────
+
+export interface AnalyseDocumentsResponse {
+  extracted_fields: OcrField[]
+  documents_analysed: number
+  extraction_quality: number
+}
+
+export async function analyseDocuments(caseId: string): Promise<AnalyseDocumentsResponse> {
+  const { data } = await api.post<AnalyseDocumentsResponse>(`/cases/${caseId}/analyse-documents`)
+  return data
+}

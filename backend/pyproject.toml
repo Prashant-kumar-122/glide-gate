@@ -36,6 +36,7 @@ httpx = "^0.28.0"
 python-multipart = "^0.0.12"
 pillow = "^11.0.0"
 aiofiles = "^24.1.0"
+pypdf = "^5.0.0"
 
 # Auth
 python-jose = { version = "^3.3.0", extras = ["cryptography"] }

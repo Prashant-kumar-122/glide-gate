@@ -21,6 +21,7 @@ from app.models.cases import OnboardingCase
 from app.models.documents import Document
 from app.services.document.document_upload_service import document_upload_service
 from app.services.document.document_storage_adapter import storage_adapter
+from app.services.document.ai_extraction_service import ai_extraction_service
 from app.services.validation.validation_orchestrator import run_validate_in_background
 
 router = APIRouter(tags=["documents"])
@@ -135,6 +136,18 @@ class DiffOut(BaseModel):
     @property
     def computed_at(self) -> str | None:
         return self.diff_result.get("computed_at")
+
+
+class ExtractedFieldOut(BaseModel):
+    key: str
+    value: str
+    confidence: float
+
+
+class AnalyseDocumentsOut(BaseModel):
+    extracted_fields: list[ExtractedFieldOut]
+    documents_analysed: int
+    extraction_quality: float
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -373,4 +386,46 @@ async def get_document_diff(
         version=doc.version,
         parent_doc_id=doc.parent_doc_id,
         diff_result=doc.diff_result,
+    )
+
+
+@router.post(
+    "/cases/{case_id}/analyse-documents",
+    response_model=AnalyseDocumentsOut,
+    tags=["documents"],
+)
+async def analyse_documents(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+) -> AnalyseDocumentsOut:
+    """Use a local vision LLM to extract questionnaire field values from uploaded documents."""
+    case_row = await db.execute(
+        select(OnboardingCase.client_id).where(OnboardingCase.id == case_id)
+    )
+    client_id = case_row.scalar_one_or_none()
+    if client_id is None:
+        raise NotFoundError("OnboardingCase", str(case_id))
+    if user.get("role") == "client" and str(client_id) != user.get("sub"):
+        raise NotFoundError("OnboardingCase", str(case_id))
+
+    raw_fields = await ai_extraction_service.extract(case_id, db)
+
+    extracted = [
+        ExtractedFieldOut(key=f["key"], value=f["value"], confidence=f["confidence"])
+        for f in raw_fields
+    ]
+    quality = (
+        sum(f.confidence for f in extracted) / len(extracted) if extracted else 0.0
+    )
+
+    doc_result = await db.execute(
+        select(Document.id).where(Document.case_id == case_id).where(Document.storage_path.isnot(None))
+    )
+    documents_analysed = len(doc_result.scalars().all())
+
+    return AnalyseDocumentsOut(
+        extracted_fields=extracted,
+        documents_analysed=documents_analysed,
+        extraction_quality=round(quality, 3),
     )
