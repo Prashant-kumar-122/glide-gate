@@ -271,11 +271,11 @@ export default function OnboardingFormView({
     return (
       <div className="space-y-3 p-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="animate-pulse rounded-xl border border-gray-200 bg-white p-4">
-            <div className="mb-3 h-4 w-32 rounded bg-gray-200" />
+          <div key={i} className="animate-pulse rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-3 h-4 w-32 rounded bg-gray-200 dark:bg-gray-700" />
             <div className="space-y-2">
-              <div className="h-8 rounded-lg bg-gray-100" />
-              <div className="h-8 rounded-lg bg-gray-100" />
+              <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-700" />
+              <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-700" />
             </div>
           </div>
         ))}
@@ -287,11 +287,11 @@ export default function OnboardingFormView({
   if (orderedSections.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <div className="rounded-full bg-blue-50 p-4">
+        <div className="rounded-full bg-blue-50 p-4 dark:bg-blue-950">
           <ClipboardList className="h-7 w-7 text-blue-400" />
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-700">Your answers will appear here</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Your answers will appear here</p>
           <p className="mt-1 text-xs text-gray-400">
             As you chat with the assistant, your responses are captured in this form
           </p>
@@ -304,7 +304,7 @@ export default function OnboardingFormView({
   return (
     <div className="flex h-full flex-col">
       {/* Summary bar */}
-      <div className="shrink-0 border-b border-gray-100 px-4 py-2.5">
+      <div className="shrink-0 border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-semibold text-blue-700">{totalAnswered}</span>
           <span className="text-xs text-gray-400">
@@ -320,15 +320,15 @@ export default function OnboardingFormView({
           return (
             <div
               key={sectionKey}
-              className="overflow-hidden rounded-xl border border-gray-200 bg-white"
+              className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
             >
-              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2">
+              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-700/50">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {sectionTitle(sectionKey)}
                 </h3>
               </div>
 
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-50 dark:divide-gray-700">
                 {fields.map(({ question_key, label }) => {
                   const isEditing = editingKey === question_key
                   const item = schemaMap.get(question_key)
@@ -344,7 +344,7 @@ export default function OnboardingFormView({
                           <button
                             onClick={() => startEdit(question_key)}
                             title={`Correct ${label}`}
-                            className="invisible group-hover:visible flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-500 hover:bg-blue-50 transition-colors"
+                            className="invisible group-hover:visible flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-blue-500 hover:bg-blue-50 transition-colors dark:hover:bg-blue-950"
                           >
                             <Pencil className="h-2.5 w-2.5" />
                             Correct
@@ -393,7 +393,7 @@ export default function OnboardingFormView({
                           <div className="flex justify-end gap-1.5">
                             <button
                               onClick={cancelEdit}
-                              className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+                              className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
                             >
                               <X className="h-3 w-3" />
                               Cancel
@@ -410,11 +410,11 @@ export default function OnboardingFormView({
                         </div>
                       ) : (
                         <div className={[
-                          'rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5',
-                          isSignature(question_key) ? 'bg-white' : '',
+                          'rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-700',
+                          isSignature(question_key) ? 'bg-white dark:bg-gray-800' : '',
                         ].join(' ')}>
                           <p
-                            className="break-words text-gray-800"
+                            className="break-words text-gray-800 dark:text-gray-100"
                             style={isSignature(question_key)
                               ? { fontFamily: "'Dancing Script', cursive", fontSize: '1.25rem', lineHeight: '1.6', color: '#1e3a5f' }
                               : { fontSize: '0.875rem' }

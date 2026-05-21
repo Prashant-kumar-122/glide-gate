@@ -41,7 +41,7 @@ export default function StatusEditor({
 
   return (
     <div className="flex flex-col gap-3">
-      <h4 className="text-sm font-semibold text-gray-800">Status</h4>
+      <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Status</h4>
 
       <div className="flex items-center gap-2">
         <StatusBadge status={currentStatus} size="md" />
@@ -59,7 +59,7 @@ export default function StatusEditor({
                 key={s}
                 onClick={() => handleSelect(s)}
                 disabled={isUpdating}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-blue-600 dark:hover:bg-blue-950 dark:hover:text-blue-300"
               >
                 <ChevronDown className="h-3 w-3" />
                 {DOC_STATUS_LABEL[s]}

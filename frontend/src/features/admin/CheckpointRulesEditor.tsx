@@ -9,9 +9,9 @@ import {
 import type { CreateCheckpointRuleRequest } from '@/lib/api'
 
 const ACTION_COLORS: Record<string, string> = {
-  ESCALATE: 'bg-red-50 text-red-700 ring-red-200',
-  ENHANCED_DD: 'bg-amber-50 text-amber-700 ring-amber-200',
-  REQUIRE_DOCUMENTS: 'bg-blue-50 text-blue-700 ring-blue-200',
+  ESCALATE: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-950 dark:text-red-300 dark:ring-red-800',
+  ENHANCED_DD: 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-800',
+  REQUIRE_DOCUMENTS: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-800',
 }
 
 const ACTION_LABEL: Record<string, string> = {
@@ -84,7 +84,7 @@ export default function CheckpointRulesEditor() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Checkpoint Rules</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Checkpoint Rules</h3>
           <p className="mt-0.5 text-xs text-gray-500">
             Rules evaluated across 4 dimensions during KYC. Built-in rules cannot be deleted.
           </p>
@@ -92,7 +92,7 @@ export default function CheckpointRulesEditor() {
         <button
           onClick={handleReset}
           disabled={resetRules.isPending}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
         >
           {resetRules.isPending ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -104,7 +104,7 @@ export default function CheckpointRulesEditor() {
       </div>
 
       {/* Rules list */}
-      <div className="overflow-hidden rounded-xl border border-gray-200">
+      <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
         {isLoading ? (
           <div className="flex items-center justify-center py-8 text-xs text-gray-400">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -113,16 +113,15 @@ export default function CheckpointRulesEditor() {
         ) : (
           <>
             {/* ── Mobile: card per rule (< md) ─────────────────────────────── */}
-            <div className="divide-y divide-gray-100 md:hidden">
+            <div className="divide-y divide-gray-100 md:hidden dark:divide-gray-700">
               {ruleList.length === 0 && (
                 <p className="py-8 text-center text-xs text-gray-400">No rules defined.</p>
               )}
               {ruleList.map((rule) => (
                 <div key={rule.rule_id} className="p-4">
-                  {/* Top row: description + delete */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium leading-snug text-gray-800">
+                      <p className="text-xs font-medium leading-snug text-gray-800 dark:text-gray-100">
                         {rule.description}
                       </p>
                       {rule.required_documents.length > 0 && (
@@ -134,19 +133,18 @@ export default function CheckpointRulesEditor() {
                     <button
                       onClick={() => handleDelete(rule.rule_id)}
                       disabled={rule.is_builtin || deleteRule.isPending}
-                      className="shrink-0 rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="shrink-0 rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-red-950"
                       aria-label="Delete rule"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
 
-                  {/* Second row: action badge + source */}
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     <span
                       className={[
                         'rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
-                        ACTION_COLORS[rule.action] ?? 'bg-gray-50 text-gray-600 ring-gray-200',
+                        ACTION_COLORS[rule.action] ?? 'bg-gray-50 text-gray-600 ring-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700',
                       ].join(' ')}
                     >
                       {ACTION_LABEL[rule.action] ?? rule.action}
@@ -156,24 +154,23 @@ export default function CheckpointRulesEditor() {
                         <Shield className="h-3 w-3" /> Built-in
                       </span>
                     ) : (
-                      <span className="text-[10px] text-indigo-600">Custom</span>
+                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400">Custom</span>
                     )}
                   </div>
 
-                  {/* Third row: dimension chips */}
                   {(rule.risk_level || rule.product_type || rule.account_value_band || rule.jurisdiction) ? (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {rule.risk_level && (
-                        <DimChip label="Risk" value={rule.risk_level} color="text-red-600 bg-red-50" />
+                        <DimChip label="Risk" value={rule.risk_level} color="text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-400" />
                       )}
                       {rule.product_type && (
-                        <DimChip label="Product" value={rule.product_type} color="text-purple-600 bg-purple-50" />
+                        <DimChip label="Product" value={rule.product_type} color="text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400" />
                       )}
                       {rule.account_value_band && (
-                        <DimChip label="Band" value={rule.account_value_band} color="text-blue-600 bg-blue-50" />
+                        <DimChip label="Band" value={rule.account_value_band} color="text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400" />
                       )}
                       {rule.jurisdiction && (
-                        <DimChip label="Juris." value={rule.jurisdiction} color="text-teal-600 bg-teal-50" />
+                        <DimChip label="Juris." value={rule.jurisdiction} color="text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-400" />
                       )}
                     </div>
                   ) : (
@@ -186,7 +183,7 @@ export default function CheckpointRulesEditor() {
             {/* ── Desktop: scrollable table (md+) ──────────────────────────── */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[600px] text-xs">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
                       Description
@@ -203,11 +200,11 @@ export default function CheckpointRulesEditor() {
                     <th className="w-10 px-4 py-2.5" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {ruleList.map((rule) => (
-                    <tr key={rule.rule_id} className="hover:bg-gray-50">
+                    <tr key={rule.rule_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="max-w-xs px-4 py-3">
-                        <p className="font-medium text-gray-800">{rule.description}</p>
+                        <p className="font-medium text-gray-800 dark:text-gray-100">{rule.description}</p>
                         {rule.required_documents.length > 0 && (
                           <p className="mt-0.5 text-[10px] text-gray-400">
                             Docs: {rule.required_documents.join(', ')}
@@ -218,7 +215,7 @@ export default function CheckpointRulesEditor() {
                         <span
                           className={[
                             'rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1',
-                            ACTION_COLORS[rule.action] ?? 'bg-gray-50 text-gray-600 ring-gray-200',
+                            ACTION_COLORS[rule.action] ?? 'bg-gray-50 text-gray-600 ring-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700',
                           ].join(' ')}
                         >
                           {ACTION_LABEL[rule.action] ?? rule.action}
@@ -227,16 +224,16 @@ export default function CheckpointRulesEditor() {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {rule.risk_level && (
-                            <DimChip label="Risk" value={rule.risk_level} color="text-red-600 bg-red-50" />
+                            <DimChip label="Risk" value={rule.risk_level} color="text-red-600 bg-red-50 dark:bg-red-950 dark:text-red-400" />
                           )}
                           {rule.product_type && (
-                            <DimChip label="Product" value={rule.product_type} color="text-purple-600 bg-purple-50" />
+                            <DimChip label="Product" value={rule.product_type} color="text-purple-600 bg-purple-50 dark:bg-purple-950 dark:text-purple-400" />
                           )}
                           {rule.account_value_band && (
-                            <DimChip label="Band" value={rule.account_value_band} color="text-blue-600 bg-blue-50" />
+                            <DimChip label="Band" value={rule.account_value_band} color="text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400" />
                           )}
                           {rule.jurisdiction && (
-                            <DimChip label="Juris." value={rule.jurisdiction} color="text-teal-600 bg-teal-50" />
+                            <DimChip label="Juris." value={rule.jurisdiction} color="text-teal-600 bg-teal-50 dark:bg-teal-950 dark:text-teal-400" />
                           )}
                           {!rule.risk_level && !rule.product_type && !rule.account_value_band && !rule.jurisdiction && (
                             <span className="text-[10px] text-gray-400">Any</span>
@@ -249,14 +246,14 @@ export default function CheckpointRulesEditor() {
                             <Shield className="h-3 w-3" /> Built-in
                           </span>
                         ) : (
-                          <span className="text-[10px] text-indigo-600">Custom</span>
+                          <span className="text-[10px] text-indigo-600 dark:text-indigo-400">Custom</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleDelete(rule.rule_id)}
                           disabled={rule.is_builtin || deleteRule.isPending}
-                          className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
+                          className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-red-950"
                           aria-label="Delete rule"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -273,11 +270,11 @@ export default function CheckpointRulesEditor() {
 
       {/* Add rule form */}
       {showAdd ? (
-        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <p className="mb-3 text-xs font-semibold text-blue-700">New Checkpoint Rule</p>
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+          <p className="mb-3 text-xs font-semibold text-blue-700 dark:text-blue-300">New Checkpoint Rule</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="col-span-1 space-y-1 sm:col-span-2">
-              <label className="text-[10px] font-medium text-gray-600">
+              <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">
                 Description <span className="text-red-400">*</span>
               </label>
               <input
@@ -285,12 +282,12 @@ export default function CheckpointRulesEditor() {
                 value={form.description}
                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                 placeholder="Short explanation of when this rule triggers"
-                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400"
+                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-600">Action</label>
+              <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Action</label>
               <select
                 value={form.action}
                 onChange={(e) =>
@@ -299,7 +296,7 @@ export default function CheckpointRulesEditor() {
                     action: e.target.value as CreateCheckpointRuleRequest['action'],
                   }))
                 }
-                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               >
                 {ACTIONS.map((a) => (
                   <option key={a} value={a}>{ACTION_LABEL[a]}</option>
@@ -308,11 +305,11 @@ export default function CheckpointRulesEditor() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-600">Risk Level</label>
+              <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Risk Level</label>
               <select
                 value={form.risk_level ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, risk_level: e.target.value || null }))}
-                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               >
                 <option value="">Any</option>
                 {RISK_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -320,24 +317,24 @@ export default function CheckpointRulesEditor() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-600">Product Type</label>
+              <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Product Type</label>
               <input
                 type="text"
                 value={form.product_type ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, product_type: e.target.value || null }))}
                 placeholder="e.g. cash_account"
-                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400"
+                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-600">Account Value Band</label>
+              <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Account Value Band</label>
               <select
                 value={form.account_value_band ?? ''}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, account_value_band: e.target.value || null }))
                 }
-                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               >
                 <option value="">Any</option>
                 {ACCOUNT_BANDS.map((b) => <option key={b} value={b}>{b}</option>)}
@@ -345,7 +342,7 @@ export default function CheckpointRulesEditor() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-gray-600">Jurisdiction</label>
+              <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Jurisdiction</label>
               <input
                 type="text"
                 value={form.jurisdiction ?? ''}
@@ -353,12 +350,12 @@ export default function CheckpointRulesEditor() {
                   setForm((p) => ({ ...p, jurisdiction: e.target.value || null }))
                 }
                 placeholder="e.g. iran"
-                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400"
+                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               />
             </div>
 
             <div className="col-span-1 space-y-1 sm:col-span-2">
-              <label className="text-[10px] font-medium text-gray-600">
+              <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">
                 Required Documents{' '}
                 <span className="text-gray-400">(comma-separated)</span>
               </label>
@@ -367,13 +364,13 @@ export default function CheckpointRulesEditor() {
                 value={docsInput}
                 onChange={(e) => setDocsInput(e.target.value)}
                 placeholder="e.g. source_of_wealth_declaration, bank_statement"
-                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400"
+                className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               />
             </div>
           </div>
 
           {createRule.isError && (
-            <p className="mt-2 text-[11px] text-red-600">
+            <p className="mt-2 text-[11px] text-red-600 dark:text-red-400">
               Failed to create rule. Please try again.
             </p>
           )}
@@ -389,7 +386,7 @@ export default function CheckpointRulesEditor() {
             </button>
             <button
               onClick={() => { setShowAdd(false); setForm(EMPTY_FORM); setDocsInput('') }}
-              className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
+              className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Cancel
             </button>
@@ -398,7 +395,7 @@ export default function CheckpointRulesEditor() {
       ) : (
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-xs font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600"
+          className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2.5 text-xs font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 dark:border-gray-600 dark:text-gray-400 dark:hover:border-blue-500 dark:hover:text-blue-400"
         >
           <Plus className="h-3.5 w-3.5" />
           Add Checkpoint Rule

@@ -63,11 +63,11 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
 
   if (phase === 'analysing') {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 rounded-2xl bg-violet-50 border border-violet-200">
+      <div className="flex flex-col items-center gap-4 py-16 rounded-2xl bg-violet-50 border border-violet-200 dark:bg-violet-950 dark:border-violet-800">
         <div className="h-10 w-10 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
         <div className="text-center">
-          <p className="font-semibold text-violet-800 text-sm">AI is reading your documents…</p>
-          <p className="text-xs text-violet-500 mt-1">
+          <p className="font-semibold text-violet-800 text-sm dark:text-violet-200">AI is reading your documents…</p>
+          <p className="text-xs text-violet-500 mt-1 dark:text-violet-400">
             Extracting fields from {uploadedCount} document{uploadedCount !== 1 ? 's' : ''}
           </p>
         </div>
@@ -78,10 +78,10 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
   if (phase === 'done') {
     return (
       <div className="space-y-4">
-        <div className="flex items-start gap-3 rounded-xl bg-violet-50 border border-violet-200 px-4 py-4">
+        <div className="flex items-start gap-3 rounded-xl bg-violet-50 border border-violet-200 px-4 py-4 dark:bg-violet-950 dark:border-violet-800">
           <CheckCircle className="w-5 h-5 text-violet-500 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-violet-800">Extraction complete</p>
+            <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">Extraction complete</p>
             {prefillCount > 0 ? (
               <p className="text-xs text-violet-600 mt-0.5">
                 {prefillCount} field{prefillCount !== 1 ? 's' : ''} pre-filled from your documents.
@@ -101,17 +101,17 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-bold text-gray-900">Upload Documents</h3>
-        <p className="text-sm text-gray-500 mt-1">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Upload Documents</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Upload your KYC documents. Our AI will read them and pre-fill your application — saving
           you time on the next steps.
         </p>
       </div>
 
       {error && (
-        <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+        <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 dark:bg-amber-950 dark:border-amber-800">
           <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-700">{error}</p>
+          <p className="text-xs text-amber-700 dark:text-amber-300">{error}</p>
         </div>
       )}
 
@@ -126,8 +126,8 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
               className={[
                 'cursor-pointer block rounded-xl border-2 border-dashed p-5 transition-colors',
                 isUploaded
-                  ? 'border-emerald-300 bg-emerald-50/60'
-                  : 'border-gray-300 bg-white hover:border-blue-400',
+                  ? 'border-emerald-300 bg-emerald-50/60 dark:border-emerald-700 dark:bg-emerald-950/60'
+                  : 'border-gray-300 bg-white hover:border-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-blue-500',
               ].join(' ')}
             >
               <input
@@ -151,7 +151,7 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
               ) : (
                 <div className="flex flex-col items-center gap-2 text-center text-gray-400">
                   <Upload className="w-6 h-6" />
-                  <p className="text-xs font-semibold text-gray-600">{cat.label}</p>
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">{cat.label}</p>
                   <p className="text-xs text-gray-400">{cat.hint}</p>
                   <p className="text-xs text-gray-300 mt-1">PDF, JPG, PNG</p>
                 </div>

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, Link } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, Sun, Moon } from 'lucide-react'
 import AdvisorWorkspace from '@/routes/AdvisorWorkspace'
 import ClientPortal from '@/routes/ClientPortal'
 import ContactCentre from '@/routes/ContactCentre'
@@ -12,6 +12,7 @@ import Profile from '@/routes/Profile'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import UserMenu from '@/features/auth/UserMenu'
 import { useAuthStore } from '@/store/authStore'
+import { useThemeStore } from '@/store/themeStore'
 
 const NAV_LINKS: { to: string; label: string; roles: string[] }[] = [
   { to: '/', label: 'Advisor Workspace', roles: ['advisor'] },
@@ -22,6 +23,7 @@ const NAV_LINKS: { to: string; label: string; roles: string[] }[] = [
 
 function NavBar() {
   const { user, isAuthenticated } = useAuthStore()
+  const { theme, toggleTheme } = useThemeStore()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const visibleLinks = isAuthenticated && user
@@ -41,6 +43,15 @@ function NavBar() {
 
       {/* Spacer pushes right-side items to the end */}
       <div className="flex-1" />
+
+      {/* Theme toggle */}
+      <button
+        onClick={toggleTheme}
+        className="mr-2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
+        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      </button>
 
       {/* User menu — always visible */}
       {isAuthenticated && <UserMenu />}
@@ -77,8 +88,14 @@ function NavBar() {
 }
 
 export default function App() {
+  const theme = useThemeStore((s) => s.theme)
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+  }, [theme])
+
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950">
       <NavBar />
       <main className="flex flex-1 flex-col">
         <Routes>

@@ -9,10 +9,10 @@ const PRODUCT_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'text-gray-400',
-  IN_PROGRESS: 'text-blue-600',
-  COMPLETE: 'text-green-600',
-  FAILED: 'text-red-600',
-  ESCALATED: 'text-amber-600',
+  IN_PROGRESS: 'text-blue-600 dark:text-blue-400',
+  COMPLETE: 'text-green-600 dark:text-green-400',
+  FAILED: 'text-red-600 dark:text-red-400',
+  ESCALATED: 'text-amber-600 dark:text-amber-400',
 }
 
 function StatusIndicator({ status }: { status: string }) {
@@ -34,11 +34,11 @@ function ProductTrackCard({ track }: ProductTrackCardProps) {
   const statusColor = STATUS_COLORS[track.status] ?? 'text-gray-500'
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <StatusIndicator status={track.status} />
-          <span className="text-sm font-semibold text-gray-800">{label}</span>
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{label}</span>
         </div>
         <span className={['text-xs font-medium', statusColor].join(' ')}>{track.status}</span>
       </div>
@@ -57,11 +57,11 @@ function ProductTrackCard({ track }: ProductTrackCardProps) {
         }
       />
 
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         <span>
           {track.steps_completed}/{track.steps_total} steps
         </span>
-        <span className="tabular-nums font-semibold text-gray-700">{track.progress}%</span>
+        <span className="tabular-nums font-semibold text-gray-700 dark:text-gray-200">{track.progress}%</span>
       </div>
     </div>
   )
@@ -77,7 +77,7 @@ export default function ParallelProductTracks({ tracks, isLoading }: ParallelPro
     return (
       <div className="grid grid-cols-2 gap-4">
         {[1, 2].map((i) => (
-          <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-200" />
+          <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
         ))}
       </div>
     )
@@ -85,8 +85,8 @@ export default function ParallelProductTracks({ tracks, isLoading }: ParallelPro
 
   if (!tracks || tracks.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 py-6 text-center">
-        <Package className="mx-auto h-6 w-6 text-gray-300" />
+      <div className="rounded-xl border border-dashed border-gray-200 py-6 text-center dark:border-gray-700">
+        <Package className="mx-auto h-6 w-6 text-gray-300 dark:text-gray-600" />
         <p className="mt-2 text-xs text-gray-400">No products selected</p>
       </div>
     )

@@ -76,34 +76,29 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
 
   return (
     <>
-      {/* Backdrop — covers whole screen on mobile, sits behind the drawer panel */}
       <div
         className="fixed inset-0 z-30 bg-black/30 lg:hidden"
         onClick={() => setDrawerOpen(false)}
         aria-hidden="true"
       />
 
-      {/* Drawer panel
-          Mobile: fixed full-width overlay sliding in from the right
-          sm+:    fixed 384px panel from right edge
-          lg+:    static inline sidebar in the flex row */}
       <aside
         className={[
-          'fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-gray-200 bg-white shadow-xl',
+          'fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800',
           'sm:w-96',
           'lg:relative lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0',
         ].join(' ')}
         aria-label="Document detail panel"
       >
         {/* Drawer header */}
-        <div className="flex items-start justify-between border-b border-gray-200 px-4 py-3">
+        <div className="flex items-start justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
           <div className="flex items-start gap-2">
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
             <div className="min-w-0">
               {docLoading ? (
-                <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
               ) : (
-                <p className="truncate text-sm font-semibold text-gray-900">
+                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {doc?.name ?? 'Document'}
                 </p>
               )}
@@ -117,7 +112,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
           </div>
           <button
             onClick={() => setDrawerOpen(false)}
-            className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600"
+            className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
             aria-label="Close document details"
           >
             <X className="h-4 w-4" />
@@ -125,7 +120,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -134,17 +129,17 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
                 'flex-1 px-1 py-2.5 text-[11px] font-medium transition-colors sm:text-xs',
                 activeTab === t.key
                   ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700',
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
               ].join(' ')}
             >
               {t.label}
               {t.key === 'validation' && doc?.has_validation_result && (
-                <span className="ml-1 rounded-full bg-indigo-100 px-1 py-0.5 text-[9px] font-bold text-indigo-700">
+                <span className="ml-1 rounded-full bg-indigo-100 px-1 py-0.5 text-[9px] font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
                   ✓
                 </span>
               )}
               {t.key === 'diff' && doc?.has_diff && (
-                <span className="ml-1 rounded-full bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700">
+                <span className="ml-1 rounded-full bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900 dark:text-amber-300">
                   Δ
                 </span>
               )}
@@ -164,7 +159,6 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
             <>
               {activeTab === 'overview' && (
                 <div className="flex flex-col gap-5">
-                  {/* Meta */}
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">Status</span>
@@ -172,17 +166,17 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">Category</span>
-                      <span className="text-xs font-medium text-gray-700 capitalize">
+                      <span className="text-xs font-medium text-gray-700 capitalize dark:text-gray-200">
                         {doc.category.replace(/_/g, ' ')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">Version</span>
-                      <span className="text-xs font-medium text-gray-700">v{doc.version}</span>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-200">v{doc.version}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">Uploaded</span>
-                      <span className="text-xs text-gray-700">
+                      <span className="text-xs text-gray-700 dark:text-gray-200">
                         {new Date(doc.created_at).toLocaleString()}
                       </span>
                     </div>
@@ -200,7 +194,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
                   <button
                     onClick={handleDownload}
                     disabled={downloading}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                   >
                     {downloading
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -210,7 +204,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
                   </button>
 
                   {/* Status editor */}
-                  <div className="border-t border-gray-100 pt-4">
+                  <div className="border-t border-gray-100 pt-4 dark:border-gray-700">
                     <StatusEditor
                       currentStatus={doc.status}
                       onStatusChange={handleStatusChange}

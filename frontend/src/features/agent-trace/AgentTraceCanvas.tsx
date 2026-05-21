@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css'
 import { List, X } from 'lucide-react'
 
 import { useTraceStore } from '@/store/traceStore'
+import { useThemeStore } from '@/store/themeStore'
 import { AgentNode } from './AgentNode'
 import { AgentDetailPopover } from './AgentDetailPopover'
 import { MessageLog } from './MessageLog'
@@ -57,6 +58,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
   const setSelectedAgent = useTraceStore((s) => s.setSelectedAgent)
   const setNodeState = useTraceStore((s) => s.setNodeState)
   const initMessages = useTraceStore((s) => s.initMessages)
+  const theme = useThemeStore((s) => s.theme)
 
   const { data: traceData } = useAgentTrace(activeCaseId)
 
@@ -101,7 +103,6 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
       nodeIds.forEach((n) => setNodeState(n, state))
     }
 
-    // Populate the A2A message log from historical tasks
     const historicalMessages = traceData.tasks
       .slice()
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
@@ -162,6 +163,8 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
     [nodeStates],
   )
 
+  const bgColor = theme === 'dark' ? '#374151' : '#e5e7eb'
+
   return (
     <div className="flex h-full">
       {/* ── React Flow canvas ─────────────────────────────────────────────── */}
@@ -170,7 +173,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
         {/* Mobile: "Log" button — top-right floating */}
         <button
           onClick={() => setShowPanel(true)}
-          className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-[11px] font-medium text-gray-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-white lg:hidden"
+          className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-[11px] font-medium text-gray-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-white lg:hidden dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-400 dark:hover:bg-gray-800"
           aria-label="Open message log"
         >
           <List className="h-3.5 w-3.5" />
@@ -178,7 +181,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
         </button>
 
         {/* Status legend — bottom-left floating card */}
-        <div className="absolute bottom-16 left-3 z-10 flex flex-col gap-1 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-[9px] shadow-sm backdrop-blur-sm">
+        <div className="absolute bottom-16 left-3 z-10 flex flex-col gap-1 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-[9px] shadow-sm backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/90">
           {(
             [
               { color: 'bg-gray-300', label: 'Idle' },
@@ -189,7 +192,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
           ).map(({ color, label }) => (
             <div key={label} className="flex items-center gap-1.5">
               <span className={['h-2 w-2 rounded-full', color].join(' ')} />
-              <span className="text-gray-600">{label}</span>
+              <span className="text-gray-600 dark:text-gray-400">{label}</span>
             </div>
           ))}
         </div>
@@ -202,9 +205,9 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
           nodeTypes={NODE_TYPES}
           fitView
           fitViewOptions={{ padding: 0.25 }}
-          className="bg-gray-50"
+          className={theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}
         >
-          <Background color="#e5e7eb" gap={16} />
+          <Background color={bgColor} gap={16} />
           <Controls />
           <MiniMap nodeColor={miniMapNodeColor} className="hidden sm:block !bottom-4 !right-4" />
         </ReactFlow>
@@ -221,13 +224,9 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
         />
       )}
 
-      {/* Panel:
-          Mobile  — fixed overlay from right, toggled by showPanel
-          sm+     — fixed 320px overlay
-          lg+     — static inline sidebar, always visible */}
       <div
         className={[
-          'fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-gray-200 bg-white shadow-xl',
+          'fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800',
           'transition-transform duration-300 ease-in-out sm:w-80',
           showPanel ? 'translate-x-0' : 'translate-x-full',
           'lg:relative lg:inset-auto lg:z-auto lg:w-80 lg:translate-x-0 lg:shadow-none lg:transition-none',
@@ -235,11 +234,11 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
         aria-label="Agent log panel"
       >
         {/* Mobile panel header with close button */}
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-2.5 lg:hidden">
-          <p className="text-xs font-semibold text-gray-700">Agent Log</p>
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-2.5 lg:hidden dark:border-gray-700">
+          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Agent Log</p>
           <button
             onClick={() => setShowPanel(false)}
-            className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600"
+            className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
             aria-label="Close agent log"
           >
             <X className="h-4 w-4" />
@@ -253,7 +252,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
             onClose={() => setSelectedAgent(null)}
           />
         ) : (
-          <div className="border-b border-gray-100 px-4 py-3">
+          <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
             <p className="text-[11px] text-gray-400">
               Click an agent node to inspect its tasks and current state.
             </p>

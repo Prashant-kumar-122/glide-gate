@@ -18,11 +18,14 @@ export default function StatusBadge({ status, size = 'md', showDot = true }: Sta
         colors.bg,
         colors.text,
         colors.ring,
+        colors.dark.bg,
+        colors.dark.text,
+        colors.dark.ring,
         sizeClass,
       ].join(' ')}
     >
       {showDot && (
-        <span className={['h-1.5 w-1.5 rounded-full', colors.dot].join(' ')} />
+        <span className={['h-1.5 w-1.5 rounded-full', colors.dot, colors.dark.dot].join(' ')} />
       )}
       {label}
     </span>

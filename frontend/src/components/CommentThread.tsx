@@ -30,13 +30,13 @@ function CommentBubble({ comment }: { comment: Comment }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-gray-700">{comment.authorName}</span>
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{comment.authorName}</span>
         <RoleBadge role={comment.authorRole} size="sm" />
         <span className="ml-auto text-[10px] text-gray-400">
           {new Date(comment.createdAt).toLocaleString()}
         </span>
       </div>
-      <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">{comment.body}</p>
+      <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-200">{comment.body}</p>
       <p className="text-[10px] text-gray-400">
         Visible to: {VISIBILITY_LABELS[comment.visibility]}
       </p>
@@ -71,20 +71,20 @@ export default function CommentThread({
       </div>
 
       {!readOnly && onAddComment && (
-        <div className="flex flex-col gap-2 border-t border-gray-100 pt-3">
+        <div className="flex flex-col gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add a comment…"
             rows={3}
-            className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-500"
           />
           <div className="flex items-center justify-between">
             {!hideVisibility && (
               <select
                 value={visibility}
                 onChange={(e) => setVisibility(e.target.value as Comment['visibility'])}
-                className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 focus:outline-none"
+                className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
               >
                 <option value="ALL">Everyone</option>
                 <option value="ADVISOR_ONLY">Advisor only</option>

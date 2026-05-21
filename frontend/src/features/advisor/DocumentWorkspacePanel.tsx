@@ -64,26 +64,26 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
     <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
       {/* Case progress header */}
       {(summaryLoading || summary) && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {summary?.client_name ?? '…'}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
                 Stage:{' '}
-                <span className="font-medium text-gray-700">
+                <span className="font-medium text-gray-700 dark:text-gray-200">
                   {summary?.current_stage ?? '…'}
                 </span>
                 {summary?.escalated && (
-                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900 dark:text-amber-300">
                     ESCALATED
                   </span>
                 )}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-gray-900 tabular-nums">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums dark:text-gray-100">
                 {summary?.overall_progress ?? 0}%
               </p>
               <p className="text-xs text-gray-400">overall</p>
@@ -114,7 +114,7 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
         {docsLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-gray-200" />
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
             ))}
           </div>
         ) : (
@@ -133,7 +133,7 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
                   defaultOpen={catDocs.length > 0}
                   badge={
                     catDocs.some((d) => d.status === 'NEEDS_REVISION') ? (
-                      <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
+                      <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900 dark:text-red-300">
                         Action needed
                       </span>
                     ) : undefined
@@ -159,7 +159,7 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
 
                     <div className="mt-2 px-1">
                       {catDocs[catDocs.length - 1]?.status === 'APPROVED' ? (
-                        <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
+                        <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
                           <span>✓</span>
                           <span>Document approved — no further uploads needed</span>
                         </div>

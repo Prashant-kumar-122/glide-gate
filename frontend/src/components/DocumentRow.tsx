@@ -41,14 +41,14 @@ export default function DocumentRow({ doc, caseId: _caseId }: DocumentRowProps) 
       className={[
         'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
         isActive
-          ? 'bg-blue-50 ring-1 ring-blue-200'
-          : 'hover:bg-gray-50',
+          ? 'bg-blue-50 ring-1 ring-blue-200 dark:bg-blue-950 dark:ring-blue-700'
+          : 'hover:bg-gray-50 dark:hover:bg-gray-700',
       ].join(' ')}
     >
       <StatusIcon status={doc.status} />
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-800">{doc.name}</p>
+        <p className="truncate text-sm font-medium text-gray-800 dark:text-gray-100">{doc.name}</p>
         <p className="text-xs text-gray-400">
           v{doc.version} &middot; {new Date(doc.updatedAt).toLocaleDateString()}
         </p>
@@ -56,17 +56,17 @@ export default function DocumentRow({ doc, caseId: _caseId }: DocumentRowProps) 
 
       <div className="flex shrink-0 items-center gap-1.5">
         {doc.hasDiff && (
-          <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-medium text-amber-700">
+          <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900 dark:text-amber-300">
             DIFF
           </span>
         )}
         {doc.hasValidationResult && (
-          <span className="rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-medium text-indigo-700">
+          <span className="rounded bg-indigo-100 px-1 py-0.5 text-[10px] font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
             AI
           </span>
         )}
         {(doc.commentCount ?? 0) > 0 && (
-          <span className="flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+          <span className="flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
             <MessageCircle className="h-2.5 w-2.5" />
             {doc.commentCount}
           </span>

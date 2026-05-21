@@ -15,13 +15,13 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {login.error && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
           {(login.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Login failed. Please check your credentials.'}
         </div>
       )}
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+        <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
         <input
           id="email"
           type="email"
@@ -29,12 +29,12 @@ export default function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="password" className="text-sm font-medium text-gray-700">Password</label>
+        <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
         <input
           id="password"
           type="password"
@@ -42,7 +42,7 @@ export default function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
         />
       </div>
 
@@ -54,9 +54,9 @@ export default function LoginForm() {
         {login.isPending ? 'Signing in…' : 'Sign in'}
       </button>
 
-      <p className="text-center text-sm text-gray-500">
+      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
         Don't have an account?{' '}
-        <Link to="/signup" className="font-medium text-blue-600 hover:underline">Sign up</Link>
+        <Link to="/signup" className="font-medium text-blue-600 hover:underline dark:text-blue-400">Sign up</Link>
       </p>
     </form>
   )

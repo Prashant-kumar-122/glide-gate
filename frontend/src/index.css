@@ -23,6 +23,10 @@
   *::after {
     box-sizing: border-box;
   }
+
+  .dark {
+    color-scheme: dark;
+  }
 }
 
 @layer utilities {

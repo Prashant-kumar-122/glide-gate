@@ -44,3 +44,6 @@ backend/uploads/
 
 # Poetry
 poetry.lock
+
+# Temp
+frontend-reference-project/

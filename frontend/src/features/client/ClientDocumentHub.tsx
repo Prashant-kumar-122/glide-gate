@@ -96,14 +96,14 @@ function AccordionItem({
   return (
     <div
       className={[
-        'rounded-xl border bg-white overflow-hidden transition-colors',
-        needsAction ? 'border-red-200' : allApproved ? 'border-green-200' : 'border-gray-200',
+        'rounded-xl border bg-white overflow-hidden transition-colors dark:bg-gray-800',
+        needsAction ? 'border-red-200 dark:border-red-800' : allApproved ? 'border-green-200 dark:border-green-800' : 'border-gray-200 dark:border-gray-700',
       ].join(' ')}
     >
       {/* Accordion header */}
       <button
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors dark:hover:bg-gray-700"
       >
         <div className="flex min-w-0 items-center gap-2.5">
           {allApproved ? (
@@ -114,7 +114,7 @@ function AccordionItem({
             <FolderOpen className="h-4 w-4 shrink-0 text-gray-400" />
           )}
           <div className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-gray-900">
+            <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
               {CATEGORY_LABELS[category] ?? category}
             </span>
             <span className="block truncate text-xs text-gray-400">
@@ -124,7 +124,7 @@ function AccordionItem({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {documents.length > 0 && (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {documents.length}
             </span>
           )}
@@ -139,7 +139,7 @@ function AccordionItem({
 
       {/* Accordion body */}
       {open && (
-        <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+        <div className="border-t border-gray-100 px-4 pb-4 pt-3 dark:border-gray-700">
           {/* Document list */}
           {documents.length > 0 && (
             <div className="mb-3 space-y-1">
@@ -147,18 +147,18 @@ function AccordionItem({
                 <div
                   key={doc.id}
                   onClick={() => onDocumentClick(doc)}
-                  className="group flex cursor-pointer items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 hover:bg-gray-100 transition-colors"
+                  className="group flex cursor-pointer items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
                 >
                   <div className="flex min-w-0 items-center gap-2">
                     <FileText className="h-3 w-3 shrink-0 text-gray-400" />
-                    <span className="truncate text-xs text-gray-700">{doc.name}</span>
+                    <span className="truncate text-xs text-gray-700 dark:text-gray-200">{doc.name}</span>
                     {doc.version > 1 && (
                       <span className="shrink-0 text-[10px] text-gray-400">v{doc.version}</span>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {(commentCountByDoc[doc.id] ?? 0) > 0 && (
-                      <span className="flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
+                      <span className="flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
                         <MessageCircle className="h-2.5 w-2.5" />
                         {commentCountByDoc[doc.id]}
                       </span>
@@ -172,7 +172,7 @@ function AccordionItem({
 
           {/* Upload zone */}
           {documents[documents.length - 1]?.status === 'APPROVED' ? (
-            <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700">
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
               <CheckCircle className="h-3.5 w-3.5 shrink-0" />
               <span>Document approved — no further uploads needed</span>
             </div>
@@ -195,8 +195,8 @@ function AccordionItem({
               className={[
                 'flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-3 text-center transition-colors',
                 dragging
-                  ? 'border-blue-400 bg-blue-50 cursor-copy'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer',
+                  ? 'border-blue-400 bg-blue-50 cursor-copy dark:border-blue-500 dark:bg-blue-950'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700',
                 isUploading ? 'cursor-not-allowed opacity-60' : '',
               ].join(' ')}
             >
@@ -206,7 +206,7 @@ function AccordionItem({
                 <Upload className={['h-3.5 w-3.5', dragging ? 'text-blue-500' : 'text-gray-400'].join(' ')} />
               )}
               <div>
-                <p className="text-xs font-medium text-gray-600">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
                   {isUploading ? 'Uploading…' : documents.length > 0 ? 'Upload new version' : 'Upload document'}
                 </p>
                 <p className="text-[10px] text-gray-400">PDF, Word, or image · drag & drop or click</p>
@@ -279,11 +279,11 @@ export default function ClientDocumentHub({ caseId }: ClientDocumentHubProps) {
   return (
     <div>
       {totalDocs > 0 && (
-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5">
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
           <FolderOpen className="h-4 w-4 text-gray-400" />
-          <p className="text-xs text-gray-600">
-            <span className="font-semibold text-gray-900">{approvedDocs}</span> of{' '}
-            <span className="font-semibold text-gray-900">{totalDocs}</span> document
+          <p className="text-xs text-gray-600 dark:text-gray-300">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{approvedDocs}</span> of{' '}
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{totalDocs}</span> document
             {totalDocs !== 1 ? 's' : ''} approved
           </p>
         </div>

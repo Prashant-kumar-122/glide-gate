@@ -40,12 +40,12 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
         'w-full rounded-xl px-3 py-3 text-left transition-all',
         isSelected
           ? 'bg-blue-600 text-white shadow-md'
-          : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200',
+          : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 dark:border-gray-600',
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className={['truncate text-sm font-semibold', isSelected ? 'text-white' : 'text-gray-900'].join(' ')}>
+          <p className={['truncate text-sm font-semibold', isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'].join(' ')}>
             {caseDisplayName(c)}
           </p>
           <p className={['mt-0.5 text-xs', isSelected ? 'text-blue-200' : 'text-gray-400'].join(' ')}>
@@ -99,20 +99,18 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
   return (
     <aside
       className={[
-        // Mobile: fixed slide-in drawer from the left edge
-        'fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-gray-200 bg-gray-50 shadow-xl',
+        'fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-gray-200 bg-gray-50 shadow-xl dark:border-gray-700 dark:bg-gray-900',
         'transition-transform duration-300 ease-in-out',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full',
-        // Desktop (lg+): reset to static sidebar in the normal flex flow
         'lg:relative lg:inset-auto lg:z-auto lg:w-64 lg:translate-x-0 lg:shadow-none lg:transition-none',
       ].join(' ')}
       aria-label="Cases sidebar"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <div className="flex items-center gap-2">
-          <Briefcase className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-semibold text-gray-700">Cases</span>
+          <Briefcase className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Cases</span>
         </div>
         <div className="flex items-center gap-2">
           <span title={socketConnected ? 'Live' : 'Disconnected'}>
@@ -122,11 +120,10 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
               <WifiOff className="h-4 w-4 text-gray-400" />
             )}
           </span>
-          {/* Close button — mobile only */}
           {onMobileClose && (
             <button
               onClick={onMobileClose}
-              className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600 lg:hidden"
+              className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300 lg:hidden"
               aria-label="Close cases panel"
             >
               <X className="h-4 w-4" />
@@ -140,13 +137,13 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
         {isLoading && (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl bg-gray-200" />
+              <div key={i} className="h-20 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
             ))}
           </div>
         )}
 
         {isError && (
-          <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600">
+          <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600 dark:bg-red-950 dark:text-red-400">
             Failed to load cases. Is the backend running?
           </p>
         )}
@@ -168,7 +165,7 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
 
       {/* Footer stats */}
       {cases && cases.length > 0 && (
-        <div className="border-t border-gray-200 px-4 py-2">
+        <div className="border-t border-gray-200 px-4 py-2 dark:border-gray-700">
           <p className="text-xs text-gray-400">
             {cases.length} active case{cases.length !== 1 ? 's' : ''}
           </p>

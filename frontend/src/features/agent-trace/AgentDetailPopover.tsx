@@ -4,7 +4,6 @@ import { AGENT_LABELS } from './agentPositions'
 import type { AgentId } from './agentPositions'
 import type { AgentTraceOut } from '@/lib/api'
 
-// Canvas node IDs for parallel product tracks map back to the A2A agent_type
 const CANVAS_TO_A2A: Record<string, string> = {
   product_onboarding_cash: 'product_onboarding',
   product_onboarding_retirement: 'product_onboarding',
@@ -18,10 +17,10 @@ const STATUS_ICON: Record<string, React.ReactElement> = {
 }
 
 const STATE_BADGE: Record<string, string> = {
-  idle: 'bg-gray-100 text-gray-600',
-  active: 'bg-blue-100 text-blue-700',
-  escalated: 'bg-amber-100 text-amber-700',
-  complete: 'bg-green-100 text-green-700',
+  idle: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  active: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  escalated: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+  complete: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
 }
 
 interface Props {
@@ -34,7 +33,6 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
   const nodeState = useTraceStore((s) => s.nodeStates[agentId] ?? 'idle')
   const label = AGENT_LABELS[agentId as AgentId] ?? agentId
 
-  // Canvas node IDs like product_onboarding_cash map to A2A agent_type product_onboarding
   const a2aId = CANVAS_TO_A2A[agentId] ?? agentId
   const agentInfo = traceData?.agents.find(
     (a) => a.agent_type === a2aId || a.agent_type === agentId || a.id === agentId,
@@ -49,11 +47,11 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
     .reverse()
 
   return (
-    <div className="border-b border-gray-200 p-4">
+    <div className="border-b border-gray-200 p-4 dark:border-gray-700">
       {/* Header */}
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900">{label}</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{label}</p>
           {agentInfo?.description && (
             <p className="truncate text-[10px] text-gray-400">{agentInfo.description}</p>
           )}
@@ -69,7 +67,7 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
           </span>
           <button
             onClick={onClose}
-            className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -84,10 +82,10 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
           </p>
           <ul className="max-h-48 space-y-1.5 overflow-y-auto">
             {recentTasks.map((task) => (
-              <li key={task.id} className="flex items-center gap-2 rounded-lg bg-gray-50 px-2 py-1.5">
+              <li key={task.id} className="flex items-center gap-2 rounded-lg bg-gray-50 px-2 py-1.5 dark:bg-gray-800">
                 {STATUS_ICON[task.status] ?? <Loader className="h-3.5 w-3.5 text-gray-400" />}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[10px] font-medium text-gray-700">
+                  <p className="truncate text-[10px] font-medium text-gray-700 dark:text-gray-200">
                     {task.task_type}
                   </p>
                   <p className="text-[9px] text-gray-400">
