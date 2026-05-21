@@ -37,6 +37,7 @@ _CATEGORY_TEMPLATES: dict[str, dict[str, Any]] = {
             "Nationality: INDIAN\nDate of Birth: 15 JAN 1985\n"
             "Place of Birth: MUMBAI, INDIA\nDate of Issue: 10 MAR 2020\n"
             "Date of Expiry: 09 MAR 2030\nPassport No: J8342910\n"
+            "Photo: Present\n"
         ),
         "fields": [
             ("full_name", "Aarav Kumar Mehta"),
@@ -45,6 +46,7 @@ _CATEGORY_TEMPLATES: dict[str, dict[str, Any]] = {
             ("document_number", "J8342910"),
             ("issue_date", "10 Mar 2020"),
             ("expiry_date", "09 Mar 2030"),
+            ("photo", "Present"),
         ],
     },
     "financial": {

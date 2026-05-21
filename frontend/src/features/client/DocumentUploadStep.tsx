@@ -1,10 +1,8 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle, Upload, Sparkles, AlertCircle } from 'lucide-react'
-import { useUploadDocument, useQuestionnaireSchema, qk } from '@/hooks/useDocuments'
+import { useUploadDocument, useQuestionnaireSchema } from '@/hooks/useDocuments'
 import { useDocumentPrefill } from '@/hooks/useDocumentPrefill'
-import type { DocumentOut } from '@/lib/api'
-import type { QuestionSchemaItem } from '@/hooks/useDocuments'
+import { analyseDocuments } from '@/lib/api'
 
 const UPLOAD_CATEGORIES = [
   { id: 'identity',   label: 'Identity Document',  hint: 'Passport, National ID, Driving Licence' },
@@ -21,10 +19,9 @@ interface Props {
 }
 
 export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props) {
-  const qc = useQueryClient()
   const uploadDocument = useUploadDocument(caseId)
   const { data: schemaData } = useQuestionnaireSchema(caseId)
-  const { prefill } = useDocumentPrefill(caseId)
+  const { prefillFromFields } = useDocumentPrefill(caseId)
 
   const [phase, setPhase] = useState<Phase>('upload')
   const [uploaded, setUploaded] = useState<Record<string, string>>({}) // category → filename
@@ -46,12 +43,9 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
     setPhase('analysing')
     setError(null)
     try {
-      // Give the backend OCR agent time to finish (simulated: 100–600 ms)
-      await new Promise((r) => setTimeout(r, 900))
-      await qc.invalidateQueries({ queryKey: qk.documents(caseId) })
-      const docs = qc.getQueryData<DocumentOut[]>(qk.documents(caseId)) ?? []
-      const schema: QuestionSchemaItem[] = schemaData?.fields ?? []
-      const { count } = await prefill(docs, schema)
+      const response = await analyseDocuments(caseId)
+      const schema = schemaData?.fields ?? []
+      const { count } = await prefillFromFields(response.extracted_fields, schema)
       setPrefillCount(count)
       setPhase('done')
       onAnalysed(count)
