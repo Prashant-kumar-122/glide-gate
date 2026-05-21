@@ -205,6 +205,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
           nodeTypes={NODE_TYPES}
           fitView
           fitViewOptions={{ padding: 0.25 }}
+          colorMode={theme === 'dark' ? 'dark' : 'light'}
           className={theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}
         >
           <Background color={bgColor} gap={16} />

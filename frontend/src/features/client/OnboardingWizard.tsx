@@ -281,7 +281,7 @@ function DatePickerField({
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0 dark:hover:bg-gray-700 dark:text-gray-400"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -297,7 +297,7 @@ function DatePickerField({
                       'px-2 py-1 rounded-lg text-sm font-semibold transition-colors',
                       mode === 'month'
                         ? 'bg-blue-600 text-white'
-                        : 'text-gray-800 hover:bg-gray-100',
+                        : 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700',
                     ].join(' ')}
                   >
                     {MONTH_NAMES[viewMonth]}
@@ -311,7 +311,7 @@ function DatePickerField({
                     'px-2 py-1 rounded-lg text-sm font-semibold transition-colors',
                     mode === 'year'
                       ? 'bg-blue-600 text-white'
-                      : 'text-gray-800 hover:bg-gray-100',
+                      : 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700',
                   ].join(' ')}
                 >
                   {viewYear}
@@ -322,7 +322,7 @@ function DatePickerField({
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0 dark:hover:bg-gray-700 dark:text-gray-400"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -341,7 +341,7 @@ function DatePickerField({
                       'py-2 rounded-xl text-sm font-medium transition-all',
                       viewMonth === i
                         ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-gray-700 hover:bg-gray-100',
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700',
                     ].join(' ')}
                   >
                     {m}
@@ -367,8 +367,8 @@ function DatePickerField({
                       y === viewYear
                         ? 'bg-blue-600 text-white shadow-sm'
                         : y === today.getFullYear()
-                        ? 'ring-1 ring-blue-400 text-blue-600'
-                        : 'text-gray-700 hover:bg-gray-100',
+                        ? 'ring-1 ring-blue-400 text-blue-600 dark:text-blue-400'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700',
                     ].join(' ')}
                   >
                     {y}
@@ -401,8 +401,8 @@ function DatePickerField({
                             : isToday && thisMonth
                             ? 'ring-2 ring-blue-400 text-blue-600 font-semibold'
                             : thisMonth
-                            ? 'text-gray-800 hover:bg-gray-100'
-                            : 'text-gray-300 hover:bg-gray-50',
+                            ? 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700'
+                            : 'text-gray-300 hover:bg-gray-50 dark:text-gray-600 dark:hover:bg-gray-700',
                         ].join(' ')}
                       >
                         {date.getDate()}
@@ -415,11 +415,11 @@ function DatePickerField({
 
             {/* ── Footer ── */}
             {mode === 'day' && (
-              <div className="mt-3 pt-2.5 border-t border-gray-100 flex justify-between items-center">
+              <div className="mt-3 pt-2.5 border-t border-gray-100 flex justify-between items-center dark:border-gray-700">
                 <button
                   type="button"
                   onClick={() => { onChange(''); setOpen(false) }}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-xs text-gray-400 hover:text-gray-600 transition-colors dark:hover:text-gray-300"
                 >
                   Clear
                 </button>
