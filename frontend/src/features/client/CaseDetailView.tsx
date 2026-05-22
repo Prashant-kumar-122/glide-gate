@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText, ClipboardList } from 'lucide-react'
-import { useCaseProgress, useQuestionnaireSchema, useCollectedFields } from '@/hooks/useDocuments'
+import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText, ClipboardList, BadgeCheck } from 'lucide-react'
+import { useCaseProgress, useQuestionnaireSchema, useCollectedFields, useAccount } from '@/hooks/useDocuments'
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
 import OnboardingFormView from '@/features/client/OnboardingFormView'
 
@@ -34,6 +34,7 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
   const { data: summary, isLoading } = useCaseProgress(caseId)
   const { data: schemaData, isLoading: schemaLoading } = useQuestionnaireSchema(caseId)
   const { data: collectedData, isLoading: collectedLoading } = useCollectedFields(caseId)
+  const { data: account } = useAccount(caseId, summary?.current_stage === 'COMPLETE')
 
   const activeStageIndex = STAGES.indexOf(
     (summary?.current_stage ?? 'INTAKE') as (typeof STAGES)[number],
@@ -170,6 +171,29 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
           </div>
         )}
 
+        {/* Account number banner */}
+        {account && (
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-800 dark:bg-emerald-950">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center shrink-0">
+                <BadgeCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Account Number</p>
+                <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100 tracking-wider font-mono">
+                  {account.account_number}
+                </p>
+              </div>
+            </div>
+            <div className="text-right hidden sm:block">
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">Onboarding complete</p>
+              <p className="text-xs text-emerald-500 dark:text-emerald-500 mt-0.5">
+                {new Date(account.created_at).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden dark:border-gray-700 dark:bg-gray-800">
           {/* Tab bar */}
@@ -199,12 +223,12 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
                 clientData={collectedData?.client_data ?? {}}
                 schema={schemaData?.fields ?? []}
                 isLoading={schemaLoading || collectedLoading}
-                readOnly={summary?.current_stage === 'KYC'}
+                readOnly={summary?.current_stage === 'KYC' || summary?.current_stage === 'COMPLETE'}
               />
             )}
 
             {activeTab === 'documents' && (
-              <ClientDocumentHub caseId={caseId} readOnly={summary?.current_stage === 'KYC'} />
+              <ClientDocumentHub caseId={caseId} readOnly={summary?.current_stage === 'KYC' || summary?.current_stage === 'COMPLETE'} />
             )}
           </div>
         </div>

@@ -52,6 +52,15 @@ class StateRepository:
             .values(**values)
         )
 
+        if state.stage == OnboardingStage.COMPLETE:
+            from app.services.accounts.account_service import AccountService
+            await AccountService.ensure_created(
+                session=session,
+                case_id=case_id,
+                client_id=state.client_id,
+                products=list(state.selected_products),
+            )
+
     @staticmethod
     async def exists(session: AsyncSession, case_id: UUID) -> bool:
         result = await session.execute(

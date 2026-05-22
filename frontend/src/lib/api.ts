@@ -51,6 +51,12 @@ export interface ClientOut {
   created_at: string
 }
 
+export interface ClientAccountOut {
+  account_number: string
+  products: string[]
+  created_at: string
+}
+
 export interface CaseOut {
   id: string
   client_id: string

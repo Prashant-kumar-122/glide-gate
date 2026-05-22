@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Navigate, Link } from 'react-router-dom'
-import { Menu, X, Sun, Moon } from 'lucide-react'
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
+import { Menu, X, Sun, Moon, Building2 } from 'lucide-react'
 import AdvisorWorkspace from '@/routes/AdvisorWorkspace'
 import ClientPortal from '@/routes/ClientPortal'
 import ContactCentre from '@/routes/ContactCentre'
@@ -25,18 +25,34 @@ function NavBar() {
   const { user, isAuthenticated } = useAuthStore()
   const { theme, toggleTheme } = useThemeStore()
   const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
+
+  const ROLE_LABELS: Record<string, string> = {
+    client: 'Client Portal',
+    advisor: 'Advisor Portal',
+    admin: 'Admin Portal',
+  }
+  const pageLabel = user ? ROLE_LABELS[user.role] : undefined
 
   const visibleLinks = isAuthenticated && user
     ? NAV_LINKS.filter((l) => l.roles.includes(user.role))
     : []
 
   return (
-    <nav className="relative flex items-center bg-gray-900 px-4 py-3 text-sm text-gray-300 lg:px-6">
-      <span className="mr-4 font-semibold text-white">GlideGate</span>
+    <nav className="sticky top-0 z-50 flex items-center bg-gray-900 px-4 py-3 text-sm text-gray-300 lg:px-6">
+      <div className="flex items-center gap-3 mr-4">
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+          <Building2 className="w-4 h-4 text-white" />
+        </div>
+        <span className="font-semibold text-white">GlideGate</span>
+        {pageLabel && (
+          <span className="text-gray-400 text-sm hidden md:block">/ {pageLabel}</span>
+        )}
+      </div>
 
       {/* Desktop nav links — hidden on mobile */}
       {visibleLinks.map((l) => (
-        <Link key={l.to} to={l.to} className="hidden hover:text-white lg:block lg:mr-1">
+        <Link key={l.to} to={l.to} className="hidden lg:block px-3 py-1.5 rounded-lg hover:bg-gray-700 hover:text-white transition-colors">
           {l.label}
         </Link>
       ))}

@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { CheckCircle, Upload, Sparkles, AlertCircle } from 'lucide-react'
-import { useUploadDocument, useQuestionnaireSchema } from '@/hooks/useDocuments'
+import { useUploadDocument, useQuestionnaireSchema, useDocuments } from '@/hooks/useDocuments'
 import { useDocumentPrefill } from '@/hooks/useDocumentPrefill'
 import { analyseDocuments } from '@/lib/api'
 
 const UPLOAD_CATEGORIES = [
-  { id: 'identity',   label: 'Identity Document',  hint: 'Passport, National ID, Driving Licence' },
-  { id: 'financial',  label: 'Financial Document',  hint: 'Bank statement, financial report' },
-  { id: 'compliance', label: 'Compliance / KYC',    hint: 'KYC form, tax declaration' },
+  { id: 'identity',   label: 'Identity',   hint: 'Passport, National ID, Driving Licence' },
+  { id: 'financial',  label: 'Financial',  hint: 'Bank statement, pay slip, financial report' },
+  { id: 'legal',      label: 'Legal',      hint: 'Power of attorney, court orders, contracts' },
+  { id: 'insurance',  label: 'Insurance',  hint: 'Policy documents, coverage certificates' },
+  { id: 'compliance', label: 'Compliance', hint: 'KYC form, AML declaration, tax forms' },
+  { id: 'entity',     label: 'Entity',     hint: 'Company registration, articles of incorporation' },
 ] as const
 
 type Phase = 'upload' | 'analysing' | 'done'
@@ -22,18 +25,34 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
   const uploadDocument = useUploadDocument(caseId)
   const { data: schemaData } = useQuestionnaireSchema(caseId)
   const { prefillFromFields } = useDocumentPrefill(caseId)
+  const { data: existingDocs = [] } = useDocuments(caseId)
+
+  // Latest doc per category already stored in the backend
+  const persistedByCategory = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const doc of existingDocs) {
+      if (doc.category) map[doc.category] = doc.name
+    }
+    return map
+  }, [existingDocs])
 
   const [phase, setPhase] = useState<Phase>('upload')
-  const [uploaded, setUploaded] = useState<Record<string, string>>({}) // category → filename
+  const [newlyUploaded, setNewlyUploaded] = useState<Record<string, string>>({}) // category → filename
   const [prefillCount, setPrefillCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
+
+  // Merge persisted + newly uploaded this session (session wins for filename display)
+  const uploaded = useMemo(
+    () => ({ ...persistedByCategory, ...newlyUploaded }),
+    [persistedByCategory, newlyUploaded],
+  )
 
   const uploadedCount = Object.keys(uploaded).length
 
   async function handleUpload(file: File, category: string) {
     try {
       await uploadDocument.mutateAsync({ file, category })
-      setUploaded((prev) => ({ ...prev, [category]: file.name }))
+      setNewlyUploaded((prev) => ({ ...prev, [category]: file.name }))
     } catch {
       setError(`Failed to upload ${file.name}. Please try again.`)
     }
@@ -110,7 +129,7 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
       )}
 
       {/* Upload cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {UPLOAD_CATEGORIES.map((cat) => {
           const filename = uploaded[cat.id]
           const isUploaded = !!filename

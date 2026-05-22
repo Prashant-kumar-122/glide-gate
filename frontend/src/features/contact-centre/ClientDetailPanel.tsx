@@ -1,7 +1,8 @@
-import { User, Package } from 'lucide-react'
+import { User, Package, BadgeCheck } from 'lucide-react'
 import ProductTrackSummary from './ProductTrackSummary'
 import CallSummaryCard from './CallSummaryCard'
 import CCActionBar from './CCActionBar'
+import { useAccount } from '@/hooks/useDocuments'
 import type { CaseSummary, CallSummary } from '@/lib/api'
 
 const STAGE_LABELS: Record<string, string> = {
@@ -65,6 +66,7 @@ export default function ClientDetailPanel({
 
   const badgeClass = STAGE_COLORS[summary.current_stage] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
   const stageLabel = STAGE_LABELS[summary.current_stage] ?? summary.current_stage
+  const { data: account } = useAccount(summary.case_id, summary.current_stage === 'COMPLETE')
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-6">
@@ -83,6 +85,12 @@ export default function ClientDetailPanel({
                 <span className="font-medium text-gray-500 dark:text-gray-400">Case name: </span>
                 {caseName ?? `#${summary.case_id.slice(0, 8)}`}
               </p>
+              {account && (
+                <p className="mt-0.5 flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                  <BadgeCheck className="w-3 h-3 shrink-0" />
+                  Account Number: {account.account_number}
+                </p>
+              )}
             </div>
           </div>
           <span className={['rounded-full px-2.5 py-1 text-xs font-medium', badgeClass].join(' ')}>

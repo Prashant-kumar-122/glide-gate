@@ -1,7 +1,7 @@
-import { Briefcase, Wifi, WifiOff, X } from 'lucide-react'
+import { Briefcase, Wifi, WifiOff, X, BadgeCheck } from 'lucide-react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import ProgressBar from '@/components/ProgressBar'
-import { useCases } from '@/hooks/useDocuments'
+import { useCases, useAccount } from '@/hooks/useDocuments'
 import type { CaseOut } from '@/lib/api'
 
 const STAGE_LABELS: Record<string, string> = {
@@ -32,6 +32,7 @@ function caseDisplayName(c: CaseOut): string {
 function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
   const progress = Math.round(c.percentage ?? 0)
   const stageLabel = STAGE_LABELS[c.current_stage] ?? c.current_stage
+  const { data: account } = useAccount(c.id, c.current_stage === 'COMPLETE')
 
   return (
     <button
@@ -51,6 +52,12 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
           <p className={['mt-0.5 text-xs', isSelected ? 'text-blue-200' : 'text-gray-400'].join(' ')}>
             {stageLabel}
           </p>
+          {account && (
+            <p className={['mt-0.5 flex items-center gap-1 text-[10px] font-mono font-medium truncate', isSelected ? 'text-emerald-300' : 'text-emerald-600 dark:text-emerald-400'].join(' ')}>
+              <BadgeCheck className="w-2.5 h-2.5 shrink-0" />
+              {account.account_number}
+            </p>
+          )}
         </div>
 
         {badgeCount > 0 && (
