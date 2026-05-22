@@ -1048,12 +1048,9 @@ export default function OnboardingWizard({
     if (!caseId) return
     setIsSubmitting(true)
     try {
-      await Promise.all([
-        api.patch(`/cases/${caseId}/percentage`, { percentage: 60 }),
-        api.patch(`/cases/${caseId}/status`, { status: 'REVIEW', current_stage: 'PARALLEL_PRODUCTS' }),
-      ])
+      await api.post(`/cases/${caseId}/submit-intake`)
     } catch {
-      // Case data is saved regardless
+      // Case data is saved regardless; orchestrator will be retried on resume
     } finally {
       setIsSubmitting(false)
       onComplete(caseId)

@@ -11,6 +11,7 @@ from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.agents.base.a2a_types import AgentID, OnboardingStage, TaskPacket, TaskType
 from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import ConflictError, NotFoundError
@@ -693,6 +694,57 @@ async def patch_case_status(
     )
     await db.commit()
     return PatchStatusResponse(case_id=case_id, status=body.status)
+
+
+class SubmitIntakeResponse(BaseModel):
+    case_id: UUID
+    status: str
+    current_stage: str
+
+
+@router.post("/{case_id}/submit-intake", status_code=status.HTTP_200_OK, response_model=SubmitIntakeResponse)
+async def submit_intake(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role("client", "advisor", "admin")),
+) -> SubmitIntakeResponse:
+    """Signal that the wizard form has been completed.
+
+    Updates the case to KYC stage and notifies the orchestrator agent so that
+    the KYC compliance check and downstream workflow steps are triggered.
+    """
+    case = await _get_case_or_404(case_id, db)
+    _assert_case_access(case, current_user)
+
+    shared_ctx = dict(case.shared_context or {})
+    client_data = shared_ctx.get("client_data", {})
+
+    await db.execute(
+        sa_update(OnboardingCase)
+        .where(OnboardingCase.id == case_id)
+        .values(status="REVIEW", current_stage="KYC", percentage=60)
+    )
+    await db.commit()
+
+    asyncio.create_task(
+        orchestration_service.publish_task(
+            TaskPacket(
+                from_agent=AgentID.CUSTOMER_SERVICE,
+                to_agent=AgentID.ORCHESTRATOR,
+                task_type=TaskType.ADVANCE_STAGE,
+                case_id=case_id,
+                client_id=case.client_id,
+                priority="HIGH",
+                payload={
+                    "to_stage": OnboardingStage.KYC,
+                    "client_data": client_data,
+                    "selected_products": case.selected_products,
+                },
+            )
+        )
+    )
+
+    return SubmitIntakeResponse(case_id=case_id, status="REVIEW", current_stage="KYC")
 
 
 @router.post("/{case_id}/resume", status_code=status.HTTP_202_ACCEPTED, response_model=ResumeResponse)
