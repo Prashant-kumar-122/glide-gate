@@ -4,7 +4,7 @@ import { useCaseProgress, useQuestionnaireSchema, useCollectedFields, useAccount
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
 import OnboardingFormView from '@/features/client/OnboardingFormView'
 
-const STAGES = ['INTAKE', 'PARALLEL_PRODUCTS', 'KYC', 'REVIEW', 'COMPLETE'] as const
+const STAGES = ['INTAKE', 'KYC', 'PARALLEL_PRODUCTS', 'REVIEW', 'COMPLETE'] as const
 
 const STAGE_LABELS: Record<string, string> = {
   INTAKE: 'Application',

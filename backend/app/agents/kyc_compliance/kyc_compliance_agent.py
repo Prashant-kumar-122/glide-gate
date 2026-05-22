@@ -142,6 +142,11 @@ class KYCComplianceAgent(BaseAgent):
         checkpoint: Any,
         evidence: Any,
     ) -> None:
+        import asyncio
+        from sqlalchemy import update as sa_update
+        from app.database import AsyncSessionLocal
+        from app.models.cases import OnboardingCase
+
         if self._bus is None:
             self.logger.warning(
                 f"No event bus; cannot signal KYC outcome for case={task.case_id}"
@@ -184,8 +189,27 @@ class KYCComplianceAgent(BaseAgent):
                     "client_data": task.payload.get("client_data", {}),
                 },
             ))
+        # Persist the stage transition to the DB so the frontend reflects the outcome
+        if kyc_status == "PASSED":
+            new_stage = OnboardingStage.PARALLEL_PRODUCTS
+        elif kyc_status == "FAILED":
+            new_stage = OnboardingStage.KYC
+        else:
+            new_stage = None  # ESCALATED — leave current_stage unchanged
+
+        if new_stage is not None:
+            async def _update_stage(case_id: UUID, stage: str) -> None:
+                async with AsyncSessionLocal() as db:
+                    await db.execute(
+                        sa_update(OnboardingCase)
+                        .where(OnboardingCase.id == case_id)
+                        .values(current_stage=stage)
+                    )
+                    await db.commit()
+
+            asyncio.create_task(_update_stage(task.case_id, new_stage))
+
         # Log compliance decision for every KYC outcome (PASSED, ESCALATED, or FAILED)
-        import asyncio
         asyncio.create_task(
             compliance_decision_logger.log_automated_kyc_decision(
                 case_id=task.case_id,
