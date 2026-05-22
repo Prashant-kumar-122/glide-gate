@@ -1019,7 +1019,28 @@ export default function OnboardingWizard({
         dirty.map((k) => updateField.mutateAsync({ questionKey: k, value: localData[k] })),
       )
     }
-    setStep((s) => s + 1)
+
+    const nextStep = step + 1
+    const pct = Math.round((nextStep / Math.max(totalSteps - 1, 1)) * 60)
+    try {
+      await api.patch(`/cases/${caseId}/percentage`, { percentage: pct })
+    } catch {
+      // non-critical — continue anyway
+    }
+
+    setStep(nextStep)
+  }
+
+  async function handleDocumentsContinue() {
+    if (!caseId) return
+    const nextStep = step + 1
+    const pct = Math.round((nextStep / Math.max(totalSteps - 1, 1)) * 60)
+    try {
+      await api.patch(`/cases/${caseId}/percentage`, { percentage: pct })
+    } catch {
+      // non-critical
+    }
+    setStep(nextStep)
   }
 
   async function handleSubmit() {
@@ -1252,19 +1273,19 @@ export default function OnboardingWizard({
       </div>
 
       {/* Header */}
-      <header className="shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
+      <header className="shrink-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <Building2 className="w-4 h-4 text-white" />
           </div>
           <div>
-            <div className="font-bold text-sm text-gray-900 dark:text-gray-100">GlideGate</div>
+            <div className="font-bold text-sm text-white">GlideGate</div>
             <div className="text-gray-400 text-xs">New Account Application</div>
           </div>
         </div>
         <button
           onClick={onCancel}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-colors dark:border-gray-600 dark:hover:border-gray-500 dark:hover:text-gray-200"
+          className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 border border-gray-600 hover:border-gray-500 px-3 py-1.5 rounded-lg transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Cancel
@@ -1274,8 +1295,8 @@ export default function OnboardingWizard({
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar — stepper */}
-        <aside className="w-60 shrink-0 bg-gray-900 flex flex-col overflow-y-auto hidden lg:flex">
-          <nav className="flex-1 px-4 py-8">
+        <aside className="w-60 shrink-0 bg-gray-900 flex flex-col overflow-hidden hidden lg:flex">
+          <nav className="flex-1 px-4 py-8 overflow-y-auto">
             <div className="space-y-1">
               {steps.map((s, idx) => {
                 const isCompleted = idx < step
@@ -1395,7 +1416,7 @@ export default function OnboardingWizard({
                   <button
                     onClick={
                       currentStep?.id === 'documents'
-                        ? () => setStep((s) => s + 1)
+                        ? handleDocumentsContinue
                         : handleSectionContinue
                     }
                     className={[
