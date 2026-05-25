@@ -21,17 +21,23 @@ from app.agents.orchestrator.workflow_state_machine import (
 )
 
 
-async def _persist_case_stage(case_id: UUID, stage: str) -> None:
-    """Write status + current_stage to the DB from a background task."""
+async def _persist_case_stage(
+    case_id: UUID, stage: str, percentage: float | None = None
+) -> None:
+    """Write status + current_stage (and optionally percentage) to the DB."""
     from sqlalchemy import update as sa_update
     from app.database import AsyncSessionLocal
     from app.models.cases import OnboardingCase
+
+    values: dict = {"status": stage, "current_stage": stage}
+    if percentage is not None:
+        values["percentage"] = percentage
 
     async with AsyncSessionLocal() as db:
         await db.execute(
             sa_update(OnboardingCase)
             .where(OnboardingCase.id == case_id)
-            .values(status=stage, current_stage=stage)
+            .values(**values)
         )
         await db.commit()
 
@@ -251,7 +257,8 @@ class OrchestratorAgent(BaseAgent):
             except InvalidTransitionError as exc:
                 self.logger.warning(f"FSM transition skipped for case={case_id}: {exc}")
 
-            asyncio.create_task(_persist_case_stage(case_id, target_stage.value))
+            pct = 100.0 if target_stage == OnboardingStage.COMPLETE else None
+            asyncio.create_task(_persist_case_stage(case_id, target_stage.value, pct))
 
             if has_issues:
                 await self.send_task(
