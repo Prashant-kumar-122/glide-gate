@@ -70,7 +70,7 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                {summary?.client_name ?? '…'}
+                {summary?.case_name ?? summary?.client_name ?? '…'}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
                 Stage:{' '}
@@ -83,12 +83,12 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
                   </span>
                 )}
               </p>
-              {account && (
-                <p className="mt-1 flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+              {account && account.map((acc) => (
+                <p key={acc.account_number} className="mt-1 flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
                   <BadgeCheck className="w-3 h-3 shrink-0" />
-                  Account Number: {account.account_number}
+                  {acc.product.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}: {acc.account_number}
                 </p>
-              )}
+              ))}
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-gray-900 tabular-nums dark:text-gray-100">

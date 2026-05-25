@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 from typing import Any
+from uuid import UUID
 
 from app.agents.base.a2a_types import (
     AgentID,
@@ -12,6 +13,91 @@ from app.agents.base.a2a_types import (
 )
 from app.agents.base.base_agent import BaseAgent
 from app.agents.product_onboarding.suitability_assessor import SuitabilityAssessor
+
+
+async def _persist_product_start(case_id: UUID, product_code: str, step_names: list[str]) -> None:
+    from sqlalchemy import select, update
+    from app.database import AsyncSessionLocal
+    from app.models.cases import CaseProduct, CaseProductStep
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(CaseProduct).where(
+                CaseProduct.case_id == case_id,
+                CaseProduct.product_code == product_code,
+            )
+        )
+        cp = result.scalar_one_or_none()
+        if cp is None:
+            return
+
+        cp.status = "IN_PROGRESS"
+        cp.started_at = datetime.utcnow()
+
+        existing = await db.execute(
+            select(CaseProductStep.step_name).where(CaseProductStep.case_product_id == cp.id)
+        )
+        existing_names = {r for r in existing.scalars().all()}
+
+        for idx, name in enumerate(step_names):
+            if name not in existing_names:
+                db.add(CaseProductStep(
+                    case_product_id=cp.id,
+                    step_name=name,
+                    step_index=idx,
+                    status="PENDING",
+                ))
+        await db.commit()
+
+
+async def _persist_step_done(
+    case_id: UUID, product_code: str, step_name: str, step_index: int, status: str
+) -> None:
+    from sqlalchemy import select
+    from app.database import AsyncSessionLocal
+    from app.models.cases import CaseProduct, CaseProductStep
+
+    async with AsyncSessionLocal() as db:
+        cp_result = await db.execute(
+            select(CaseProduct.id).where(
+                CaseProduct.case_id == case_id,
+                CaseProduct.product_code == product_code,
+            )
+        )
+        cp_id = cp_result.scalar_one_or_none()
+        if cp_id is None:
+            return
+
+        step_result = await db.execute(
+            select(CaseProductStep).where(
+                CaseProductStep.case_product_id == cp_id,
+                CaseProductStep.step_index == step_index,
+            )
+        )
+        step = step_result.scalar_one_or_none()
+        if step:
+            step.status = status
+            step.completed_at = datetime.utcnow()
+            await db.commit()
+
+
+async def _persist_product_finish(case_id: UUID, product_code: str, final_status: str) -> None:
+    from sqlalchemy import select
+    from app.database import AsyncSessionLocal
+    from app.models.cases import CaseProduct
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(CaseProduct).where(
+                CaseProduct.case_id == case_id,
+                CaseProduct.product_code == product_code,
+            )
+        )
+        cp = result.scalar_one_or_none()
+        if cp:
+            cp.status = final_status
+            cp.completed_at = datetime.utcnow()
+            await db.commit()
 
 _PRODUCT_STEPS: dict[str, list[str]] = {
     "cash_account": [
@@ -106,11 +192,14 @@ class ProductOnboardingAgent(BaseAgent):
             f"product={product_code} steps={total} resume_from={resume_from_step}"
         )
 
+        await _persist_product_start(task.case_id, product_code, steps)
+
         suitability = self._assessor.assess(product_code, client_data)
         if not suitability.is_suitable:
             self.logger.warning(
                 f"Suitability FAILED for {product_code}: score={suitability.suitability_score}"
             )
+            await _persist_product_finish(task.case_id, product_code, "FAILED")
             await self._signal_complete(task, product_code, "UNSUITABLE", completed, total)
             return TaskResponse(
                 task_id=task.id,
@@ -128,6 +217,7 @@ class ProductOnboardingAgent(BaseAgent):
         for idx, step_name in enumerate(steps):
             if idx < resume_from_step:
                 completed.append({"step": step_name, "status": "SKIPPED_RESUME", "step_index": idx})
+                await _persist_step_done(task.case_id, product_code, step_name, idx, "SKIPPED")
                 continue
 
             step_result = await self._execute_step(
@@ -139,6 +229,8 @@ class ProductOnboardingAgent(BaseAgent):
                 self.logger.error(
                     f"Step '{step_name}' failed for {product_code}, halting track."
                 )
+                await _persist_step_done(task.case_id, product_code, step_name, idx, "FAILED")
+                await _persist_product_finish(task.case_id, product_code, "FAILED")
                 await self._signal_complete(task, product_code, "FAILED", completed, total)
                 return TaskResponse(
                     task_id=task.id,
@@ -153,11 +245,13 @@ class ProductOnboardingAgent(BaseAgent):
                     },
                 )
 
+            await _persist_step_done(task.case_id, product_code, step_name, idx, "COMPLETE")
             self.logger.debug(
                 f"[{product_code}] step {idx + 1}/{total} '{step_name}' OK"
             )
 
         self.logger.info(f"Product onboarding COMPLETE: case={task.case_id} product={product_code}")
+        await _persist_product_finish(task.case_id, product_code, "COMPLETE")
         await self._signal_complete(task, product_code, "COMPLETE", completed, total)
 
         return TaskResponse(

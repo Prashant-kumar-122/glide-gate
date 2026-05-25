@@ -105,6 +105,7 @@ class CaseProgressOut(BaseModel):
     case_id: UUID
     client_id: UUID
     client_name: str
+    case_name: str | None
     current_stage: str
     status: str
     overall_progress: int
@@ -142,7 +143,7 @@ class CollectedFieldsOut(BaseModel):
 
 class ClientAccountOut(BaseModel):
     account_number: str
-    products: list[str]
+    product: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -200,12 +201,16 @@ def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
     steps = cp.steps or []
     completed = sum(1 for s in steps if s.status in ("COMPLETE", "SKIPPED"))
     product_name = cp.product.name if cp.product else cp.product_code
+    if steps:
+        progress = round(completed / len(steps) * 100)
+    else:
+        progress = _PRODUCT_STATUS_PROGRESS.get(cp.status, 0)
     return ProductTrackOut(
         id=cp.id,
         product_code=cp.product_code,
         product_name=product_name,
         status=cp.status,
-        progress=_PRODUCT_STATUS_PROGRESS.get(cp.status, 0),
+        progress=progress,
         steps_total=len(steps),
         steps_completed=completed,
         started_at=cp.started_at,
@@ -420,6 +425,7 @@ async def get_case_summary(
         case_id=case.id,
         client_id=case.client_id,
         client_name=client_name,
+        case_name=(case.extra_metadata or {}).get("case_name"),
         current_stage=stage,
         status=case.status,
         overall_progress=round(case.percentage),
@@ -433,23 +439,23 @@ async def get_case_summary(
     )
 
 
-@router.get("/{case_id}/account", response_model=ClientAccountOut)
+@router.get("/{case_id}/account", response_model=list[ClientAccountOut])
 async def get_case_account(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
-) -> ClientAccountOut:
-    """Return the generated account for a completed case."""
+) -> list[ClientAccountOut]:
+    """Return one account per product for a completed case."""
     case = await _get_case_or_404(case_id, db)
     _assert_case_access(case, current_user)
 
     result = await db.execute(
         select(ClientAccount).where(ClientAccount.case_id == case_id)
     )
-    account = result.scalar_one_or_none()
-    if account is None:
+    accounts = result.scalars().all()
+    if not accounts:
         raise NotFoundError("ClientAccount", str(case_id))
-    return ClientAccountOut.model_validate(account)
+    return [ClientAccountOut.model_validate(a) for a in accounts]
 
 
 @router.get("/{case_id}/questionnaire-schema", response_model=QuestionnaireSchemaOut)

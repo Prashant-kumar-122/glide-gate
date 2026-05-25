@@ -53,7 +53,7 @@ export interface ClientOut {
 
 export interface ClientAccountOut {
   account_number: string
-  products: string[]
+  product: string
   created_at: string
 }
 
@@ -74,6 +74,7 @@ export interface CaseSummary {
   case_id: string
   client_id: string
   client_name: string
+  case_name?: string
   current_stage: string
   overall_progress: number
   questionnaire_pct: number

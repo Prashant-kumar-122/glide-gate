@@ -45,7 +45,7 @@ export function useCaseProgress(caseId: string | null) {
 }
 
 export function useAccount(caseId: string | null, enabled = true) {
-  return useQuery<ClientAccountOut>({
+  return useQuery<ClientAccountOut[]>({
     queryKey: qk.caseAccount(caseId ?? ''),
     queryFn: () => api.get(`/cases/${caseId}/account`).then((r) => r.data),
     enabled: !!caseId && enabled,
