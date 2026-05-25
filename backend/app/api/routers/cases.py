@@ -564,13 +564,17 @@ async def update_collected_field(
     current_user: dict = Depends(get_current_user),
 ) -> CollectedFieldsOut:
     result = await db.execute(
-        select(OnboardingCase.client_id, OnboardingCase.shared_context)
-        .where(OnboardingCase.id == case_id)
+        select(
+            OnboardingCase.client_id,
+            OnboardingCase.shared_context,
+            OnboardingCase.current_stage,
+            OnboardingCase.selected_products,
+        ).where(OnboardingCase.id == case_id)
     )
     row = result.one_or_none()
     if row is None:
         raise NotFoundError("OnboardingCase", str(case_id))
-    client_id, shared_ctx = row
+    client_id, shared_ctx, current_stage, selected_products = row
     if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
         raise NotFoundError("OnboardingCase", str(case_id))
 
@@ -585,6 +589,26 @@ async def update_collected_field(
         .values(shared_context=shared_ctx)
     )
     await db.commit()
+
+    if current_stage == OnboardingStage.REVIEW:
+        asyncio.create_task(
+            orchestration_service.publish_task(
+                TaskPacket(
+                    from_agent=AgentID.CUSTOMER_SERVICE,
+                    to_agent=AgentID.ORCHESTRATOR,
+                    task_type=TaskType.RESUME_ONBOARDING,
+                    case_id=case_id,
+                    client_id=client_id,
+                    priority="HIGH",
+                    payload={
+                        "stage": OnboardingStage.KYC,
+                        "client_data": client_data,
+                        "selected_products": selected_products or [],
+                    },
+                )
+            )
+        )
+
     return CollectedFieldsOut(client_data=client_data)
 
 
