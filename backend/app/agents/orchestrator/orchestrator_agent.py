@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -18,6 +19,21 @@ from app.agents.orchestrator.workflow_state_machine import (
     InvalidTransitionError,
     WorkflowStateMachine,
 )
+
+
+async def _persist_case_stage(case_id: UUID, stage: str) -> None:
+    """Write status + current_stage to the DB from a background task."""
+    from sqlalchemy import update as sa_update
+    from app.database import AsyncSessionLocal
+    from app.models.cases import OnboardingCase
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_update(OnboardingCase)
+            .where(OnboardingCase.id == case_id)
+            .values(status=stage, current_stage=stage)
+        )
+        await db.commit()
 
 
 class OrchestratorAgent(BaseAgent):
@@ -193,11 +209,20 @@ class OrchestratorAgent(BaseAgent):
                 result={"acknowledged": True},
             )
 
-        if product_code in state.product_tracks:
+        # Cold-start: track may be absent if the orchestrator restarted mid-flow
+        if product_code not in state.product_tracks:
+            state.product_tracks[product_code] = ProductTrackState(
+                product_code=product_code,
+                stage=track_status,
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+            )
+        else:
             state.product_tracks[product_code].stage = track_status
             state.product_tracks[product_code].completed_at = datetime.utcnow()
 
         terminal = {"COMPLETE", "UNSUITABLE", "FAILED"}
+        problematic = {"UNSUITABLE", "FAILED"}
         expected = set(state.selected_products)
         settled = {
             code
@@ -211,32 +236,43 @@ class OrchestratorAgent(BaseAgent):
         )
 
         if expected and expected <= settled:
+            has_issues = any(
+                state.product_tracks[code].stage in problematic for code in expected
+            )
+            target_stage = OnboardingStage.REVIEW if has_issues else OnboardingStage.COMPLETE
+
             self.logger.info(
-                f"All {len(expected)} product tracks settled for case={case_id}, advancing to REVIEW"
+                f"All {len(expected)} product tracks settled for case={case_id}, "
+                f"advancing to {target_stage} (has_issues={has_issues})"
             )
             fsm = self._get_or_create_fsm(case_id)
             try:
-                fsm.transition(OnboardingStage.REVIEW)
+                fsm.transition(target_stage)
             except InvalidTransitionError as exc:
                 self.logger.warning(f"FSM transition skipped for case={case_id}: {exc}")
 
-            await self.send_task(
-                TaskPacket(
-                    from_agent=self.agent_id,
-                    to_agent=AgentID.COLLABORATION,
-                    task_type=TaskType.CREATE_COLLABORATION_ROOM,
-                    case_id=case_id,
-                    client_id=task.client_id,
-                    priority="NORMAL",
-                    payload={
-                        "selected_products": state.selected_products,
-                        "client_data": state.client_data,
-                        "product_tracks": {
-                            k: v.model_dump() for k, v in state.product_tracks.items()
+            asyncio.create_task(_persist_case_stage(case_id, target_stage.value))
+
+            if has_issues:
+                await self.send_task(
+                    TaskPacket(
+                        from_agent=self.agent_id,
+                        to_agent=AgentID.COLLABORATION,
+                        task_type=TaskType.CREATE_COLLABORATION_ROOM,
+                        case_id=case_id,
+                        client_id=task.client_id,
+                        priority="NORMAL",
+                        payload={
+                            "selected_products": state.selected_products,
+                            "client_data": state.client_data,
+                            "product_tracks": {
+                                k: v.model_dump() for k, v in state.product_tracks.items()
+                            },
                         },
-                    },
+                    )
                 )
-            )
+            else:
+                await self._route_to_stage(task, OnboardingStage.COMPLETE)
 
         return TaskResponse(
             task_id=task.id,

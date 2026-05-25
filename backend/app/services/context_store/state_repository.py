@@ -42,7 +42,11 @@ class StateRepository:
     ) -> None:
         """Serialise OnboardingState and write it to onboarding_cases.shared_context."""
         payload = state.model_dump(mode="json")
-        values: dict = {"shared_context": payload, "current_stage": state.stage.value}
+        values: dict = {
+            "shared_context": payload,
+            "current_stage": state.stage.value,
+            "status": state.stage.value,
+        }
         stage_pct = _STAGE_PERCENTAGE.get(state.stage.value)
         if stage_pct is not None:
             values["percentage"] = stage_pct
