@@ -42,6 +42,23 @@ async def _persist_case_stage(
         await db.commit()
 
 
+async def _persist_accounts(
+    case_id: UUID, client_id: UUID, products: list[str]
+) -> None:
+    """Generate one account number per product for a completed case."""
+    from app.database import AsyncSessionLocal
+    from app.services.accounts.account_service import AccountService
+
+    async with AsyncSessionLocal() as db:
+        await AccountService.ensure_created(
+            session=db,
+            case_id=case_id,
+            client_id=client_id,
+            products=products,
+        )
+        await db.commit()
+
+
 class OrchestratorAgent(BaseAgent):
     """
     Central workflow controller.
@@ -259,6 +276,11 @@ class OrchestratorAgent(BaseAgent):
 
             pct = 100.0 if target_stage == OnboardingStage.COMPLETE else None
             asyncio.create_task(_persist_case_stage(case_id, target_stage.value, pct))
+
+            if target_stage == OnboardingStage.COMPLETE:
+                asyncio.create_task(
+                    _persist_accounts(case_id, task.client_id, list(state.selected_products))
+                )
 
             if has_issues:
                 await self.send_task(

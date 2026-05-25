@@ -57,12 +57,12 @@ export default function CaseCard({ caseData, onClick }: Props) {
           {caseData.case_name && (
             <p className="text-xs text-gray-400 truncate">{caseData.case_name}</p>
           )}
-          {account && (
-            <p className="flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400 truncate mt-0.5">
+          {account && account.map((acc) => (
+            <p key={acc.account_number} className="flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400 truncate mt-0.5">
               <BadgeCheck className="w-3 h-3 shrink-0" />
-              Account Number: {account.account_number}
+              {formatProductName(acc.product)}: {acc.account_number}
             </p>
-          )}
+          ))}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className={['text-xs font-semibold px-2.5 py-1 rounded-full', stageBadgeClass(caseData.status)].join(' ')}>

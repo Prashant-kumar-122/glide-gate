@@ -52,12 +52,12 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
           <p className={['mt-0.5 text-xs', isSelected ? 'text-blue-200' : 'text-gray-400'].join(' ')}>
             {stageLabel}
           </p>
-          {account && (
-            <p className={['mt-0.5 flex items-center gap-1 text-[10px] font-mono font-medium truncate', isSelected ? 'text-emerald-300' : 'text-emerald-600 dark:text-emerald-400'].join(' ')}>
+          {account && account.map((acc) => (
+            <p key={acc.account_number} className={['mt-0.5 flex items-center gap-1 text-[10px] font-mono font-medium truncate', isSelected ? 'text-emerald-300' : 'text-emerald-600 dark:text-emerald-400'].join(' ')}>
               <BadgeCheck className="w-2.5 h-2.5 shrink-0" />
-              {account.account_number}
+              {acc.account_number}
             </p>
-          )}
+          ))}
         </div>
 
         {badgeCount > 0 && (

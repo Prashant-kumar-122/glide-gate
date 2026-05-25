@@ -17,6 +17,17 @@ def _generate_number() -> str:
     return f"GG-{date_part}-{rand_part}"
 
 
+async def _unique_number(session: AsyncSession) -> str:
+    for _ in range(5):
+        number = _generate_number()
+        conflict = await session.execute(
+            select(ClientAccount.id).where(ClientAccount.account_number == number)
+        )
+        if conflict.scalar_one_or_none() is None:
+            return number
+    return _generate_number()
+
+
 class AccountService:
     @staticmethod
     async def ensure_created(
@@ -24,33 +35,30 @@ class AccountService:
         case_id: UUID,
         client_id: UUID,
         products: list[str],
-    ) -> ClientAccount:
-        """Idempotently create a ClientAccount for a completed case.
+    ) -> list[ClientAccount]:
+        """Idempotently create one ClientAccount per product for a completed case.
 
-        Safe to call multiple times — returns the existing record if one already exists.
+        Safe to call multiple times — skips products that already have an account.
         """
         result = await session.execute(
             select(ClientAccount).where(ClientAccount.case_id == case_id)
         )
-        existing = result.scalar_one_or_none()
-        if existing:
-            return existing
+        existing = {row.product: row for row in result.scalars().all()}
 
-        # Retry up to 5 times to avoid the rare collision on account_number
-        number = _generate_number()
-        for _ in range(4):
-            conflict = await session.execute(
-                select(ClientAccount.id).where(ClientAccount.account_number == number)
+        accounts: list[ClientAccount] = []
+        for product in products:
+            if product in existing:
+                accounts.append(existing[product])
+                continue
+
+            number = await _unique_number(session)
+            account = ClientAccount(
+                client_id=client_id,
+                case_id=case_id,
+                product=product,
+                account_number=number,
             )
-            if conflict.scalar_one_or_none() is None:
-                break
-            number = _generate_number()
+            session.add(account)
+            accounts.append(account)
 
-        account = ClientAccount(
-            client_id=client_id,
-            case_id=case_id,
-            products=products,
-            account_number=number,
-        )
-        session.add(account)
-        return account
+        return accounts

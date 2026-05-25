@@ -171,26 +171,35 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
           </div>
         )}
 
-        {/* Account number banner */}
-        {account && (
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-800 dark:bg-emerald-950">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center shrink-0">
-                <BadgeCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        {/* Account number banners — one per product */}
+        {account && account.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {account.map((acc) => (
+              <div
+                key={acc.account_number}
+                className="flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-800 dark:bg-emerald-950"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center shrink-0">
+                    <BadgeCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                      {acc.product.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                    </p>
+                    <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100 tracking-wider font-mono">
+                      {acc.account_number}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Onboarding complete</p>
+                  <p className="text-xs text-emerald-500 dark:text-emerald-500 mt-0.5">
+                    {new Date(acc.created_at).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Account Number</p>
-                <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100 tracking-wider font-mono">
-                  {account.account_number}
-                </p>
-              </div>
-            </div>
-            <div className="text-right hidden sm:block">
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">Onboarding complete</p>
-              <p className="text-xs text-emerald-500 dark:text-emerald-500 mt-0.5">
-                {new Date(account.created_at).toLocaleDateString()}
-              </p>
-            </div>
+            ))}
           </div>
         )}
 

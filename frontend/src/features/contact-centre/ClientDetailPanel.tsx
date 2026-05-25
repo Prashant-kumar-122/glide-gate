@@ -85,12 +85,12 @@ export default function ClientDetailPanel({
                 <span className="font-medium text-gray-500 dark:text-gray-400">Case name: </span>
                 {caseName ?? `#${summary.case_id.slice(0, 8)}`}
               </p>
-              {account && (
-                <p className="mt-0.5 flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+              {account && account.map((acc) => (
+                <p key={acc.account_number} className="mt-0.5 flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
                   <BadgeCheck className="w-3 h-3 shrink-0" />
-                  Account Number: {account.account_number}
+                  {acc.product.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}: {acc.account_number}
                 </p>
-              )}
+              ))}
             </div>
           </div>
           <span className={['rounded-full px-2.5 py-1 text-xs font-medium', badgeClass].join(' ')}>
