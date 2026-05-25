@@ -18,7 +18,7 @@ import { AgentNode } from './AgentNode'
 import { AgentDetailPopover } from './AgentDetailPopover'
 import { MessageLog } from './MessageLog'
 import { useAgentTraceSocket } from './useAgentTraceSocket'
-import { AGENT_IDS, AGENT_LABELS, AGENT_POSITIONS, STATIC_EDGES, AGENT_NODE_MAP } from './agentPositions'
+import { AGENT_IDS, AGENT_LABELS, AGENT_POSITIONS, STATIC_EDGES, AGENT_NODE_MAP, PRODUCT_NODE_MAP } from './agentPositions'
 import { useAgentTrace } from '@/hooks/useAgentTrace'
 
 const NODE_TYPES: NodeTypes = { agentNode: AgentNode }
@@ -80,8 +80,12 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
 
     const agentTasks: Record<string, { status: string }[]> = {}
     for (const task of traceData.tasks) {
-      if (!agentTasks[task.to_agent]) agentTasks[task.to_agent] = []
-      agentTasks[task.to_agent].push(task)
+      let nodeKey = task.to_agent
+      if (task.to_agent === 'product_onboarding' && task.product_code) {
+        nodeKey = PRODUCT_NODE_MAP[task.product_code] ?? task.to_agent
+      }
+      if (!agentTasks[nodeKey]) agentTasks[nodeKey] = []
+      agentTasks[nodeKey].push(task)
     }
 
     const allStatuses = traceData.tasks.map((t) => t.status)

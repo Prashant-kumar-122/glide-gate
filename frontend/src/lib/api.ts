@@ -193,6 +193,7 @@ export interface AgentTaskOut {
   duration_ms?: number
   created_at: string
   case_id?: string
+  product_code?: string | null
 }
 
 export interface AgentTraceOut {

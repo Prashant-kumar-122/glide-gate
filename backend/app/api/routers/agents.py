@@ -58,6 +58,7 @@ class AgentTaskOut(BaseModel):
     created_at: datetime
     started_at: datetime | None
     completed_at: datetime | None
+    product_code: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -120,6 +121,11 @@ async def get_agent_trace(
     return AgentTraceOut(
         case_id=case_id,
         agents=[AgentOut.model_validate(a) for a in agents],
-        tasks=[AgentTaskOut.model_validate(t) for t in tasks],
+        tasks=[
+            AgentTaskOut.model_validate(t).model_copy(
+                update={"product_code": t.payload.get("product_code")}
+            )
+            for t in tasks
+        ],
         total=len(tasks),
     )
