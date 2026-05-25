@@ -60,7 +60,7 @@ class EvidencePacketBuilder:
             net_worth = 0.0
         return {
             "full_name": d.get("full_name"),
-            "nationality": d.get("nationality"),
+            "nationality": d.get("country_of_citizenship") or d.get("nationality"),
             "tax_residency": d.get("tax_residency"),
             "employment_status": d.get("employment_status"),
             "annual_income_band": self._income_band(annual_income),

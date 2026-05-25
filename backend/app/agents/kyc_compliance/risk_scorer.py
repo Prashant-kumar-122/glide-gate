@@ -86,7 +86,7 @@ class RiskScorer:
 
     def _profile_score(self, d: dict[str, Any]) -> float:
         score = 0.0
-        nationality = (d.get("nationality") or "").lower()
+        nationality = (d.get("country_of_citizenship") or d.get("nationality") or "").lower()
         if nationality in self.HIGH_RISK_NATIONALITIES:
             score += 40.0
         if d.get("source_of_funds") == "Other":
