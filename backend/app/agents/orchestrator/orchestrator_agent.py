@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -7,6 +9,7 @@ from app.agents.base.a2a_types import (
     AgentID,
     OnboardingStage,
     OnboardingState,
+    ProductTrackState,
     TaskPacket,
     TaskResponse,
     TaskType,
@@ -16,6 +19,27 @@ from app.agents.orchestrator.workflow_state_machine import (
     InvalidTransitionError,
     WorkflowStateMachine,
 )
+
+
+async def _persist_case_stage(
+    case_id: UUID, stage: str, percentage: float | None = None
+) -> None:
+    """Write status + current_stage (and optionally percentage) to the DB."""
+    from sqlalchemy import update as sa_update
+    from app.database import AsyncSessionLocal
+    from app.models.cases import OnboardingCase
+
+    values: dict = {"status": stage, "current_stage": stage}
+    if percentage is not None:
+        values["percentage"] = percentage
+
+    async with AsyncSessionLocal() as db:
+        await db.execute(
+            sa_update(OnboardingCase)
+            .where(OnboardingCase.id == case_id)
+            .values(**values)
+        )
+        await db.commit()
 
 
 class OrchestratorAgent(BaseAgent):
@@ -58,6 +82,7 @@ class OrchestratorAgent(BaseAgent):
             TaskType.START_ONBOARDING: self._handle_start,
             TaskType.RESUME_ONBOARDING: self._handle_resume,
             TaskType.ADVANCE_STAGE: self._handle_advance,
+            TaskType.PRODUCT_TRACK_COMPLETE: self._handle_product_track_complete,
             TaskType.ESCALATE: self._handle_escalate,
             TaskType.HEALTH_CHECK: self._handle_health_check,
         }
@@ -173,6 +198,96 @@ class OrchestratorAgent(BaseAgent):
             result={"stage": to_stage},
         )
 
+    async def _handle_product_track_complete(self, task: TaskPacket) -> TaskResponse:
+        case_id = task.case_id
+        product_code: str = task.payload.get("product_code", "")
+        track_status: str = task.payload.get("track_status", "COMPLETE")
+
+        state = self._states.get(case_id)
+        if state is None:
+            self.logger.warning(
+                f"No in-memory state for case={case_id} on PRODUCT_TRACK_COMPLETE; ignoring"
+            )
+            return TaskResponse(
+                task_id=task.id,
+                from_agent=self.agent_id,
+                status="SUCCESS",
+                result={"acknowledged": True},
+            )
+
+        # Cold-start: track may be absent if the orchestrator restarted mid-flow
+        if product_code not in state.product_tracks:
+            state.product_tracks[product_code] = ProductTrackState(
+                product_code=product_code,
+                stage=track_status,
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+            )
+        else:
+            state.product_tracks[product_code].stage = track_status
+            state.product_tracks[product_code].completed_at = datetime.utcnow()
+
+        terminal = {"COMPLETE", "UNSUITABLE", "FAILED"}
+        problematic = {"UNSUITABLE", "FAILED"}
+        expected = set(state.selected_products)
+        settled = {
+            code
+            for code, track in state.product_tracks.items()
+            if track.stage in terminal
+        }
+
+        self.logger.info(
+            f"Product track settled: case={case_id} product={product_code} "
+            f"status={track_status} settled={len(settled)}/{len(expected)}"
+        )
+
+        if expected and expected <= settled:
+            has_issues = any(
+                state.product_tracks[code].stage in problematic for code in expected
+            )
+            target_stage = OnboardingStage.REVIEW if has_issues else OnboardingStage.COMPLETE
+
+            self.logger.info(
+                f"All {len(expected)} product tracks settled for case={case_id}, "
+                f"advancing to {target_stage} (has_issues={has_issues})"
+            )
+            fsm = self._get_or_create_fsm(case_id)
+            try:
+                fsm.transition(target_stage)
+            except InvalidTransitionError as exc:
+                self.logger.warning(f"FSM transition skipped for case={case_id}: {exc}")
+
+            pct = 100.0 if target_stage == OnboardingStage.COMPLETE else None
+            asyncio.create_task(_persist_case_stage(case_id, target_stage.value, pct))
+
+            if has_issues:
+                await self.send_task(
+                    TaskPacket(
+                        from_agent=self.agent_id,
+                        to_agent=AgentID.COLLABORATION,
+                        task_type=TaskType.CREATE_COLLABORATION_ROOM,
+                        case_id=case_id,
+                        client_id=task.client_id,
+                        priority="NORMAL",
+                        payload={
+                            "selected_products": state.selected_products,
+                            "client_data": state.client_data,
+                            "product_tracks": {
+                                k: v.model_dump() for k, v in state.product_tracks.items()
+                            },
+                        },
+                    )
+                )
+            else:
+                await self._route_to_stage(task, OnboardingStage.COMPLETE)
+
+        return TaskResponse(
+            task_id=task.id,
+            from_agent=self.agent_id,
+            status="SUCCESS",
+            result={"product_code": product_code, "track_status": track_status},
+        )
+
     async def _handle_escalate(self, task: TaskPacket) -> TaskResponse:
         import asyncio
 
@@ -280,6 +395,14 @@ class OrchestratorAgent(BaseAgent):
             )
 
         elif stage == OnboardingStage.PARALLEL_PRODUCTS:
+            if task.case_id in self._states:
+                for product_code in selected_products:
+                    self._states[task.case_id].product_tracks[product_code] = ProductTrackState(
+                        product_code=product_code,
+                        stage="IN_PROGRESS",
+                        started_at=datetime.utcnow(),
+                    )
+
             for product_code in selected_products:
                 await self.send_task(
                     TaskPacket(

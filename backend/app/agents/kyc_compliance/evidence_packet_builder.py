@@ -60,7 +60,7 @@ class EvidencePacketBuilder:
             net_worth = 0.0
         return {
             "full_name": d.get("full_name"),
-            "nationality": d.get("nationality"),
+            "nationality": d.get("country_of_citizenship") or d.get("nationality"),
             "tax_residency": d.get("tax_residency"),
             "employment_status": d.get("employment_status"),
             "annual_income_band": self._income_band(annual_income),
@@ -142,6 +142,7 @@ class EvidencePacketBuilder:
 
         source_of_funds = client_data.get("source_of_funds")
         if source_of_funds:
+            sof_list = source_of_funds if isinstance(source_of_funds, list) else [source_of_funds]
             items.append(EvidenceItem(
                 label="Source of Funds",
                 value={
@@ -149,7 +150,7 @@ class EvidencePacketBuilder:
                     "source_of_wealth_detail": client_data.get("source_of_wealth_detail"),
                 },
                 source="client_questionnaire",
-                risk_relevant=source_of_funds == "Other",
+                risk_relevant="Other" in sof_list,
             ))
 
         return items

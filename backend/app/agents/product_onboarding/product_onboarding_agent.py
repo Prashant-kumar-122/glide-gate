@@ -223,11 +223,10 @@ class ProductOnboardingAgent(BaseAgent):
             step_data["is_suitable"] = suitability.get("is_suitable")
 
         elif step_name == "risk_profiling":
-            risk_tolerance = client_data.get("risk_tolerance", "balanced")
+            objective = (client_data.get("investment_objective") or "growth").lower()
+            risk_tolerance = _OBJECTIVE_TO_RISK_STR.get(objective, "balanced")
             step_data["risk_profile"] = risk_tolerance
-            step_data["volatility_tolerance"] = _RISK_CAPACITY_MAP_STR.get(
-                risk_tolerance.lower(), "medium"
-            )
+            step_data["volatility_tolerance"] = _RISK_CAPACITY_MAP_STR.get(risk_tolerance, "medium")
 
         elif step_name == "account_provisioning":
             import uuid
@@ -235,10 +234,8 @@ class ProductOnboardingAgent(BaseAgent):
             step_data["account_status"] = "PROVISIONED"
 
         elif step_name == "contribution_limits_check":
-            try:
-                annual_income = float(client_data.get("annual_income") or 0.0)
-            except (TypeError, ValueError):
-                annual_income = 0.0
+            raw_income = str(client_data.get("annual_income") or "").strip().lower()
+            annual_income = _INCOME_RANGE_TO_FLOAT.get(raw_income, 0.0)
             step_data["annual_contribution_limit"] = min(annual_income * 0.18, 30_000.0)
             step_data["carry_forward_available"] = True
 
@@ -257,9 +254,8 @@ class ProductOnboardingAgent(BaseAgent):
         if self._bus is None:
             return
 
-        # Stage advance (PARALLEL_PRODUCTS → REVIEW) is handled by
-        # ParallelProductLauncher after all tracks settle, so individual
-        # product agents only emit the per-track notification here.
+        steps_done = len([s for s in completed_steps if s.get("status") == "COMPLETED"])
+
         await self.send_task(TaskPacket(
             from_agent=self.agent_id,
             to_agent=AgentID.NOTIFICATION,
@@ -271,7 +267,24 @@ class ProductOnboardingAgent(BaseAgent):
                 "template": "product_track_update",
                 "product_code": product_code,
                 "track_status": track_status,
-                "steps_completed": len([s for s in completed_steps if s.get("status") == "COMPLETED"]),
+                "steps_completed": steps_done,
+                "total_steps": total_steps,
+            },
+        ))
+
+        # Notify the orchestrator so it can advance PARALLEL_PRODUCTS → REVIEW
+        # once all product tracks have settled.
+        await self.send_task(TaskPacket(
+            from_agent=self.agent_id,
+            to_agent=AgentID.ORCHESTRATOR,
+            task_type=TaskType.PRODUCT_TRACK_COMPLETE,
+            case_id=task.case_id,
+            client_id=task.client_id,
+            priority="NORMAL",
+            payload={
+                "product_code": product_code,
+                "track_status": track_status,
+                "steps_completed": steps_done,
                 "total_steps": total_steps,
             },
         ))
@@ -283,4 +296,21 @@ _RISK_CAPACITY_MAP_STR: dict[str, str] = {
     "balanced": "medium",
     "moderately_aggressive": "medium_high",
     "aggressive": "high",
+}
+
+_OBJECTIVE_TO_RISK_STR: dict[str, str] = {
+    "capital preservation": "conservative",
+    "income": "moderately_conservative",
+    "growth and income": "balanced",
+    "growth": "moderately_aggressive",
+    "speculation": "aggressive",
+    "aggressive growth": "aggressive",
+}
+
+_INCOME_RANGE_TO_FLOAT: dict[str, float] = {
+    "under $25,000": 20_000.0,
+    "$25,000 - $50,000": 37_500.0,
+    "$50,000 - $100,000": 75_000.0,
+    "$100,000 - $200,000": 150_000.0,
+    "over $200,000": 250_000.0,
 }

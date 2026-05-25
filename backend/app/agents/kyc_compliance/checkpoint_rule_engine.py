@@ -111,7 +111,7 @@ class CheckpointRuleEngine:
         risk_band: str = risk_score.get("risk_band", "LOW")
         sanctions_match: bool = verification_result.get("sanctions_match", False)
         pep_match: bool = verification_result.get("pep_match", False)
-        nationality = (client_data.get("nationality") or "").lower()
+        nationality = (client_data.get("country_of_citizenship") or client_data.get("nationality") or "").lower()
         is_high_risk_nationality = nationality in _HIGH_RISK_NATIONALITIES
 
         try:

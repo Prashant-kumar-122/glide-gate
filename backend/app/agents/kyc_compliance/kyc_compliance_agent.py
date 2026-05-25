@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -233,70 +233,98 @@ class KYCComplianceAgent(BaseAgent):
     ) -> dict[str, Any]:
         """
         Simulates the MCP Identity Verification connector (STEP-16).
-        Deterministic seed from id_number for reproducible demo results.
+        Outcome is determined by nationality:
+          - India                  → document_authentic=True  (PASSED)
+          - High-risk nationalities → sanctions_match=True    (ESCALATED)
+          - All others             → document_authentic=False (FAILED)
         When DEMO_MODE=True, returns the pre-canned fixture for the case's scenario.
         """
         import asyncio
+        from app.config import settings
 
         # Demo mode: return pre-canned fixture
-        try:
-            from app.services.demo.demo_mode_service import demo_mode_service
-            if demo_mode_service.is_enabled() and case_id is not None:
+        if settings.DEMO_MODE and case_id is not None:
+            try:
+                from app.services.demo.demo_mode_service import demo_mode_service
                 fixture = demo_mode_service.get_kyc_result(case_id)
                 if fixture:
                     latency = fixture.get("latency_ms", 300) / 1000.0
                     await asyncio.sleep(latency)
                     return fixture
-        except Exception:
-            pass  # fall through to normal simulation
+            except Exception:
+                pass  # fall through to normal simulation
 
         latency = random.uniform(0.2, 0.8)
         await asyncio.sleep(latency)
 
-        id_number = str(client_data.get("id_number") or "DEFAULT")
-        rng = random.Random(sum(ord(c) for c in id_number))
-
-        name_confidence = round(rng.uniform(0.87, 0.99), 4)
-        document_authentic = rng.random() > 0.04  # 96% authentic
-
-        nationality = (client_data.get("nationality") or "").lower()
+        nationality = (client_data.get("country_of_citizenship") or client_data.get("nationality") or "").lower()
         sanctions_match = nationality in _HIGH_RISK_NATIONALITIES
-        pep_match = rng.random() < 0.03  # 3% PEP rate
 
+        # High-risk nationality → ESCALATED
+        if sanctions_match:
+            return {
+                "verification_id": str(uuid4()),
+                "name_match_confidence": 0.95,
+                "document_authentic": True,
+                "document_valid": True,
+                "sanctions_match": True,
+                "pep_match": False,
+                "aml_risk_factors": ["high_risk_jurisdiction_nationality"],
+                "aml_risk_level": "HIGH",
+                "latency_ms": round(latency * 1000),
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+                "provider": "simulated_identity_verification_v1",
+                "is_simulated": True,
+            }
+
+        # Non-India, non-high-risk → FAILED (inauthentic document)
+        # "india" in nationality matches "india", "indian", "i am from india", etc.
+        if "india" not in nationality:
+            return {
+                "verification_id": str(uuid4()),
+                "name_match_confidence": 0.72,
+                "document_authentic": False,
+                "document_valid": False,
+                "sanctions_match": False,
+                "pep_match": False,
+                "aml_risk_factors": [],
+                "aml_risk_level": "LOW",
+                "latency_ms": round(latency * 1000),
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+                "provider": "simulated_identity_verification_v1",
+                "is_simulated": True,
+            }
+
+        # India → PASSED
+        _INCOME_RANGE_TO_FLOAT = {
+            "under $25,000": 20_000.0,
+            "$25,000 - $50,000": 37_500.0,
+            "$50,000 - $100,000": 75_000.0,
+            "$100,000 - $200,000": 150_000.0,
+            "over $200,000": 250_000.0,
+        }
         aml_risk_factors: list[str] = []
-        try:
-            _income = float(client_data.get("annual_income") or 0)
-        except (TypeError, ValueError):
-            _income = 0.0
+        raw_income = str(client_data.get("annual_income") or "").strip().lower()
+        _income = _INCOME_RANGE_TO_FLOAT.get(raw_income, 0.0)
         if _income > 1_000_000:
             aml_risk_factors.append("high_income")
-        if client_data.get("source_of_funds") == "Other":
+        source_of_funds = client_data.get("source_of_funds") or []
+        if "Other" in (source_of_funds if isinstance(source_of_funds, list) else [source_of_funds]):
             aml_risk_factors.append("undisclosed_source_of_funds")
-        if sanctions_match:
-            aml_risk_factors.append("high_risk_jurisdiction_nationality")
-        if pep_match:
-            aml_risk_factors.append("politically_exposed_person")
 
-        if sanctions_match or pep_match:
-            aml_risk_level = "HIGH"
-        elif len(aml_risk_factors) > 1:
-            aml_risk_level = "MEDIUM"
-        elif aml_risk_factors:
-            aml_risk_level = "LOW"
-        else:
-            aml_risk_level = "LOW"
+        aml_risk_level = "MEDIUM" if len(aml_risk_factors) > 1 else ("LOW" if aml_risk_factors else "LOW")
 
         return {
             "verification_id": str(uuid4()),
-            "name_match_confidence": name_confidence,
-            "document_authentic": document_authentic,
+            "name_match_confidence": 0.97,
+            "document_authentic": True,
             "document_valid": True,
-            "sanctions_match": sanctions_match,
-            "pep_match": pep_match,
+            "sanctions_match": False,
+            "pep_match": False,
             "aml_risk_factors": aml_risk_factors,
             "aml_risk_level": aml_risk_level,
             "latency_ms": round(latency * 1000),
-            "checked_at": datetime.utcnow().isoformat(),
+            "checked_at": datetime.now(timezone.utc).isoformat(),
             "provider": "simulated_identity_verification_v1",
             "is_simulated": True,
         }

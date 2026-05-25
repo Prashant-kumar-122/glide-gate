@@ -14,8 +14,14 @@ const EV = {
   PROGRESS_UPDATE: 'progress_update',
 } as const
 
-/** Resolve an A2A agent_id to one or more canvas node IDs. */
-function resolveNodes(agentId: string): string[] {
+/** Resolve an A2A agent_id to one or more canvas node IDs.
+ * When product_code is provided for a product_onboarding task, maps to
+ * the specific product node instead of activating all product nodes.
+ */
+function resolveNodes(agentId: string, productCode?: string | null): string[] {
+  if (agentId === 'product_onboarding' && productCode && PRODUCT_NODE_MAP[productCode]) {
+    return [PRODUCT_NODE_MAP[productCode]]
+  }
   return AGENT_NODE_MAP[agentId] ?? [agentId]
 }
 
@@ -37,14 +43,14 @@ export function useAgentTraceSocket(caseId: string | null) {
       task_type?: string
       task_id?: string
       status?: string
+      product_code?: string | null
     }) {
       const fromAgent = data.from_agent ?? ''
       const toAgent = data.to_agent ?? ''
       const taskType = data.task_type ?? 'TASK'
       const id = data.task_id ?? `${Date.now()}-${Math.random()}`
 
-      // For agents with multiple canvas nodes (e.g. product_onboarding), activate all
-      const toNodes = resolveNodes(toAgent)
+      const toNodes = resolveNodes(toAgent, data.product_code)
       const primaryTo = toNodes[0] ?? toAgent
 
       const edge: AgentEdgeEvent = {
@@ -68,9 +74,9 @@ export function useAgentTraceSocket(caseId: string | null) {
       appendMessage(msg)
     }
 
-    function onTaskAssigned(data: { to_agent?: string }) {
+    function onTaskAssigned(data: { to_agent?: string; product_code?: string | null }) {
       if (data.to_agent) {
-        resolveNodes(data.to_agent).forEach((n) => setNodeState(n, 'active'))
+        resolveNodes(data.to_agent, data.product_code).forEach((n) => setNodeState(n, 'active'))
       }
     }
 
@@ -80,10 +86,11 @@ export function useAgentTraceSocket(caseId: string | null) {
       task_type?: string
       status?: string
       task_id?: string
+      product_code?: string | null
     }) {
       if (data.from_agent) {
         const state = data.status === 'FAILED' ? 'idle' : 'complete'
-        resolveNodes(data.from_agent).forEach((n) => setNodeState(n, state))
+        resolveNodes(data.from_agent, data.product_code).forEach((n) => setNodeState(n, state))
       }
       if (data.task_id ?? data.task_type) {
         const msg: TraceMessage = {

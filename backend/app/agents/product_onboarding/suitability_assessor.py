@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date as _date
 from typing import Any
 
 from pydantic import BaseModel
@@ -37,6 +38,35 @@ _PRODUCT_MIN_INCOME: dict[str, float] = {
     "retirement_account": 0.0,
 }
 
+# Maps the investment_objective form field to internal risk tolerance strings.
+_OBJECTIVE_TO_RISK: dict[str, str] = {
+    "capital preservation": "conservative",
+    "income": "moderately_conservative",
+    "growth and income": "balanced",
+    "growth": "moderately_aggressive",
+    "speculation": "aggressive",
+    "aggressive growth": "aggressive",
+}
+
+# Maps investment_objective to an investment horizon category.
+_OBJECTIVE_TO_HORIZON: dict[str, str] = {
+    "capital preservation": "short_term",
+    "income": "short_term",
+    "growth and income": "medium_term",
+    "growth": "long_term",
+    "speculation": "long_term",
+    "aggressive growth": "long_term",
+}
+
+# Maps the annual_income range string (from the form) to a representative float.
+_INCOME_RANGE_TO_FLOAT: dict[str, float] = {
+    "under $25,000": 20_000.0,
+    "$25,000 - $50,000": 37_500.0,
+    "$50,000 - $100,000": 75_000.0,
+    "$100,000 - $200,000": 150_000.0,
+    "over $200,000": 250_000.0,
+}
+
 
 class SuitabilityAssessor:
     """
@@ -56,7 +86,8 @@ class SuitabilityAssessor:
         score_components: list[float] = []
 
         # ── Risk alignment ────────────────────────────────────────────────────
-        risk_tolerance = (client_data.get("risk_tolerance") or "balanced").lower()
+        objective = (client_data.get("investment_objective") or "growth").lower()
+        risk_tolerance = _OBJECTIVE_TO_RISK.get(objective, "balanced")
         client_risk = _RISK_CAPACITY_MAP.get(risk_tolerance, 3)
         min_risk = _PRODUCT_MIN_RISK.get(product_code, 1)
 
@@ -73,10 +104,8 @@ class SuitabilityAssessor:
         score_components.append(risk_score * 0.40)
 
         # ── Income adequacy ───────────────────────────────────────────────────
-        try:
-            annual_income = float(client_data.get("annual_income") or 0.0)
-        except (TypeError, ValueError):
-            annual_income = 0.0
+        raw_income = str(client_data.get("annual_income") or "").strip().lower()
+        annual_income = _INCOME_RANGE_TO_FLOAT.get(raw_income, 0.0)
         min_income = _PRODUCT_MIN_INCOME.get(product_code, 0.0)
 
         if min_income == 0.0 or annual_income >= min_income:
@@ -97,7 +126,16 @@ class SuitabilityAssessor:
         score_components.append(income_score * 0.30)
 
         # ── Age appropriateness ───────────────────────────────────────────────
-        age = int(client_data.get("age") or 0)
+        dob_str = client_data.get("date_of_birth")
+        try:
+            dob = _date.fromisoformat(str(dob_str)) if dob_str else None
+            today = _date.today()
+            age = (
+                today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+                if dob else 0
+            )
+        except ValueError:
+            age = 0
         min_age = _PRODUCT_MIN_AGE.get(product_code, 18)
 
         if age >= min_age:
@@ -116,7 +154,7 @@ class SuitabilityAssessor:
         score_components.append(age_score * 0.20)
 
         # ── Investment horizon ────────────────────────────────────────────────
-        horizon = (client_data.get("investment_horizon") or "medium_term").lower()
+        horizon = _OBJECTIVE_TO_HORIZON.get(objective, "medium_term")
         if product_code == "cash_account":
             ideal_horizons = {"short_term", "medium_term", "long_term"}
         else:  # retirement_account

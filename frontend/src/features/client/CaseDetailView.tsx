@@ -4,13 +4,13 @@ import { useCaseProgress, useQuestionnaireSchema, useCollectedFields, useAccount
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
 import OnboardingFormView from '@/features/client/OnboardingFormView'
 
-const STAGES = ['INTAKE', 'KYC', 'PARALLEL_PRODUCTS', 'REVIEW', 'COMPLETE'] as const
+const STAGES = ['INTAKE', 'REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE'] as const
 
 const STAGE_LABELS: Record<string, string> = {
   INTAKE: 'Application',
+  REVIEW: 'Documents',
   KYC: 'KYC Review',
-  PARALLEL_PRODUCTS: 'Documents',
-  REVIEW: 'Final Review',
+  PARALLEL_PRODUCTS: 'Products',
   COMPLETE: 'Complete',
   ESCALATED: 'Escalated',
 }
@@ -223,12 +223,12 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
                 clientData={collectedData?.client_data ?? {}}
                 schema={schemaData?.fields ?? []}
                 isLoading={schemaLoading || collectedLoading}
-                readOnly={summary?.current_stage === 'KYC' || summary?.current_stage === 'COMPLETE'}
+                readOnly={summary?.current_stage !== 'REVIEW'}
               />
             )}
 
             {activeTab === 'documents' && (
-              <ClientDocumentHub caseId={caseId} readOnly={summary?.current_stage === 'KYC' || summary?.current_stage === 'COMPLETE'} />
+              <ClientDocumentHub caseId={caseId} readOnly={summary?.current_stage !== 'REVIEW'} />
             )}
           </div>
         </div>

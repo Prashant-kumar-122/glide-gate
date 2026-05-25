@@ -716,35 +716,14 @@ async def submit_intake(
     case = await _get_case_or_404(case_id, db)
     _assert_case_access(case, current_user)
 
-    shared_ctx = dict(case.shared_context or {})
-    client_data = shared_ctx.get("client_data", {})
-
     await db.execute(
         sa_update(OnboardingCase)
         .where(OnboardingCase.id == case_id)
-        .values(status="REVIEW", current_stage="KYC", percentage=60)
+        .values(status="REVIEW", current_stage="REVIEW", percentage=60)
     )
     await db.commit()
 
-    asyncio.create_task(
-        orchestration_service.publish_task(
-            TaskPacket(
-                from_agent=AgentID.CUSTOMER_SERVICE,
-                to_agent=AgentID.ORCHESTRATOR,
-                task_type=TaskType.ADVANCE_STAGE,
-                case_id=case_id,
-                client_id=case.client_id,
-                priority="HIGH",
-                payload={
-                    "to_stage": OnboardingStage.KYC,
-                    "client_data": client_data,
-                    "selected_products": case.selected_products,
-                },
-            )
-        )
-    )
-
-    return SubmitIntakeResponse(case_id=case_id, status="REVIEW", current_stage="KYC")
+    return SubmitIntakeResponse(case_id=case_id, status="REVIEW", current_stage="REVIEW")
 
 
 @router.post("/{case_id}/resume", status_code=status.HTTP_202_ACCEPTED, response_model=ResumeResponse)

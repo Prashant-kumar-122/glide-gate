@@ -18,7 +18,7 @@ import { AgentNode } from './AgentNode'
 import { AgentDetailPopover } from './AgentDetailPopover'
 import { MessageLog } from './MessageLog'
 import { useAgentTraceSocket } from './useAgentTraceSocket'
-import { AGENT_IDS, AGENT_LABELS, AGENT_POSITIONS, STATIC_EDGES, AGENT_NODE_MAP } from './agentPositions'
+import { AGENT_IDS, AGENT_LABELS, AGENT_POSITIONS, STATIC_EDGES, AGENT_NODE_MAP, PRODUCT_NODE_MAP } from './agentPositions'
 import { useAgentTrace } from '@/hooks/useAgentTrace'
 
 const NODE_TYPES: NodeTypes = { agentNode: AgentNode }
@@ -80,8 +80,12 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
 
     const agentTasks: Record<string, { status: string }[]> = {}
     for (const task of traceData.tasks) {
-      if (!agentTasks[task.to_agent]) agentTasks[task.to_agent] = []
-      agentTasks[task.to_agent].push(task)
+      let nodeKey = task.to_agent
+      if (task.to_agent === 'product_onboarding' && task.product_code) {
+        nodeKey = PRODUCT_NODE_MAP[task.product_code] ?? task.to_agent
+      }
+      if (!agentTasks[nodeKey]) agentTasks[nodeKey] = []
+      agentTasks[nodeKey].push(task)
     }
 
     const allStatuses = traceData.tasks.map((t) => t.status)
@@ -97,8 +101,9 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
       if (agentId === 'orchestrator') continue
       const hasEscalated = tasks.some((t) => t.status === 'ESCALATED')
       const hasInProgress = tasks.some((t) => t.status === 'IN_PROGRESS' || t.status === 'PENDING')
-      const hasSuccess = tasks.some((t) => t.status === 'SUCCESS' || t.status === 'PARTIAL')
-      const state = hasEscalated ? 'escalated' : hasInProgress ? 'active' : hasSuccess ? 'complete' : 'idle'
+      const hasSuccess = tasks.some((t) => t.status === 'SUCCESS')
+      const hasPartial = tasks.some((t) => t.status === 'PARTIAL')
+      const state = hasEscalated ? 'escalated' : hasInProgress ? 'active' : hasSuccess ? 'complete' : hasPartial ? 'escalated' : 'idle'
       const nodeIds = AGENT_NODE_MAP[agentId] ?? [agentId]
       nodeIds.forEach((n) => setNodeState(n, state))
     }
