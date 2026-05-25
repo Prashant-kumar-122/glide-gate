@@ -8,6 +8,7 @@ import {
   useProducts, useQuestionnaireSchema, useCollectedFields,
   useUpdateCollectedField, useInitiateCase, useUpdateCaseProducts, useCases,
 } from '@/hooks/useDocuments'
+import { normalizeDateToISO } from '@/lib/dateUtils'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import DocumentUploadStep from '@/features/client/DocumentUploadStep'
@@ -172,7 +173,7 @@ function DatePickerField({
   onChange: (v: unknown) => void
   error?: string
 }) {
-  const strVal = value !== undefined && value !== null ? String(value) : ''
+  const strVal = value !== undefined && value !== null ? normalizeDateToISO(String(value)) : ''
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<PickerMode>('day')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -1047,12 +1048,9 @@ export default function OnboardingWizard({
     if (!caseId) return
     setIsSubmitting(true)
     try {
-      await Promise.all([
-        api.patch(`/cases/${caseId}/percentage`, { percentage: 60 }),
-        api.patch(`/cases/${caseId}/status`, { status: 'REVIEW', current_stage: 'PARALLEL_PRODUCTS' }),
-      ])
+      await api.post(`/cases/${caseId}/submit-intake`)
     } catch {
-      // Case data is saved regardless
+      // Case data is saved regardless; orchestrator will be retried on resume
     } finally {
       setIsSubmitting(false)
       onComplete(caseId)

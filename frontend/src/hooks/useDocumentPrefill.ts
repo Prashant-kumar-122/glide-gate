@@ -1,6 +1,7 @@
 import type { DocumentOut, OcrField, OcrResult } from '@/lib/api'
 import type { QuestionSchemaItem } from '@/hooks/useDocuments'
 import { useUpdateCollectedField } from '@/hooks/useDocuments'
+import { normalizeDateToISO } from '@/lib/dateUtils'
 
 export function useDocumentPrefill(caseId: string | null) {
   const { mutateAsync } = useUpdateCollectedField(caseId)
@@ -9,7 +10,7 @@ export function useDocumentPrefill(caseId: string | null) {
     docs: DocumentOut[],
     schema: QuestionSchemaItem[],
   ): Promise<{ count: number }> {
-    const schemaKeySet = new Set(schema.map((f) => f.question_key))
+    const schemaMap = new Map(schema.map((f) => [f.question_key, f]))
     const toUpdate: { questionKey: string; value: string }[] = []
     const seen = new Set<string>()
 
@@ -18,11 +19,12 @@ export function useDocumentPrefill(caseId: string | null) {
       for (const field of ocr?.fields ?? []) {
         if (
           field.confidence >= 0.7 &&
-          schemaKeySet.has(field.key) &&
+          schemaMap.has(field.key) &&
           !seen.has(field.key)
         ) {
           seen.add(field.key)
-          toUpdate.push({ questionKey: field.key, value: field.value })
+          const isDate = schemaMap.get(field.key)?.field_type === 'date'
+          toUpdate.push({ questionKey: field.key, value: isDate ? normalizeDateToISO(field.value) : field.value })
         }
       }
     }
@@ -37,18 +39,19 @@ export function useDocumentPrefill(caseId: string | null) {
     fields: OcrField[],
     schema: QuestionSchemaItem[],
   ): Promise<{ count: number }> {
-    const schemaKeySet = new Set(schema.map((f) => f.question_key))
+    const schemaMap = new Map(schema.map((f) => [f.question_key, f]))
     const toUpdate: { questionKey: string; value: string }[] = []
     const seen = new Set<string>()
 
     for (const field of fields) {
       if (
         field.confidence >= 0.7 &&
-        schemaKeySet.has(field.key) &&
+        schemaMap.has(field.key) &&
         !seen.has(field.key)
       ) {
         seen.add(field.key)
-        toUpdate.push({ questionKey: field.key, value: field.value })
+        const isDate = schemaMap.get(field.key)?.field_type === 'date'
+        toUpdate.push({ questionKey: field.key, value: isDate ? normalizeDateToISO(field.value) : field.value })
       }
     }
 
