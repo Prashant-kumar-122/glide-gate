@@ -12,6 +12,7 @@ from pydantic import BaseModel, computed_field
 from sqlalchemy import select, update as sa_update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.base.a2a_types import AgentID, OnboardingStage, TaskPacket, TaskType
 from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import NotFoundError, UnprocessableError
@@ -22,6 +23,7 @@ from app.models.documents import Document
 from app.services.document.document_upload_service import document_upload_service
 from app.services.document.document_storage_adapter import storage_adapter
 from app.services.document.ai_extraction_service import ai_extraction_service
+from app.services.orchestration.agent_orchestration_service import orchestration_service
 from app.services.validation.validation_orchestrator import run_validate_in_background
 
 router = APIRouter(tags=["documents"])
@@ -161,7 +163,7 @@ async def _get_doc_or_404(doc_id: UUID, db: AsyncSession) -> Document:
 
 
 async def _update_case_percentage_for_docs(case_id: UUID) -> None:
-    """Recompute percentage from approved docs and advance stage to KYC when all are approved."""
+    """Recompute percentage from approved docs (documents contribute the 60–90% band)."""
     try:
         async with AsyncSessionLocal() as db:
             total_result = await db.execute(
@@ -177,28 +179,63 @@ async def _update_case_percentage_for_docs(case_id: UUID) -> None:
             approved = approved_result.scalar() or 0
 
             doc_ratio = (approved / total) if total > 0 else 0.0
-            # Documents contribute the 60-90% band; 90% reserved for KYC completion
             new_pct = round(60.0 + doc_ratio * 30.0, 1)
-
-            # Fetch current stage so we don't regress an already-advanced case
-            stage_result = await db.execute(
-                select(OnboardingCase.current_stage).where(OnboardingCase.id == case_id)
-            )
-            current_stage = stage_result.scalar_one_or_none()
-
-            new_values: dict = {"percentage": new_pct}
-            if total > 0 and approved == total and current_stage == "PARALLEL_PRODUCTS":
-                new_values["current_stage"] = "KYC"
 
             await db.execute(
                 sa_update(OnboardingCase)
                 .where(OnboardingCase.id == case_id)
-                .values(**new_values)
+                .values(percentage=new_pct)
             )
             await db.commit()
     except Exception as exc:
         from loguru import logger
         logger.warning(f"documents: percentage update failed for case {case_id}: {exc}")
+
+
+async def _trigger_kyc_if_all_docs_approved(case_id: UUID) -> None:
+    """Dispatch ADVANCE_STAGE → KYC when all uploaded documents for the case are APPROVED."""
+    try:
+        async with AsyncSessionLocal() as db:
+            case_result = await db.execute(
+                select(OnboardingCase).where(OnboardingCase.id == case_id)
+            )
+            case = case_result.scalar_one_or_none()
+            if not case or case.current_stage != "REVIEW":
+                return
+
+            # Only consider documents that have actually been uploaded
+            docs_result = await db.execute(
+                select(Document)
+                .where(Document.case_id == case_id)
+                .where(Document.status.notin_(["NOT_REQUESTED", "REQUESTED"]))
+            )
+            uploaded_docs = docs_result.scalars().all()
+
+            if not uploaded_docs:
+                return
+
+            if not all(d.status == "APPROVED" for d in uploaded_docs):
+                return
+
+            shared_ctx = dict(case.shared_context or {})
+            await orchestration_service.publish_task(
+                TaskPacket(
+                    from_agent=AgentID.CUSTOMER_SERVICE,
+                    to_agent=AgentID.ORCHESTRATOR,
+                    task_type=TaskType.ADVANCE_STAGE,
+                    case_id=case_id,
+                    client_id=case.client_id,
+                    priority="HIGH",
+                    payload={
+                        "to_stage": OnboardingStage.KYC,
+                        "client_data": shared_ctx.get("client_data", {}),
+                        "selected_products": case.selected_products or [],
+                    },
+                )
+            )
+    except Exception as exc:
+        from loguru import logger
+        logger.warning(f"documents: KYC trigger check failed for case {case_id}: {exc}")
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -334,6 +371,10 @@ async def update_document_status(
     # Recalculate the document portion (70-100%) of the overall percentage column
     if body.status in ("APPROVED", "REJECTED", "RECEIVED", "UNDER_REVIEW"):
         asyncio.create_task(_update_case_percentage_for_docs(doc.case_id))
+
+    # Trigger KYC once all uploaded documents are approved and case is in REVIEW
+    if body.status == "APPROVED":
+        asyncio.create_task(_trigger_kyc_if_all_docs_approved(doc.case_id))
 
     return DocumentOut.model_validate(doc)
 
