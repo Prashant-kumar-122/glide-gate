@@ -38,6 +38,7 @@ class TaskType(StrEnum):
     # Product Onboarding
     ONBOARD_PRODUCT = "onboard_product"
     ASSESS_SUITABILITY = "assess_suitability"
+    PRODUCT_TRACK_COMPLETE = "product_track_complete"
     # Collaboration
     CREATE_COLLABORATION_ROOM = "create_collaboration_room"
     ADD_COMMENT = "add_comment"

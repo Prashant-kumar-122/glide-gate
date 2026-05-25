@@ -101,8 +101,9 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
       if (agentId === 'orchestrator') continue
       const hasEscalated = tasks.some((t) => t.status === 'ESCALATED')
       const hasInProgress = tasks.some((t) => t.status === 'IN_PROGRESS' || t.status === 'PENDING')
-      const hasSuccess = tasks.some((t) => t.status === 'SUCCESS' || t.status === 'PARTIAL')
-      const state = hasEscalated ? 'escalated' : hasInProgress ? 'active' : hasSuccess ? 'complete' : 'idle'
+      const hasSuccess = tasks.some((t) => t.status === 'SUCCESS')
+      const hasPartial = tasks.some((t) => t.status === 'PARTIAL')
+      const state = hasEscalated ? 'escalated' : hasInProgress ? 'active' : hasSuccess ? 'complete' : hasPartial ? 'escalated' : 'idle'
       const nodeIds = AGENT_NODE_MAP[agentId] ?? [agentId]
       nodeIds.forEach((n) => setNodeState(n, state))
     }

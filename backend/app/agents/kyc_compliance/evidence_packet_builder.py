@@ -142,6 +142,7 @@ class EvidencePacketBuilder:
 
         source_of_funds = client_data.get("source_of_funds")
         if source_of_funds:
+            sof_list = source_of_funds if isinstance(source_of_funds, list) else [source_of_funds]
             items.append(EvidenceItem(
                 label="Source of Funds",
                 value={
@@ -149,7 +150,7 @@ class EvidencePacketBuilder:
                     "source_of_wealth_detail": client_data.get("source_of_wealth_detail"),
                 },
                 source="client_questionnaire",
-                risk_relevant=source_of_funds == "Other",
+                risk_relevant="Other" in sof_list,
             ))
 
         return items

@@ -296,14 +296,20 @@ class KYCComplianceAgent(BaseAgent):
             }
 
         # India → PASSED
+        _INCOME_RANGE_TO_FLOAT = {
+            "under $25,000": 20_000.0,
+            "$25,000 - $50,000": 37_500.0,
+            "$50,000 - $100,000": 75_000.0,
+            "$100,000 - $200,000": 150_000.0,
+            "over $200,000": 250_000.0,
+        }
         aml_risk_factors: list[str] = []
-        try:
-            _income = float(client_data.get("annual_income") or 0)
-        except (TypeError, ValueError):
-            _income = 0.0
+        raw_income = str(client_data.get("annual_income") or "").strip().lower()
+        _income = _INCOME_RANGE_TO_FLOAT.get(raw_income, 0.0)
         if _income > 1_000_000:
             aml_risk_factors.append("high_income")
-        if client_data.get("source_of_funds") == "Other":
+        source_of_funds = client_data.get("source_of_funds") or []
+        if "Other" in (source_of_funds if isinstance(source_of_funds, list) else [source_of_funds]):
             aml_risk_factors.append("undisclosed_source_of_funds")
 
         aml_risk_level = "MEDIUM" if len(aml_risk_factors) > 1 else ("LOW" if aml_risk_factors else "LOW")
