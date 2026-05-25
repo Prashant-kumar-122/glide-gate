@@ -193,7 +193,7 @@ class KYCComplianceAgent(BaseAgent):
         if kyc_status == "PASSED":
             new_stage = OnboardingStage.PARALLEL_PRODUCTS
         elif kyc_status == "FAILED":
-            new_stage = OnboardingStage.KYC
+            new_stage = OnboardingStage.REVIEW
         else:
             new_stage = None  # ESCALATED — leave current_stage unchanged
 
