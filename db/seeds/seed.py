@@ -52,6 +52,7 @@ _ALL_TABLES = [
     "documents",
     "onboarding_answers",
     "onboarding_question_sessions",
+    "client_accounts",
     "case_product_steps",
     "case_products",
     "onboarding_question_rules",

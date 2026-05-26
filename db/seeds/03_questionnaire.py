@@ -1,8 +1,8 @@
-"""Seed: GlideGate standard onboarding questionnaire — 11 sections, 45 questions.
+"""Seed: GlideGate standard onboarding questionnaire — 11 sections, 49 questions.
 
 Sections (in order):
     1.  personal_information     (10 questions)
-    2.  trusted_contact          (1 question)
+    2.  trusted_contact          (5 questions)
     3.  employment_status        (4 questions)
     4.  financial_information    (5 questions)
     5.  investment_objective     (4 questions)
@@ -151,7 +151,7 @@ QUESTIONS: list[dict] = [
         "show_if": None,
         "order_index": 10,
     },
-    # ── Section 2: trusted_contact (1 question) ─────────────────────────────
+    # ── Section 2: trusted_contact (5 questions) ────────────────────────────
     {
         "section": "trusted_contact",
         "question_key": "will_name_trusted_contact",
@@ -162,6 +162,46 @@ QUESTIONS: list[dict] = [
         "show_if": None,
         "order_index": 11,
     },
+    {
+        "section": "trusted_contact",
+        "question_key": "trusted_contact_first_name",
+        "question_text": "Trusted Contact First Name",
+        "question_type": "text",
+        "options": [],
+        "validation_rules": {"required": True},
+        "show_if": {"field": "will_name_trusted_contact", "operator": "eq", "value": "Yes"},
+        "order_index": 12,
+    },
+    {
+        "section": "trusted_contact",
+        "question_key": "trusted_contact_last_name",
+        "question_text": "Trusted Contact Last Name",
+        "question_type": "text",
+        "options": [],
+        "validation_rules": {"required": True},
+        "show_if": {"field": "will_name_trusted_contact", "operator": "eq", "value": "Yes"},
+        "order_index": 13,
+    },
+    {
+        "section": "trusted_contact",
+        "question_key": "trusted_contact_phone_number",
+        "question_text": "Trusted Contact Phone Number",
+        "question_type": "text",
+        "options": [],
+        "validation_rules": {"required": True},
+        "show_if": {"field": "will_name_trusted_contact", "operator": "eq", "value": "Yes"},
+        "order_index": 14,
+    },
+    {
+        "section": "trusted_contact",
+        "question_key": "trusted_contact_relationship",
+        "question_text": "Trusted Contact Relationship",
+        "question_type": "select",
+        "options": ["Brother", "Father", "Son", "Mother", "Spouse", "Sister", "Daughter"],
+        "validation_rules": {"required": True},
+        "show_if": {"field": "will_name_trusted_contact", "operator": "eq", "value": "Yes"},
+        "order_index": 15,
+    },
     # ── Section 3: employment_status (4 questions) ──────────────────────────
     {
         "section": "employment_status",
@@ -171,7 +211,7 @@ QUESTIONS: list[dict] = [
         "options": ["Employed", "Self-Employed", "Retired", "Student", "Unemployed"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 12,
+        "order_index": 16,
     },
     {
         "section": "employment_status",
@@ -181,7 +221,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": False},
         "show_if": {"field": "employment_status", "operator": "in", "value": ["Employed", "Self-Employed"]},
-        "order_index": 13,
+        "order_index": 17,
     },
     {
         "section": "employment_status",
@@ -191,7 +231,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": False},
         "show_if": {"field": "employment_status", "operator": "in", "value": ["Employed", "Self-Employed"]},
-        "order_index": 14,
+        "order_index": 18,
     },
     {
         "section": "employment_status",
@@ -201,7 +241,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": False},
         "show_if": {"field": "employment_status", "operator": "in", "value": ["Employed", "Self-Employed"]},
-        "order_index": 15,
+        "order_index": 19,
     },
     # ── Section 4: financial_information (5 questions) ──────────────────────
     {
@@ -212,7 +252,7 @@ QUESTIONS: list[dict] = [
         "options": ["Single", "Married", "Divorced", "Widowed", "Domestic Partnership"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 16,
+        "order_index": 20,
     },
     {
         "section": "financial_information",
@@ -222,7 +262,7 @@ QUESTIONS: list[dict] = [
         "options": ["Under $25,000", "$25,000 - $50,000", "$50,000 - $100,000", "$100,000 - $250,000", "$250,000 - $500,000", "Over $500,000"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 17,
+        "order_index": 21,
     },
     {
         "section": "financial_information",
@@ -232,7 +272,7 @@ QUESTIONS: list[dict] = [
         "options": ["Under $50,000", "$50,000 - $100,000", "$100,000 - $250,000", "$250,000 - $500,000", "$500,000 - $1,000,000", "Over $1,000,000"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 18,
+        "order_index": 22,
     },
     {
         "section": "financial_information",
@@ -242,7 +282,7 @@ QUESTIONS: list[dict] = [
         "options": ["Income", "Inheritance", "Savings", "Business Ownership", "Investments", "Property Sales", "Other"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 19,
+        "order_index": 23,
     },
     {
         "section": "financial_information",
@@ -252,7 +292,7 @@ QUESTIONS: list[dict] = [
         "options": ["Under $50,000", "$50,000 - $100,000", "$100,000 - $250,000", "$250,000 - $500,000", "$500,000 - $1,000,000", "Over $1,000,000"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 20,
+        "order_index": 24,
     },
     # ── Section 5: investment_objective (4 questions) ────────────────────────
     {
@@ -263,7 +303,7 @@ QUESTIONS: list[dict] = [
         "options": ["Cash Account", "Margin Account"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 21,
+        "order_index": 25,
     },
     {
         "section": "investment_objective",
@@ -273,7 +313,7 @@ QUESTIONS: list[dict] = [
         "options": ["Income", "Pension / Retirement Savings", "Savings", "Inheritance", "Business Revenue", "Gift", "Other"],
         "validation_rules": {"required": True, "min_items": 1},
         "show_if": None,
-        "order_index": 22,
+        "order_index": 26,
     },
     {
         "section": "investment_objective",
@@ -283,7 +323,7 @@ QUESTIONS: list[dict] = [
         "options": ["Under $10,000", "$10,000 - $25,000", "$25,000 - $50,000", "$50,000 - $100,000", "$100,000 - $250,000", "Over $250,000"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 23,
+        "order_index": 27,
     },
     {
         "section": "investment_objective",
@@ -293,9 +333,9 @@ QUESTIONS: list[dict] = [
         "options": ["Growth", "Income", "Speculation", "Capital Preservation", "Trading"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 24,
+        "order_index": 28,
     },
-    # ── Section 6: background (4 questions) ─────────────────────────────────
+    # ── Section 6: background (5 questions) ─────────────────────────────────
     {
         "section": "background",
         "question_key": "prior_investments",
@@ -304,7 +344,7 @@ QUESTIONS: list[dict] = [
         "options": ["Options", "Equities", "Bonds", "Mutual Funds", "ETFs", "Futures", "None"],
         "validation_rules": {"required": True, "min_items": 1},
         "show_if": None,
-        "order_index": 25,
+        "order_index": 29,
     },
     {
         "section": "background",
@@ -314,7 +354,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 26,
+        "order_index": 30,
     },
     {
         "section": "background",
@@ -324,7 +364,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 27,
+        "order_index": 31,
     },
     {
         "section": "background",
@@ -334,7 +374,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True, "alphanumeric": True, "max_alphanumeric": 20},
         "show_if": {"field": "has_large_trader_id", "operator": "eq", "value": "Yes"},
-        "order_index": 28,
+        "order_index": 32,
     },
     {
         "section": "background",
@@ -344,7 +384,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": False},
         "show_if": None,
-        "order_index": 29,
+        "order_index": 33,
     },
     # ── Section 7: regulatory_questions (5 questions) ───────────────────────
     {
@@ -355,7 +395,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 30,
+        "order_index": 34,
     },
     {
         "section": "regulatory_questions",
@@ -365,7 +405,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 31,
+        "order_index": 35,
     },
     {
         "section": "regulatory_questions",
@@ -375,7 +415,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 32,
+        "order_index": 36,
     },
     {
         "section": "regulatory_questions",
@@ -385,7 +425,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 33,
+        "order_index": 37,
     },
     {
         "section": "regulatory_questions",
@@ -395,7 +435,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 34,
+        "order_index": 38,
     },
     # ── Section 8: identity (3 questions) ───────────────────────────────────
     {
@@ -406,7 +446,7 @@ QUESTIONS: list[dict] = [
         "options": ["Driver's License", "Passport", "National ID", "State ID"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 35,
+        "order_index": 39,
     },
     {
         "section": "identity",
@@ -416,7 +456,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 36,
+        "order_index": 40,
     },
     {
         "section": "identity",
@@ -426,7 +466,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True, "future_date": True},
         "show_if": None,
-        "order_index": 37,
+        "order_index": 41,
     },
     # ── Section 9: tax (4 questions) ─────────────────────────────────────────
     {
@@ -437,7 +477,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 38,
+        "order_index": 42,
     },
     {
         "section": "tax",
@@ -447,7 +487,7 @@ QUESTIONS: list[dict] = [
         "options": ["SSN", "ITIN", "Foreign Tax ID"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 39,
+        "order_index": 43,
     },
     {
         "section": "tax",
@@ -457,7 +497,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True},
         "show_if": {"field": "tax_id_type", "operator": "in", "value": ["SSN", "ITIN", "Foreign Tax ID"]},
-        "order_index": 40,
+        "order_index": 44,
     },
     {
         "section": "tax",
@@ -467,7 +507,7 @@ QUESTIONS: list[dict] = [
         "options": ["FIFO", "LIFO", "Highest Cost", "Lowest Cost", "Average Cost"],
         "validation_rules": {"required": True},
         "show_if": None,
-        "order_index": 41,
+        "order_index": 45,
     },
     # ── Section 10: acknowledgement (1 question) ─────────────────────────────
     {
@@ -478,9 +518,9 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True, "must_be_true": True},
         "show_if": None,
-        "order_index": 42,
+        "order_index": 46,
     },
-    # ── Section 11: sign (4 questions) ───────────────────────────────────────
+    # ── Section 11: sign (3 questions) ───────────────────────────────────────
     {
         "section": "sign",
         "question_key": "full_name_signature",
@@ -489,7 +529,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True, "match_fields": ["first_name", "last_name"]},
         "show_if": None,
-        "order_index": 43,
+        "order_index": 47,
     },
     {
         "section": "sign",
@@ -499,7 +539,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True, "min_length": 1, "max_length": 10},
         "show_if": None,
-        "order_index": 44,
+        "order_index": 48,
     },
     {
         "section": "sign",
@@ -509,7 +549,7 @@ QUESTIONS: list[dict] = [
         "options": [],
         "validation_rules": {"required": True, "must_be_true": True},
         "show_if": None,
-        "order_index": 45,
+        "order_index": 49,
     },
 ]
 
@@ -548,7 +588,7 @@ async def seed(session: AsyncSession) -> None:
         print(f"    [seed] question {q_data['question_key']}")
 
     await session.commit()
-    print(f"  [done] {len(QUESTIONS)} questions seeded across {len(SECTIONS)} sections")  # 44 questions
+    print(f"  [done] {len(QUESTIONS)} questions seeded across {len(SECTIONS)} sections")  # 49 questions
 
 
 if __name__ == "__main__":
