@@ -56,7 +56,7 @@ export default function AIValidationPanel({
     <div className="flex flex-col gap-3">
       {/* Header row */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">AI Validation</h4>
+        <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Document Validation</h4>
         {onRunValidation && (
           <button
             onClick={onRunValidation}
