@@ -128,7 +128,7 @@ export interface DocumentOut {
 
 export interface FindingResult {
   field: string
-  verdict: 'pass' | 'warn' | 'fail'
+  severity: 'pass' | 'warn' | 'fail'
   message: string
   confidence?: number
 }
@@ -136,7 +136,7 @@ export interface FindingResult {
 export interface ValidationResult {
   document_id: string
   findings: FindingResult[]
-  overall_verdict: 'pass' | 'warn' | 'fail'
+  overall_status: 'pass' | 'warn' | 'fail'
   validated_at: string
   prompt_version?: string
 }

@@ -2,7 +2,7 @@ import { CheckCircle, AlertTriangle, XCircle, Loader2, RefreshCw } from 'lucide-
 import type { ValidationResult, FindingResult } from '@/lib/api'
 
 interface VerdictIconProps {
-  verdict: FindingResult['verdict']
+  verdict: FindingResult['severity']
   size?: 'sm' | 'md'
 }
 
@@ -13,19 +13,19 @@ function VerdictIcon({ verdict, size = 'sm' }: VerdictIconProps) {
   return <XCircle className={`${cls} text-red-500`} />
 }
 
-const VERDICT_BG: Record<FindingResult['verdict'], string> = {
+const VERDICT_BG: Record<FindingResult['severity'], string> = {
   pass: 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800',
   warn: 'bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800',
   fail: 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
 }
 
-const VERDICT_TEXT: Record<FindingResult['verdict'], string> = {
+const VERDICT_TEXT: Record<FindingResult['severity'], string> = {
   pass: 'text-green-700 dark:text-green-300',
   warn: 'text-amber-700 dark:text-amber-300',
   fail: 'text-red-700 dark:text-red-300',
 }
 
-const OVERALL_BADGE: Record<FindingResult['verdict'], string> = {
+const OVERALL_BADGE: Record<FindingResult['severity'], string> = {
   pass: 'bg-green-100 text-green-800 ring-green-300 dark:bg-green-900 dark:text-green-200 dark:ring-green-700',
   warn: 'bg-amber-100 text-amber-800 ring-amber-300 dark:bg-amber-900 dark:text-amber-200 dark:ring-amber-700',
   fail: 'bg-red-100 text-red-800 ring-red-300 dark:bg-red-900 dark:text-red-200 dark:ring-red-700',
@@ -96,13 +96,13 @@ export default function AIValidationPanel({
             <span
               className={[
                 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
-                OVERALL_BADGE[result.overall_verdict],
+                OVERALL_BADGE[result.overall_status],
               ].join(' ')}
             >
-              <VerdictIcon verdict={result.overall_verdict} />
-              {result.overall_verdict === 'pass'
+              <VerdictIcon verdict={result.overall_status} />
+              {result.overall_status === 'pass'
                 ? 'All checks passed'
-                : result.overall_verdict === 'warn'
+                : result.overall_status === 'warn'
                 ? 'Warnings found'
                 : 'Issues found'}
             </span>
@@ -118,12 +118,12 @@ export default function AIValidationPanel({
                 key={i}
                 className={[
                   'flex items-start gap-2.5 rounded-lg border px-3 py-2',
-                  VERDICT_BG[f.verdict],
+                  VERDICT_BG[f.severity],
                 ].join(' ')}
               >
-                <VerdictIcon verdict={f.verdict} />
+                <VerdictIcon verdict={f.severity} />
                 <div className="min-w-0 flex-1">
-                  <p className={['text-xs font-semibold', VERDICT_TEXT[f.verdict]].join(' ')}>
+                  <p className={['text-xs font-semibold', VERDICT_TEXT[f.severity]].join(' ')}>
                     {f.field}
                   </p>
                   <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">{f.message}</p>
