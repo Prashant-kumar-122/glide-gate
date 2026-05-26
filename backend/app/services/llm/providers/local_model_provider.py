@@ -53,7 +53,10 @@ class LocalModelProvider(LLMProvider):
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
         t0 = time.monotonic()
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        # read=None disables per-chunk read timeout — vision models on CPU can take
+        # several minutes; asyncio.wait_for in the caller provides the hard cap.
+        timeout = httpx.Timeout(connect=10.0, read=None, write=120.0, pool=5.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
             resp = await client.post(
                 f"{self._base_url}/chat/completions",
                 json=self._build_payload(request),
@@ -76,8 +79,9 @@ class LocalModelProvider(LLMProvider):
     async def stream(self, request: LLMRequest) -> AsyncIterator[LLMStreamChunk]:
         t0 = time.monotonic()
         full_text = ""
+        timeout = httpx.Timeout(connect=10.0, read=None, write=120.0, pool=5.0)
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             async with client.stream(
                 "POST",
                 f"{self._base_url}/chat/completions",
