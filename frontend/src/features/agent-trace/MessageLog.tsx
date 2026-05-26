@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react'
 import { useTraceStore } from '@/store/traceStore'
+import { formatTaskLabel } from './taskLabels'
 
 const STATUS_COLORS: Record<string, string> = {
   SUCCESS: 'text-green-600 bg-green-50 dark:bg-green-950 dark:text-green-400',
@@ -59,7 +60,7 @@ export function MessageLog() {
                     {msg.status}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">{msg.taskType}</p>
+                <p className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">{formatTaskLabel(msg.taskType)}</p>
                 <p className="mt-0.5 text-[9px] text-gray-300 dark:text-gray-600">{fmtTime(msg.timestamp)}</p>
               </li>
             ))}

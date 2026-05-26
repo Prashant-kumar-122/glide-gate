@@ -1,6 +1,7 @@
 import { X, Clock, CheckCircle, AlertTriangle, Loader } from 'lucide-react'
 import { useTraceStore } from '@/store/traceStore'
 import { AGENT_LABELS } from './agentPositions'
+import { formatTaskLabel } from './taskLabels'
 import type { AgentId } from './agentPositions'
 import type { AgentTraceOut } from '@/lib/api'
 
@@ -86,7 +87,7 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
                 {STATUS_ICON[task.status] ?? <Loader className="h-3.5 w-3.5 text-gray-400" />}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[10px] font-medium text-gray-700 dark:text-gray-200">
-                    {task.task_type}
+                    {formatTaskLabel(task.task_type)}
                   </p>
                   <p className="text-[9px] text-gray-400">
                     {task.from_agent} → {task.to_agent}
