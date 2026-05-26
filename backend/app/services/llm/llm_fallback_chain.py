@@ -24,7 +24,7 @@ class LLMFallbackChain:
                 return await provider.complete(request)
             except Exception as exc:
                 logger.warning(
-                    f"LLMFallbackChain.complete: provider={provider.provider_name} failed: {exc}"
+                    f"LLMFallbackChain.complete: provider={provider.provider_name} failed: {exc!r}"
                 )
                 errors.append(f"{provider.provider_name}: {exc}")
         raise RuntimeError(f"All LLM providers failed. Errors: {'; '.join(errors)}")
@@ -39,7 +39,7 @@ class LLMFallbackChain:
                 return
             except Exception as exc:
                 logger.warning(
-                    f"LLMFallbackChain.stream: provider={provider.provider_name} failed: {exc}"
+                    f"LLMFallbackChain.complete: provider={provider.provider_name} failed: {exc!r}"
                 )
                 errors.append(f"{provider.provider_name}: {exc}")
         raise RuntimeError(

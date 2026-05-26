@@ -98,24 +98,35 @@ class ValidationOrchestrator:
             f"document={document_id} category={doc.category}"
         )
 
-        # 2. Get OcrResult — use stored result or run simulated extraction
+        # 2. Get OcrResult — use stored result or run extraction from the uploaded file
         ocr_result = _ocr_result_from_doc(doc)
         if ocr_result is None or (not ocr_result.fields and not ocr_result.raw_text):
+            # Load the actual uploaded file bytes so the extractor can use the vision model
+            file_bytes: bytes | None = None
+            if doc.storage_path:
+                try:
+                    from app.services.document.document_storage_adapter import storage_adapter
+                    file_bytes = await storage_adapter.retrieve(doc.storage_path)
+                except Exception as exc:
+                    logger.warning(
+                        f"[ValidationOrchestrator] Could not load file for OCR "
+                        f"doc={document_id}: {exc}"
+                    )
+
             logger.debug(
-                f"[ValidationOrchestrator] No OCR data for doc={document_id}; "
-                "running simulated extraction"
+                f"[ValidationOrchestrator] Running OCR for doc={document_id} "
+                f"file_bytes={'present' if file_bytes else 'absent (will simulate)'}"
             )
             try:
                 ocr_result = await _ocr.extract(
                     document_id=doc.id,
                     filename=doc.original_filename or "document",
                     category=doc.category,  # type: ignore[arg-type]
+                    file_bytes=file_bytes,
                 )
-                # Persist the fresh OCR result so future validation calls skip re-extraction
                 doc.ocr_result = ocr_result.model_dump(mode="json")
             except Exception as exc:
-                logger.warning(f"[ValidationOrchestrator] Simulated OCR failed: {exc}")
-                # Continue with an empty OcrResult — heuristic fallback handles it
+                logger.warning(f"[ValidationOrchestrator] OCR failed: {exc}")
                 from uuid import uuid4
                 ocr_result = OcrResult(
                     extraction_id=uuid4(),
