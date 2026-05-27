@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ClipboardList, Pencil, Check, X, Lock } from 'lucide-react'
+import { ClipboardList, Pencil, Check, X, Lock, ChevronDown } from 'lucide-react'
 import type { QuestionSchemaItem } from '@/hooks/useDocuments'
 import { useUpdateCollectedField } from '@/hooks/useDocuments'
 
@@ -165,6 +165,7 @@ interface OnboardingFormViewProps {
   schema: QuestionSchemaItem[]
   isLoading?: boolean
   readOnly?: boolean
+  hideReadOnlyLabel?: boolean
 }
 
 export default function OnboardingFormView({
@@ -173,12 +174,22 @@ export default function OnboardingFormView({
   schema,
   isLoading,
   readOnly = false,
+  hideReadOnlyLabel = false,
 }: OnboardingFormViewProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [editMultiValues, setEditMultiValues] = useState<string[]>([])
   const [editError, setEditError] = useState<string | null>(null)
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const updateField = useUpdateCollectedField(caseId)
+
+  function toggleSection(key: string) {
+    setExpandedSections((prev) => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
 
   // Full schema item lookup for field_type / options / validation_rules
   const schemaMap = new Map<string, QuestionSchemaItem>()
@@ -317,7 +328,9 @@ export default function OnboardingFormView({
           {readOnly && (
             <div className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
               <Lock className="h-3 w-3" />
-              Editing locked during KYC review or once completed
+              {hideReadOnlyLabel
+                ? 'View only — editable by client'
+                : 'Editing locked during KYC review or once completed'}
             </div>
           )}
         </div>
@@ -327,18 +340,27 @@ export default function OnboardingFormView({
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {orderedSections.map((sectionKey) => {
           const fields = sectionMap.get(sectionKey) ?? []
+          const isCollapsed = !expandedSections.has(sectionKey)
           return (
             <div
               key={sectionKey}
               className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
             >
-              <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-700/50">
+              <button
+                type="button"
+                onClick={() => toggleSection(sectionKey)}
+                className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 transition-colors hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700"
+              >
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {sectionTitle(sectionKey)}
                 </h3>
-              </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-400">{fields.length} field{fields.length !== 1 ? 's' : ''}</span>
+                  <ChevronDown className={['h-3.5 w-3.5 text-gray-400 transition-transform duration-200', isCollapsed ? '-rotate-90' : ''].join(' ')} />
+                </div>
+              </button>
 
-              <div className="divide-y divide-gray-50 dark:divide-gray-700">
+              {!isCollapsed && <div className="divide-y divide-gray-50 dark:divide-gray-700">
                 {fields.map(({ question_key, label }) => {
                   const isEditing = editingKey === question_key
                   const item = schemaMap.get(question_key)
@@ -445,7 +467,7 @@ export default function OnboardingFormView({
                     </div>
                   )
                 })}
-              </div>
+              </div>}
             </div>
           )
         })}

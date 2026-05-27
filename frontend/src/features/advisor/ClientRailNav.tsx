@@ -1,4 +1,5 @@
-import { Briefcase, Wifi, WifiOff, X, BadgeCheck } from 'lucide-react'
+import { Briefcase, Wifi, WifiOff, X, BadgeCheck, Search } from 'lucide-react'
+import { useState } from 'react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import ProgressBar from '@/components/ProgressBar'
 import { useCases, useAccount } from '@/hooks/useDocuments'
@@ -97,6 +98,18 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
   const { selectedCaseId, socketConnected, setSelectedClient, uploadBadgeCounts } =
     useWorkspaceStore()
   const { data: cases, isLoading, isError } = useCases()
+  const [search, setSearch] = useState('')
+
+  const filtered = (cases ?? []).filter((c) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      caseDisplayName(c).toLowerCase().includes(q) ||
+      (c.client_name ?? '').toLowerCase().includes(q) ||
+      c.current_stage.toLowerCase().includes(q) ||
+      c.selected_products.some((p) => p.toLowerCase().includes(q))
+    )
+  })
 
   function handleSelect(clientId: string, caseId: string) {
     setSelectedClient(clientId, caseId)
@@ -139,6 +152,34 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
         </div>
       </div>
 
+      {/* Search */}
+      <div className="border-b border-gray-200 px-3 py-2.5 dark:border-gray-700">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search clients, stage…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-8 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label="Clear search"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+        {search && (
+          <p className="mt-1 text-[11px] text-gray-400">
+            {filtered.length} of {cases?.length ?? 0} cases
+          </p>
+        )}
+      </div>
+
       {/* Client list */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {isLoading && (
@@ -155,11 +196,16 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
           </p>
         )}
 
-        {!isLoading && !isError && cases?.length === 0 && (
-          <p className="pt-8 text-center text-xs text-gray-400">No active cases</p>
+        {!isLoading && !isError && filtered.length === 0 && (
+          <div className="flex flex-col items-center py-12 text-center">
+            <Search className="h-7 w-7 text-gray-200 dark:text-gray-700" />
+            <p className="mt-2 text-xs text-gray-400">
+              {search ? 'No cases match your search' : 'No active cases'}
+            </p>
+          </div>
         )}
 
-        {cases?.map((c) => (
+        {filtered.map((c) => (
           <CaseItem
             key={c.id}
             c={c}

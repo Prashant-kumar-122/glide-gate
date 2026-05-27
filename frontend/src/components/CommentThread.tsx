@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Send } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Send, ChevronDown, Check } from 'lucide-react'
 import RoleBadge from './RoleBadge'
 import type { TeamRole } from '@/design-system/tokens'
 
@@ -44,6 +44,66 @@ function CommentBubble({ comment }: { comment: Comment }) {
   )
 }
 
+const VISIBILITY_OPTIONS: { value: Comment['visibility']; label: string }[] = [
+  { value: 'ALL', label: 'Everyone' },
+  { value: 'ADVISOR_ONLY', label: 'Advisor only' },
+]
+
+function VisibilitySelect({
+  value,
+  onChange,
+}: {
+  value: Comment['visibility']
+  onChange: (v: Comment['visibility']) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  const selected = VISIBILITY_OPTIONS.find((o) => o.value === value)!
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+      >
+        {selected.label}
+        <ChevronDown className={['h-3 w-3 text-gray-400 transition-transform', open ? 'rotate-180' : ''].join(' ')} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 z-50 mt-1 min-w-[130px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
+          {VISIBILITY_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={[
+                'flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium transition-colors',
+                opt.value === value
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                  : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700',
+              ].join(' ')}
+            >
+              {opt.label}
+              {opt.value === value && <Check className="h-3 w-3" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CommentThread({
   comments,
   onAddComment,
@@ -81,14 +141,7 @@ export default function CommentThread({
           />
           <div className="flex items-center justify-between">
             {!hideVisibility && (
-              <select
-                value={visibility}
-                onChange={(e) => setVisibility(e.target.value as Comment['visibility'])}
-                className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
-              >
-                <option value="ALL">Everyone</option>
-                <option value="ADVISOR_ONLY">Advisor only</option>
-              </select>
+              <VisibilitySelect value={visibility} onChange={setVisibility} />
             )}
             {hideVisibility && <span />}
             <button

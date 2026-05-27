@@ -15,7 +15,7 @@ type DrawerTab = 'overview' | 'validation' | 'diff' | 'comments'
 
 const TABS: { key: DrawerTab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
-  { key: 'validation', label: 'AI Validation' },
+  { key: 'validation', label: 'Doc Validation' },
   { key: 'diff', label: 'Version Diff' },
   { key: 'comments', label: 'Comments' },
 ]
@@ -84,35 +84,33 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
 
       <aside
         className={[
-          'fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800',
+          'fixed top-12 bottom-0 right-0 z-40 flex w-full flex-col border-l border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800',
           'sm:w-96',
           'lg:relative lg:inset-auto lg:z-auto lg:w-96 lg:shrink-0',
         ].join(' ')}
         aria-label="Document detail panel"
       >
         {/* Drawer header */}
-        <div className="flex items-start justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-          <div className="flex items-start gap-2">
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
-            <div className="min-w-0">
-              {docLoading ? (
-                <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-              ) : (
-                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  {doc?.name ?? 'Document'}
-                </p>
-              )}
-              {doc && (
-                <p className="mt-0.5 text-xs text-gray-400">
-                  v{doc.version} &middot;{' '}
-                  {new Date(doc.updated_at).toLocaleDateString()}
-                </p>
-              )}
-            </div>
+        <div className="flex items-start gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+          <div className="min-w-0 flex-1">
+            {docLoading ? (
+              <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+            ) : (
+              <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {doc?.name ?? 'Document'}
+              </p>
+            )}
+            {doc && (
+              <p className="mt-0.5 text-xs text-gray-400">
+                v{doc.version} &middot;{' '}
+                {new Date(doc.updated_at).toLocaleDateString()}
+              </p>
+            )}
           </div>
           <button
             onClick={() => setDrawerOpen(false)}
-            className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+            className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             aria-label="Close document details"
           >
             <X className="h-4 w-4" />
@@ -148,7 +146,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto pl-4 pr-5 py-4">
           {docLoading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
