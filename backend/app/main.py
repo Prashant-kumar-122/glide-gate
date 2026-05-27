@@ -9,7 +9,7 @@ from app.config import settings
 from app.api.error_handlers import register_error_handlers
 from app.api.routers import health
 from app.api.routers import auth
-from app.api.routers import clients, cases, documents, conversations, reviews, agents, audit
+from app.api.routers import clients, cases, documents, conversations, reviews, agents, audit, notifications
 from app.api.routers.admin import llm_config, validation_prompts, checkpoint_rules
 from app.api.routers import demo
 from app.api.routers import collaboration
@@ -49,6 +49,7 @@ app.include_router(conversations.router, prefix=_prefix)
 app.include_router(reviews.router, prefix=_prefix)
 app.include_router(agents.router, prefix=_prefix)
 app.include_router(audit.router, prefix=_prefix)
+app.include_router(notifications.router, prefix=_prefix)
 app.include_router(llm_config.router, prefix=_prefix)
 app.include_router(validation_prompts.router, prefix=_prefix)
 app.include_router(checkpoint_rules.router, prefix=_prefix)

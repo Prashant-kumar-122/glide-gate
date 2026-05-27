@@ -209,6 +209,12 @@ class KYCComplianceAgent(BaseAgent):
 
             asyncio.create_task(_update_stage(task.case_id, new_stage))
 
+        # Send client notifications for PASSED and FAILED outcomes
+        if kyc_status in ("PASSED", "FAILED"):
+            asyncio.create_task(
+                self._notify_kyc_outcome(task, kyc_status, task.payload.get("selected_products", []))
+            )
+
         # Log compliance decision for every KYC outcome (PASSED, ESCALATED, or FAILED)
         asyncio.create_task(
             compliance_decision_logger.log_automated_kyc_decision(
@@ -225,6 +231,44 @@ class KYCComplianceAgent(BaseAgent):
                 evidence_packet_id=str(evidence.packet_id),
             )
         )
+
+    # ── Notification helpers ──────────────────────────────────────────────────
+
+    async def _notify_kyc_outcome(
+        self, task: TaskPacket, kyc_status: str, selected_products: list
+    ) -> None:
+        from app.database import AsyncSessionLocal
+        from app.models.users import User
+        from app.models.cases import OnboardingCase
+
+        async with AsyncSessionLocal() as _db:
+            _user = await _db.get(User, task.client_id)
+            _client_name = _user.full_name if _user else ""
+            _client_email = _user.email if _user else ""
+            _case = await _db.get(OnboardingCase, task.case_id)
+            _case_name = (_case.extra_metadata or {}).get("case_name", "") if _case else ""
+
+        if kyc_status == "PASSED":
+            templates = [("kyc_passed", "NORMAL")]
+        else:
+            templates = [("kyc_failed", "HIGH"), ("kyc_failed_inapp", "HIGH")]
+
+        for _tmpl, _priority in templates:
+            await self.send_task(TaskPacket(
+                from_agent=self.agent_id,
+                to_agent=AgentID.NOTIFICATION,
+                task_type=TaskType.SEND_NOTIFICATION,
+                case_id=task.case_id,
+                client_id=task.client_id,
+                priority=_priority,
+                payload={
+                    "template": _tmpl,
+                    "client_name": _client_name,
+                    "case_name": _case_name,
+                    "selected_products": selected_products,
+                    "recipient_email": _client_email,
+                },
+            ))
 
     # ── Simulated MCP identity verification ───────────────────────────────────
 

@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GlideGate — Theme Preview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 32px 24px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 13px;
+      margin-bottom: 36px;
+    }
+
+    /* ── Theme grid ── */
+    .grid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      width: 100%;
+    }
+
+    /* ── Single theme card ── */
+    .theme-card {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .theme-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-bottom: 10px;
+    }
+    .theme-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .theme-desc {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 16px;
+    }
+
+    /* ── Navbar mock ── */
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+    .nav-logo {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .nav-brand { font-weight: 700; font-size: 14px; }
+    .nav-link {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: default;
+    }
+    .nav-spacer { flex: 1; }
+    .nav-swatch {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+
+    /* ── Body mock ── */
+    .body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ── Card mock ── */
+    .card {
+      border-radius: 10px;
+      padding: 12px 14px;
+      border: 1px solid;
+    }
+    .card-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+    .card-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .card-item { font-size: 11px; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .dot { width: 5px; height: 5px; border-radius: 50%; }
+
+    /* ── Progress bar ── */
+    .progress-track {
+      height: 4px;
+      border-radius: 9999px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .progress-fill { height: 100%; border-radius: 9999px; }
+
+    /* ── Palette chips ── */
+    .palette {
+      display: flex;
+      gap: 6px;
+      padding: 10px 16px 12px;
+    }
+    .chip {
+      flex: 1;
+      height: 18px;
+      border-radius: 4px;
+    }
+
+    /* ════════════════════════════════════════════════
+       THEME 1 — Midnight Indigo
+    ════════════════════════════════════════════════ */
+    .t1 { background: #1e293b; }
+    .t1 .nav { background: #0f172a; color: #94a3b8; }
+    .t1 .nav-logo { background: #4f46e5; color: #fff; }
+    .t1 .nav-brand { color: #f1f5f9; }
+    .t1 .nav-link { color: #94a3b8; }
+    .t1 .nav-link:hover { background: #1e293b; }
+    .t1 .nav-swatch { background: #4f46e5; }
+    .t1 .body { background: #1e293b; }
+    .t1 .card { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+    .t1 .card-title { color: #f1f5f9; }
+    .t1 .card-item { color: #94a3b8; }
+    .t1 .progress-track { background: #334155; }
+    .t1 .progress-fill { background: #4f46e5; }
+
+    /* ════════════════════════════════════════════════
+       THEME 2 — Emerald Wealth
+    ════════════════════════════════════════════════ */
+    .t2 { background: #064e3b; }
+    .t2 .nav { background: #052e16; color: #6ee7b7; }
+    .t2 .nav-logo { background: #10b981; color: #fff; }
+    .t2 .nav-brand { color: #ecfdf5; }
+    .t2 .nav-link { color: #6ee7b7; }
+    .t2 .nav-swatch { background: #10b981; }
+    .t2 .body { background: #064e3b; }
+    .t2 .card { background: #052e16; border-color: #065f46; color: #ecfdf5; }
+    .t2 .card-title { color: #ecfdf5; }
+    .t2 .card-item { color: #6ee7b7; }
+    .t2 .progress-track { background: #065f46; }
+    .t2 .progress-fill { background: #10b981; }
+
+    /* ════════════════════════════════════════════════
+       THEME 3 — Royal Amethyst
+    ════════════════════════════════════════════════ */
+    .t3 { background: #312e81; }
+    .t3 .nav { background: #1e1b4b; color: #c4b5fd; }
+    .t3 .nav-logo { background: #8b5cf6; color: #fff; }
+    .t3 .nav-brand { color: #f5f3ff; }
+    .t3 .nav-link { color: #c4b5fd; }
+    .t3 .nav-swatch { background: #8b5cf6; }
+    .t3 .body { background: #312e81; }
+    .t3 .card { background: #1e1b4b; border-color: #4c1d95; color: #f5f3ff; }
+    .t3 .card-title { color: #f5f3ff; }
+    .t3 .card-item { color: #c4b5fd; }
+    .t3 .progress-track { background: #4c1d95; }
+    .t3 .progress-fill { background: #8b5cf6; }
+
+    /* ════════════════════════════════════════════════
+       THEME 4 — Warm Charcoal
+    ════════════════════════════════════════════════ */
+    .t4 { background: #292524; }
+    .t4 .nav { background: #1c1917; color: #a8a29e; }
+    .t4 .nav-logo { background: #f59e0b; color: #1c1917; }
+    .t4 .nav-brand { color: #fafaf9; }
+    .t4 .nav-link { color: #a8a29e; }
+    .t4 .nav-swatch { background: #f59e0b; }
+    .t4 .body { background: #292524; }
+    .t4 .card { background: #1c1917; border-color: #44403c; color: #fafaf9; }
+    .t4 .card-title { color: #fafaf9; }
+    .t4 .card-item { color: #a8a29e; }
+    .t4 .progress-track { background: #44403c; }
+    .t4 .progress-fill { background: #f59e0b; }
+
+    /* ════════════════════════════════════════════════
+       THEME 5 — Arctic Frost (light)
+    ════════════════════════════════════════════════ */
+    .t5 { background: #f0f9ff; }
+    .t5 .nav { background: #0c4a6e; color: #bae6fd; }
+    .t5 .nav-logo { background: #0ea5e9; color: #fff; }
+    .t5 .nav-brand { color: #fff; }
+    .t5 .nav-link { color: #bae6fd; }
+    .t5 .nav-swatch { background: #0ea5e9; }
+    .t5 .body { background: #f0f9ff; }
+    .t5 .card { background: #fff; border-color: #e0f2fe; color: #0f172a; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .t5 .card-title { color: #0f172a; }
+    .t5 .card-item { color: #64748b; }
+    .t5 .progress-track { background: #e0f2fe; }
+    .t5 .progress-fill { background: #0ea5e9; }
+
+    /* ════════════════════════════════════════════════
+       THEME 6 — Crimson Steel
+    ════════════════════════════════════════════════ */
+    .t6 { background: #1a1a1a; }
+    .t6 .nav { background: #0d0d0d; color: #a3a3a3; }
+    .t6 .nav-logo { background: #dc2626; color: #fff; }
+    .t6 .nav-brand { color: #fafafa; }
+    .t6 .nav-link { color: #a3a3a3; }
+    .t6 .nav-swatch { background: #dc2626; }
+    .t6 .body { background: #1a1a1a; }
+    .t6 .card { background: #0d0d0d; border-color: #292929; color: #fafafa; }
+    .t6 .card-title { color: #fafafa; }
+    .t6 .card-item { color: #a3a3a3; }
+    .t6 .progress-track { background: #292929; }
+    .t6 .progress-fill { background: #dc2626; }
+
+    /* ════════════════════════════════════════════════
+       THEME 7 — Cyber Teal
+    ════════════════════════════════════════════════ */
+    .t7 { background: #0f172a; }
+    .t7 .nav { background: #020617; color: #67e8f9; }
+    .t7 .nav-logo { background: #06b6d4; color: #020617; }
+    .t7 .nav-brand { color: #e2e8f0; }
+    .t7 .nav-link { color: #67e8f9; }
+    .t7 .nav-swatch { background: #06b6d4; }
+    .t7 .body { background: #0f172a; }
+    .t7 .card { background: #020617; border-color: #0e7490; color: #e2e8f0; }
+    .t7 .card-title { color: #e2e8f0; }
+    .t7 .card-item { color: #67e8f9; }
+    .t7 .progress-track { background: #164e63; }
+    .t7 .progress-fill { background: #06b6d4; }
+
+    /* ════════════════════════════════════════════════
+       THEME 8 — Solar Eclipse
+    ════════════════════════════════════════════════ */
+    .t8 { background: #18181b; }
+    .t8 .nav { background: #09090b; color: #a3a3a3; }
+    .t8 .nav-logo { background: #eab308; color: #09090b; }
+    .t8 .nav-brand { color: #fafafa; }
+    .t8 .nav-link { color: #a3a3a3; }
+    .t8 .nav-swatch { background: #eab308; }
+    .t8 .body { background: #18181b; }
+    .t8 .card { background: #09090b; border-color: #27272a; color: #fafafa; }
+    .t8 .card-title { color: #fafafa; }
+    .t8 .card-item { color: #a3a3a3; }
+    .t8 .progress-track { background: #27272a; }
+    .t8 .progress-fill { background: #eab308; }
+
+    /* ════════════════════════════════════════════════
+       THEME 9 — Deep Ocean
+    ════════════════════════════════════════════════ */
+    .t9 { background: #0a192f; }
+    .t9 .nav { background: #020c1b; color: #8892b0; }
+    .t9 .nav-logo { background: #64ffda; color: #020c1b; }
+    .t9 .nav-brand { color: #ccd6f6; }
+    .t9 .nav-link { color: #8892b0; }
+    .t9 .nav-swatch { background: #64ffda; }
+    .t9 .body { background: #0a192f; }
+    .t9 .card { background: #020c1b; border-color: #112240; color: #ccd6f6; }
+    .t9 .card-title { color: #ccd6f6; }
+    .t9 .card-item { color: #8892b0; }
+    .t9 .progress-track { background: #112240; }
+    .t9 .progress-fill { background: #64ffda; }
+
+    /* ════════════════════════════════════════════════
+       THEME 10 — Dracula
+    ════════════════════════════════════════════════ */
+    .t10 { background: #282a36; }
+    .t10 .nav { background: #1e1f29; color: #6272a4; }
+    .t10 .nav-logo { background: #bd93f9; color: #1e1f29; }
+    .t10 .nav-brand { color: #f8f8f2; }
+    .t10 .nav-link { color: #6272a4; }
+    .t10 .nav-swatch { background: #bd93f9; }
+    .t10 .body { background: #282a36; }
+    .t10 .card { background: #1e1f29; border-color: #44475a; color: #f8f8f2; }
+    .t10 .card-title { color: #f8f8f2; }
+    .t10 .card-item { color: #6272a4; }
+    .t10 .progress-track { background: #44475a; }
+    .t10 .progress-fill { background: #bd93f9; }
+
+    /* ════════════════════════════════════════════════
+       THEME 11 — Obsidian Rose
+    ════════════════════════════════════════════════ */
+    .t11 { background: #18181b; }
+    .t11 .nav { background: #09090b; color: #a1a1aa; }
+    .t11 .nav-logo { background: #f43f5e; color: #fff; }
+    .t11 .nav-brand { color: #fafafa; }
+    .t11 .nav-link { color: #a1a1aa; }
+    .t11 .nav-swatch { background: #f43f5e; }
+    .t11 .body { background: #18181b; }
+    .t11 .card { background: #09090b; border-color: #3f3f46; color: #fafafa; }
+    .t11 .card-title { color: #fafafa; }
+    .t11 .card-item { color: #a1a1aa; }
+    .t11 .progress-track { background: #3f3f46; }
+    .t11 .progress-fill { background: #f43f5e; }
+
+    /* ════════════════════════════════════════════════
+       THEME 12 — Matrix Green
+    ════════════════════════════════════════════════ */
+    .t12 { background: #0a0f0a; }
+    .t12 .nav { background: #050805; color: #4ade80; }
+    .t12 .nav-logo { background: #16a34a; color: #fff; }
+    .t12 .nav-brand { color: #bbf7d0; }
+    .t12 .nav-link { color: #4ade80; }
+    .t12 .nav-swatch { background: #16a34a; }
+    .t12 .body { background: #0a0f0a; }
+    .t12 .card { background: #050805; border-color: #14532d; color: #bbf7d0; }
+    .t12 .card-title { color: #bbf7d0; }
+    .t12 .card-item { color: #4ade80; }
+    .t12 .progress-track { background: #14532d; }
+    .t12 .progress-fill { background: #22c55e; }
+
+    /* ════════════════════════════════════════════════
+       THEME 13 — Graphite Orange
+    ════════════════════════════════════════════════ */
+    .t13 { background: #1c1c1e; }
+    .t13 .nav { background: #111113; color: #a3a3a3; }
+    .t13 .nav-logo { background: #f97316; color: #fff; }
+    .t13 .nav-brand { color: #fafafa; }
+    .t13 .nav-link { color: #a3a3a3; }
+    .t13 .nav-swatch { background: #f97316; }
+    .t13 .body { background: #1c1c1e; }
+    .t13 .card { background: #111113; border-color: #2c2c2e; color: #fafafa; }
+    .t13 .card-title { color: #fafafa; }
+    .t13 .card-item { color: #a3a3a3; }
+    .t13 .progress-track { background: #2c2c2e; }
+    .t13 .progress-fill { background: #f97316; }
+
+    /* ════════════════════════════════════════════════
+       THEME 14 — Carbon Fiber
+    ════════════════════════════════════════════════ */
+    .t14 { background: #1a1a1a; }
+    .t14 .nav { background: #0a0a0a; color: #737373; }
+    .t14 .nav-logo { background: #e5e5e5; color: #0a0a0a; }
+    .t14 .nav-brand { color: #fafafa; }
+    .t14 .nav-link { color: #737373; }
+    .t14 .nav-swatch { background: #e5e5e5; }
+    .t14 .body { background: #1a1a1a; }
+    .t14 .card { background: #0a0a0a; border-color: #262626; color: #fafafa; }
+    .t14 .card-title { color: #fafafa; }
+    .t14 .card-item { color: #737373; }
+    .t14 .progress-track { background: #262626; }
+    .t14 .progress-fill { background: #e5e5e5; }
+
+    /* ════════════════════════════════════════════════
+       THEME 15 — Neon Purple
+    ════════════════════════════════════════════════ */
+    .t15 { background: #13001f; }
+    .t15 .nav { background: #0a0010; color: #d8b4fe; }
+    .t15 .nav-logo { background: #a855f7; color: #fff; }
+    .t15 .nav-brand { color: #faf5ff; }
+    .t15 .nav-link { color: #d8b4fe; }
+    .t15 .nav-swatch { background: #a855f7; }
+    .t15 .body { background: #13001f; }
+    .t15 .card { background: #0a0010; border-color: #3b0764; color: #faf5ff; }
+    .t15 .card-title { color: #faf5ff; }
+    .t15 .card-item { color: #d8b4fe; }
+    .t15 .progress-track { background: #3b0764; }
+    .t15 .progress-fill { background: #a855f7; }
+
+    /* ════════════════════════════════════════════════
+       THEME 16 — Rust Iron
+    ════════════════════════════════════════════════ */
+    .t16 { background: #1c1410; }
+    .t16 .nav { background: #100c08; color: #92400e; }
+    .t16 .nav-logo { background: #b45309; color: #fff; }
+    .t16 .nav-brand { color: #fef3c7; }
+    .t16 .nav-link { color: #d97706; }
+    .t16 .nav-swatch { background: #b45309; }
+    .t16 .body { background: #1c1410; }
+    .t16 .card { background: #100c08; border-color: #451a03; color: #fef3c7; }
+    .t16 .card-title { color: #fef3c7; }
+    .t16 .card-item { color: #d97706; }
+    .t16 .progress-track { background: #451a03; }
+    .t16 .progress-fill { background: #b45309; }
+
+    /* ════════════════════════════════════════════════
+       THEME 17 — Toxic Lime
+    ════════════════════════════════════════════════ */
+    .t17 { background: #0f1a00; }
+    .t17 .nav { background: #080e00; color: #84cc16; }
+    .t17 .nav-logo { background: #65a30d; color: #fff; }
+    .t17 .nav-brand { color: #ecfccb; }
+    .t17 .nav-link { color: #84cc16; }
+    .t17 .nav-swatch { background: #65a30d; }
+    .t17 .body { background: #0f1a00; }
+    .t17 .card { background: #080e00; border-color: #1a2e05; color: #ecfccb; }
+    .t17 .card-title { color: #ecfccb; }
+    .t17 .card-item { color: #84cc16; }
+    .t17 .progress-track { background: #1a2e05; }
+    .t17 .progress-fill { background: #a3e635; }
+
+    /* ════════════════════════════════════════════════
+       THEME 18 — Midnight Slate
+    ════════════════════════════════════════════════ */
+    .t18 { background: #1e2433; }
+    .t18 .nav { background: #131929; color: #94a3b8; }
+    .t18 .nav-logo { background: #38bdf8; color: #131929; }
+    .t18 .nav-brand { color: #f0f4ff; }
+    .t18 .nav-link { color: #94a3b8; }
+    .t18 .nav-swatch { background: #38bdf8; }
+    .t18 .body { background: #1e2433; }
+    .t18 .card { background: #131929; border-color: #2d3748; color: #f0f4ff; }
+    .t18 .card-title { color: #f0f4ff; }
+    .t18 .card-item { color: #94a3b8; }
+    .t18 .progress-track { background: #2d3748; }
+    .t18 .progress-fill { background: #38bdf8; }
+
+    /* ── Status badge colors (shared) ── */
+    .badge-approved  { background: rgba(52,211,153,0.15); color: #34d399; }
+    .badge-review    { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+    .badge-requested { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+    .badge-revision  { background: rgba(248,113,113,0.15); color: #f87171; }
+
+    /* Light theme badge overrides */
+    .t5 .badge-approved  { background: #d1fae5; color: #065f46; }
+    .t5 .badge-review    { background: #fef3c7; color: #92400e; }
+    .t5 .badge-requested { background: #dbeafe; color: #1e40af; }
+    .t5 .badge-revision  { background: #fee2e2; color: #991b1b; }
+
+    .theme-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>GlideGate — Theme Preview</h1>
+  <p class="subtitle">Visual preview of 18 proposed themes · Open in browser · No server needed</p>
+
+  <div class="grid">
+
+    <!-- ── THEME 1: Midnight Indigo ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 01</div>
+      <div class="theme-name">Midnight Indigo</div>
+      <div class="theme-desc">Refined dark navy · Indigo accent · Financial & professional</div>
+      <div class="theme-card t1">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#4f46e5;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#0f172a" title="#0f172a Nav"></div>
+          <div class="chip" style="background:#1e293b" title="#1e293b Surface"></div>
+          <div class="chip" style="background:#4f46e5" title="#4f46e5 Accent"></div>
+          <div class="chip" style="background:#f1f5f9" title="#f1f5f9 Text"></div>
+          <div class="chip" style="background:#94a3b8" title="#94a3b8 Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 2: Emerald Wealth ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 02</div>
+      <div class="theme-name">Emerald Wealth</div>
+      <div class="theme-desc">Deep forest green · Emerald accent · Growth & prosperity</div>
+      <div class="theme-card t2">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#10b981;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#052e16" title="#052e16 Nav"></div>
+          <div class="chip" style="background:#064e3b" title="#064e3b Surface"></div>
+          <div class="chip" style="background:#10b981" title="#10b981 Accent"></div>
+          <div class="chip" style="background:#ecfdf5" title="#ecfdf5 Text"></div>
+          <div class="chip" style="background:#6ee7b7" title="#6ee7b7 Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 3: Royal Amethyst ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 03</div>
+      <div class="theme-name">Royal Amethyst</div>
+      <div class="theme-desc">Deep indigo-purple · Violet accent · Premium & luxury</div>
+      <div class="theme-card t3">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#8b5cf6;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#1e1b4b" title="#1e1b4b Nav"></div>
+          <div class="chip" style="background:#312e81" title="#312e81 Surface"></div>
+          <div class="chip" style="background:#8b5cf6" title="#8b5cf6 Accent"></div>
+          <div class="chip" style="background:#f5f3ff" title="#f5f3ff Text"></div>
+          <div class="chip" style="background:#c4b5fd" title="#c4b5fd Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 4: Warm Charcoal ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 04</div>
+      <div class="theme-name">Warm Charcoal</div>
+      <div class="theme-desc">Stone-dark · Amber/copper accent · Sophisticated & grounded</div>
+      <div class="theme-card t4">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#f59e0b;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#1c1917" title="#1c1917 Nav"></div>
+          <div class="chip" style="background:#292524" title="#292524 Surface"></div>
+          <div class="chip" style="background:#f59e0b" title="#f59e0b Accent"></div>
+          <div class="chip" style="background:#fafaf9" title="#fafaf9 Text"></div>
+          <div class="chip" style="background:#a8a29e" title="#a8a29e Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 5: Arctic Frost ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 05</div>
+      <div class="theme-name">Arctic Frost</div>
+      <div class="theme-desc">Light mode · Sky-blue accent · Clean & modern</div>
+      <div class="theme-card t5">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#065f46"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#92400e"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#1e40af"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#0ea5e9;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#0c4a6e" title="#0c4a6e Nav"></div>
+          <div class="chip" style="background:#f0f9ff" title="#f0f9ff Surface"></div>
+          <div class="chip" style="background:#0ea5e9" title="#0ea5e9 Accent"></div>
+          <div class="chip" style="background:#0f172a" title="#0f172a Text"></div>
+          <div class="chip" style="background:#64748b" title="#64748b Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 6: Crimson Steel ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 06</div>
+      <div class="theme-name">Crimson Steel</div>
+      <div class="theme-desc">True black · Crimson red accent · Bold & intense</div>
+      <div class="theme-card t6">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#dc2626;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#0d0d0d" title="#0d0d0d Nav"></div>
+          <div class="chip" style="background:#1a1a1a" title="#1a1a1a Surface"></div>
+          <div class="chip" style="background:#dc2626" title="#dc2626 Accent"></div>
+          <div class="chip" style="background:#fafafa" title="#fafafa Text"></div>
+          <div class="chip" style="background:#a3a3a3" title="#a3a3a3 Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 7: Cyber Teal ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 07</div>
+      <div class="theme-name">Cyber Teal</div>
+      <div class="theme-desc">Near-black · Cyan/teal accent · Futuristic & tech-forward</div>
+      <div class="theme-card t7">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#06b6d4;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#020617" title="#020617 Nav"></div>
+          <div class="chip" style="background:#0f172a" title="#0f172a Surface"></div>
+          <div class="chip" style="background:#06b6d4" title="#06b6d4 Accent"></div>
+          <div class="chip" style="background:#e2e8f0" title="#e2e8f0 Text"></div>
+          <div class="chip" style="background:#67e8f9" title="#67e8f9 Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 8: Solar Eclipse ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 08</div>
+      <div class="theme-name">Solar Eclipse</div>
+      <div class="theme-desc">Zinc-black · Gold accent · Premium dark editorial</div>
+      <div class="theme-card t8">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#eab308;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#09090b" title="#09090b Nav"></div>
+          <div class="chip" style="background:#18181b" title="#18181b Surface"></div>
+          <div class="chip" style="background:#eab308" title="#eab308 Accent"></div>
+          <div class="chip" style="background:#fafafa" title="#fafafa Text"></div>
+          <div class="chip" style="background:#a3a3a3" title="#a3a3a3 Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 9: Deep Ocean ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 09</div>
+      <div class="theme-name">Deep Ocean</div>
+      <div class="theme-desc">Dark navy · Aqua-mint accent · Developer / portfolio style</div>
+      <div class="theme-card t9">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#64ffda;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#020c1b" title="#020c1b Nav"></div>
+          <div class="chip" style="background:#0a192f" title="#0a192f Surface"></div>
+          <div class="chip" style="background:#64ffda" title="#64ffda Accent"></div>
+          <div class="chip" style="background:#ccd6f6" title="#ccd6f6 Text"></div>
+          <div class="chip" style="background:#8892b0" title="#8892b0 Muted"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 10: Dracula ── -->
+    <!-- themes 6-9 already inserted above -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 10</div>
+      <div class="theme-name">Dracula</div>
+      <div class="theme-desc">Classic Dracula palette · Lavender accent · Iconic dark theme</div>
+      <div class="theme-card t10">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row">
+              <span class="card-item">Passport</span>
+              <span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Bank Statement</span>
+              <span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span>
+            </div>
+            <div class="card-row">
+              <span class="card-item">Tax Return</span>
+              <span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row">
+              <span class="card-item">3 of 7 documents complete</span>
+              <span style="font-size:11px;color:#bd93f9;font-weight:600;">65%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#1e1f29" title="#1e1f29 Nav"></div>
+          <div class="chip" style="background:#282a36" title="#282a36 Surface"></div>
+          <div class="chip" style="background:#bd93f9" title="#bd93f9 Accent"></div>
+          <div class="chip" style="background:#f8f8f2" title="#f8f8f2 Text"></div>
+          <div class="chip" style="background:#6272a4" title="#6272a4 Muted"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+    <!-- ── THEME 11: Obsidian Rose ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 11</div>
+      <div class="theme-name">Obsidian Rose</div>
+      <div class="theme-desc">Zinc-black · Rose-pink accent · Sleek & distinctive</div>
+      <div class="theme-card t11">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row"><span class="card-item">Passport</span><span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span></div>
+            <div class="card-row"><span class="card-item">Bank Statement</span><span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span></div>
+            <div class="card-row"><span class="card-item">Tax Return</span><span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row"><span class="card-item">3 of 7 documents complete</span><span style="font-size:11px;color:#f43f5e;font-weight:600;">65%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#09090b"></div>
+          <div class="chip" style="background:#18181b"></div>
+          <div class="chip" style="background:#f43f5e"></div>
+          <div class="chip" style="background:#fafafa"></div>
+          <div class="chip" style="background:#a1a1aa"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 12: Matrix Green ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 12</div>
+      <div class="theme-name">Matrix Green</div>
+      <div class="theme-desc">Near-black · Neon green accent · Hacker / terminal vibe</div>
+      <div class="theme-card t12">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row"><span class="card-item">Passport</span><span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span></div>
+            <div class="card-row"><span class="card-item">Bank Statement</span><span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span></div>
+            <div class="card-row"><span class="card-item">Tax Return</span><span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row"><span class="card-item">3 of 7 documents complete</span><span style="font-size:11px;color:#22c55e;font-weight:600;">65%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#050805"></div>
+          <div class="chip" style="background:#0a0f0a"></div>
+          <div class="chip" style="background:#22c55e"></div>
+          <div class="chip" style="background:#bbf7d0"></div>
+          <div class="chip" style="background:#4ade80"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 13: Graphite Orange ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 13</div>
+      <div class="theme-name">Graphite Orange</div>
+      <div class="theme-desc">iOS-dark graphite · Vivid orange accent · Modern & energetic</div>
+      <div class="theme-card t13">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row"><span class="card-item">Passport</span><span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span></div>
+            <div class="card-row"><span class="card-item">Bank Statement</span><span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span></div>
+            <div class="card-row"><span class="card-item">Tax Return</span><span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row"><span class="card-item">3 of 7 documents complete</span><span style="font-size:11px;color:#f97316;font-weight:600;">65%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#111113"></div>
+          <div class="chip" style="background:#1c1c1e"></div>
+          <div class="chip" style="background:#f97316"></div>
+          <div class="chip" style="background:#fafafa"></div>
+          <div class="chip" style="background:#a3a3a3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 14: Carbon Fiber ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 14</div>
+      <div class="theme-name">Carbon Fiber</div>
+      <div class="theme-desc">Pure black · Silver/white accent · Minimal monochrome luxury</div>
+      <div class="theme-card t14">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row"><span class="card-item">Passport</span><span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span></div>
+            <div class="card-row"><span class="card-item">Bank Statement</span><span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span></div>
+            <div class="card-row"><span class="card-item">Tax Return</span><span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row"><span class="card-item">3 of 7 documents complete</span><span style="font-size:11px;color:#e5e5e5;font-weight:600;">65%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#0a0a0a"></div>
+          <div class="chip" style="background:#1a1a1a"></div>
+          <div class="chip" style="background:#e5e5e5"></div>
+          <div class="chip" style="background:#fafafa"></div>
+          <div class="chip" style="background:#737373"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 15: Neon Purple ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 15</div>
+      <div class="theme-name">Neon Purple</div>
+      <div class="theme-desc">Deep black-purple · Electric violet accent · Vaporwave / cyberpunk</div>
+      <div class="theme-card t15">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row"><span class="card-item">Passport</span><span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span></div>
+            <div class="card-row"><span class="card-item">Bank Statement</span><span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span></div>
+            <div class="card-row"><span class="card-item">Tax Return</span><span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row"><span class="card-item">3 of 7 documents complete</span><span style="font-size:11px;color:#a855f7;font-weight:600;">65%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#0a0010"></div>
+          <div class="chip" style="background:#13001f"></div>
+          <div class="chip" style="background:#a855f7"></div>
+          <div class="chip" style="background:#faf5ff"></div>
+          <div class="chip" style="background:#d8b4fe"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 16: Rust Iron ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 16</div>
+      <div class="theme-name">Rust Iron</div>
+      <div class="theme-desc">Dark brown-black · Amber rust accent · Industrial warmth</div>
+      <div class="theme-card t16">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row"><span class="card-item">Passport</span><span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span></div>
+            <div class="card-row"><span class="card-item">Bank Statement</span><span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span></div>
+            <div class="card-row"><span class="card-item">Tax Return</span><span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row"><span class="card-item">3 of 7 documents complete</span><span style="font-size:11px;color:#b45309;font-weight:600;">65%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#100c08"></div>
+          <div class="chip" style="background:#1c1410"></div>
+          <div class="chip" style="background:#b45309"></div>
+          <div class="chip" style="background:#fef3c7"></div>
+          <div class="chip" style="background:#d97706"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 17: Toxic Lime ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 17</div>
+      <div class="theme-name">Toxic Lime</div>
+      <div class="theme-desc">Dark olive-black · Lime green accent · Electric & sharp</div>
+      <div class="theme-card t17">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row"><span class="card-item">Passport</span><span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span></div>
+            <div class="card-row"><span class="card-item">Bank Statement</span><span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span></div>
+            <div class="card-row"><span class="card-item">Tax Return</span><span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row"><span class="card-item">3 of 7 documents complete</span><span style="font-size:11px;color:#a3e635;font-weight:600;">65%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#080e00"></div>
+          <div class="chip" style="background:#0f1a00"></div>
+          <div class="chip" style="background:#a3e635"></div>
+          <div class="chip" style="background:#ecfccb"></div>
+          <div class="chip" style="background:#84cc16"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── THEME 18: Midnight Slate ── -->
+    <div class="theme-wrapper">
+      <div class="theme-label">Theme 18</div>
+      <div class="theme-name">Midnight Slate</div>
+      <div class="theme-desc">Blue-slate dark · Sky-blue accent · Clean & corporate dark</div>
+      <div class="theme-card t18">
+        <div class="nav">
+          <div class="nav-logo">🏛</div>
+          <span class="nav-brand">GlideGate</span>
+          <span class="nav-link">Advisor Workspace</span>
+          <span class="nav-link">Agent Trace</span>
+          <div class="nav-spacer"></div>
+          <div class="nav-swatch"></div>
+        </div>
+        <div class="body">
+          <div class="card">
+            <div class="card-title">KYC Documents</div>
+            <div class="card-row"><span class="card-item">Passport</span><span class="badge badge-approved"><span class="dot" style="background:#34d399"></span>Approved</span></div>
+            <div class="card-row"><span class="card-item">Bank Statement</span><span class="badge badge-review"><span class="dot" style="background:#fbbf24"></span>Under Review</span></div>
+            <div class="card-row"><span class="card-item">Tax Return</span><span class="badge badge-requested"><span class="dot" style="background:#60a5fa"></span>Requested</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Onboarding Progress</div>
+            <div class="card-row"><span class="card-item">3 of 7 documents complete</span><span style="font-size:11px;color:#38bdf8;font-weight:600;">65%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%"></div></div>
+          </div>
+        </div>
+        <div class="palette">
+          <div class="chip" style="background:#131929"></div>
+          <div class="chip" style="background:#1e2433"></div>
+          <div class="chip" style="background:#38bdf8"></div>
+          <div class="chip" style="background:#f0f4ff"></div>
+          <div class="chip" style="background:#94a3b8"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="text-align:center;color:#555;font-size:12px;margin-top:40px;">
+    Color chips at bottom of each card = Nav · Surface · Accent · Text · Muted
+  </p>
+
+</body>
+</html>

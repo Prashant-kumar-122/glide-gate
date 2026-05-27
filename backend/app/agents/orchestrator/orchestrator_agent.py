@@ -138,6 +138,48 @@ class OrchestratorAgent(BaseAgent):
                 payload={"selected_products": selected_products},
             )
         )
+
+        client_name = task.payload.get("client_name", "")
+        client_email = task.payload.get("client_email", "")
+        case_name = task.payload.get("case_name", "")
+
+        # Email notification — sent to client's inbox
+        await self.send_task(
+            TaskPacket(
+                from_agent=self.agent_id,
+                to_agent=AgentID.NOTIFICATION,
+                task_type=TaskType.SEND_NOTIFICATION,
+                case_id=case_id,
+                client_id=task.client_id,
+                priority="NORMAL",
+                payload={
+                    "template": "onboarding_started",
+                    "selected_products": selected_products,
+                    "client_name": client_name,
+                    "case_name": case_name,
+                    "recipient_email": client_email,
+                },
+            )
+        )
+
+        # In-app notification — direct to client user room
+        await self.send_task(
+            TaskPacket(
+                from_agent=self.agent_id,
+                to_agent=AgentID.NOTIFICATION,
+                task_type=TaskType.SEND_NOTIFICATION,
+                case_id=case_id,
+                client_id=task.client_id,
+                priority="NORMAL",
+                payload={
+                    "template": "case_created_inapp",
+                    "selected_products": selected_products,
+                    "client_name": client_name,
+                    "case_name": case_name,
+                },
+            )
+        )
+
         self.logger.info(f"Started onboarding case={case_id} products={selected_products}")
         return TaskResponse(
             task_id=task.id,
@@ -278,11 +320,16 @@ class OrchestratorAgent(BaseAgent):
             asyncio.create_task(_persist_case_stage(case_id, target_stage.value, pct))
 
             if target_stage == OnboardingStage.COMPLETE:
-                asyncio.create_task(
-                    _persist_accounts(case_id, task.client_id, list(state.selected_products))
-                )
+                # Await so account numbers are in DB before the completion notification queries them
+                await _persist_accounts(case_id, task.client_id, list(state.selected_products))
 
             if has_issues:
+                from app.websocket.socket_emitter import socket_emitter as _se
+                await _se.case_stage_changed(case_id, {
+                    "case_id": str(case_id),
+                    "stage": OnboardingStage.REVIEW.value,
+                    "triggered_by": "product_track_complete",
+                })
                 await self.send_task(
                     TaskPacket(
                         from_agent=self.agent_id,
@@ -301,6 +348,12 @@ class OrchestratorAgent(BaseAgent):
                     )
                 )
             else:
+                from app.websocket.socket_emitter import socket_emitter
+                await socket_emitter.case_stage_changed(case_id, {
+                    "case_id": str(case_id),
+                    "stage": OnboardingStage.COMPLETE.value,
+                    "triggered_by": "product_track_complete",
+                })
                 await self._route_to_stage(task, OnboardingStage.COMPLETE)
 
         return TaskResponse(
@@ -452,17 +505,67 @@ class OrchestratorAgent(BaseAgent):
             )
 
         elif stage == OnboardingStage.COMPLETE:
-            await self.send_task(
-                TaskPacket(
-                    from_agent=self.agent_id,
-                    to_agent=AgentID.NOTIFICATION,
-                    task_type=TaskType.SEND_NOTIFICATION,
-                    case_id=task.case_id,
-                    client_id=task.client_id,
-                    priority="NORMAL",
-                    payload={"type": "ONBOARDING_COMPLETE"},
-                )
+            state = self._states.get(task.case_id)
+            _client_data = state.client_data if state else {}
+            _client_name = (
+                _client_data.get("full_name")
+                or f"{_client_data.get('first_name', '')} {_client_data.get('last_name', '')}".strip()
+                or task.payload.get("client_name", "")
             )
+            _client_email = (
+                _client_data.get("email")
+                or _client_data.get("email_address", "")
+                or task.payload.get("client_email", "")
+            )
+            # client_data is never populated in orchestrator state — fall back to DB
+            _case_name = task.payload.get("case_name", "")
+            _account_numbers = ""
+            if not _client_email or not _client_name or not _case_name or not _account_numbers:
+                from app.database import AsyncSessionLocal
+                from app.models.users import User
+                from app.models.cases import OnboardingCase
+                from app.models.accounts import ClientAccount
+                from sqlalchemy import select as _select
+                try:
+                    async with AsyncSessionLocal() as _db:
+                        if not _client_email or not _client_name:
+                            _user = await _db.get(User, task.client_id)
+                            if _user:
+                                _client_name = _client_name or _user.full_name or f"{_user.first_name} {_user.last_name}".strip()
+                                _client_email = _client_email or _user.email
+                        if not _case_name:
+                            _case = await _db.get(OnboardingCase, task.case_id)
+                            if _case:
+                                _case_name = (_case.extra_metadata or {}).get("case_name", "")
+                        _accts = await _db.execute(
+                            _select(ClientAccount).where(ClientAccount.case_id == task.case_id)
+                        )
+                        _account_numbers = ", ".join(
+                            a.account_number for a in _accts.scalars().all()
+                        ) or "—"
+                except Exception as _exc:
+                    self.logger.warning(f"Could not fetch client/accounts for COMPLETE notification: {_exc}")
+            _products = list(state.selected_products) if state else task.payload.get("selected_products", [])
+
+            for _tmpl in ("onboarding_complete", "onboarding_complete_inapp"):
+                await self.send_task(
+                    TaskPacket(
+                        from_agent=self.agent_id,
+                        to_agent=AgentID.NOTIFICATION,
+                        task_type=TaskType.SEND_NOTIFICATION,
+                        case_id=task.case_id,
+                        client_id=task.client_id,
+                        priority="NORMAL",
+                        payload={
+                            "template": _tmpl,
+                            "client_name": _client_name,
+                            "case_name": _case_name,
+                            "selected_products": _products,
+                            "recipient_email": _client_email,
+                            "account_numbers": _account_numbers,
+                        },
+                    )
+                )
 
             # Push a final status snapshot to the Contact Centre agent so
             # representatives have an up-to-date summary if the client calls.

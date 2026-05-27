@@ -13,6 +13,7 @@ from sqlalchemy import select, update as sa_update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.base.a2a_types import AgentID, OnboardingStage, TaskPacket, TaskType
+from app.models.clients import Client
 from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import NotFoundError, UnprocessableError
@@ -190,6 +191,51 @@ async def _update_case_percentage_for_docs(case_id: UUID) -> None:
     except Exception as exc:
         from loguru import logger
         logger.warning(f"documents: percentage update failed for case {case_id}: {exc}")
+
+
+async def _notify_document_status(doc_id: UUID, new_status: str) -> None:
+    """Send in-app (and email for REQUESTED) notification on document status change."""
+    _TEMPLATE_MAP: dict[str, list[str]] = {
+        "REQUESTED": ["document_requested", "document_requested_inapp"],
+        "APPROVED": ["document_approved"],
+        "NEEDS_REVISION": ["document_needs_revision"],
+    }
+    templates = _TEMPLATE_MAP.get(new_status)
+    if not templates:
+        return
+
+    async with AsyncSessionLocal() as db:
+        doc = await db.get(Document, doc_id)
+        if doc is None:
+            return
+        client = await db.get(Client, doc.client_id)
+        client_name = f"{client.first_name} {client.last_name}".strip() if client else ""
+        client_email = client.email if client else ""
+        # Use original filename if uploaded, otherwise fall back to document_type
+        doc_display_name = doc.original_filename or doc.document_type or "document"
+        _case = await db.get(OnboardingCase, doc.case_id)
+        _case_name = (_case.extra_metadata or {}).get("case_name", "") if _case else ""
+
+    for tmpl in templates:
+        await orchestration_service.publish_task(
+            TaskPacket(
+                from_agent=AgentID.CUSTOMER_SERVICE,
+                to_agent=AgentID.NOTIFICATION,
+                task_type=TaskType.SEND_NOTIFICATION,
+                case_id=doc.case_id,
+                client_id=doc.client_id,
+                priority="NORMAL",
+                payload={
+                    "template": tmpl,
+                    "document_name": doc_display_name,
+                    "document_type": doc_display_name,
+                    "document_list": doc_display_name,
+                    "case_name": _case_name,
+                    "client_name": client_name,
+                    "recipient_email": client_email,
+                },
+            )
+        )
 
 
 async def _trigger_kyc_if_all_docs_approved(case_id: UUID) -> None:
@@ -375,6 +421,10 @@ async def update_document_status(
     # Trigger KYC once all uploaded documents are approved and case is in REVIEW
     if body.status == "APPROVED":
         asyncio.create_task(_trigger_kyc_if_all_docs_approved(doc.case_id))
+
+    # Send notification for status changes the client needs to know about
+    if body.status in ("APPROVED", "NEEDS_REVISION", "REQUESTED"):
+        asyncio.create_task(_notify_document_status(document_id, body.status))
 
     return DocumentOut.model_validate(doc)
 

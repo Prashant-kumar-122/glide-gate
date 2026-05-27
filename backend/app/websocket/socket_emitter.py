@@ -12,6 +12,7 @@ from loguru import logger
 
 from app.websocket.socket_events import SocketEvent
 from app.websocket import socket_server
+from uuid import UUID
 
 
 class SocketEmitter:
@@ -67,6 +68,13 @@ class SocketEmitter:
 
     async def notification_sent(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
         await self.emit(case_id, SocketEvent.NOTIFICATION_SENT, payload)
+
+    async def notify_user(self, user_id: str | UUID, payload: dict[str, Any]) -> None:
+        """Emit notification_sent directly to the user room (bypasses case room)."""
+        try:
+            await socket_server.emit_to_user(user_id, SocketEvent.NOTIFICATION_SENT, payload)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"[SocketEmitter] notify_user failed user={user_id}: {exc}")
 
     async def case_stage_changed(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
         await self.emit(case_id, SocketEvent.CASE_STAGE_CHANGED, payload)

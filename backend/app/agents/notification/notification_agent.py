@@ -9,6 +9,9 @@ from uuid import uuid4
 from app.agents.base.a2a_types import AgentID, TaskPacket, TaskResponse, TaskType
 from app.agents.base.base_agent import BaseAgent
 from app.agents.notification.notification_templates import get_template, list_templates
+from app.config import settings
+from app.websocket.socket_emitter import socket_emitter
+from app.models.communications import Notification
 
 _PRODUCT_NAMES: dict[str, str] = {
     "cash_account": "Cash Account",
@@ -110,7 +113,7 @@ class NotificationAgent(BaseAgent):
             result=record,
         )
 
-    # ── Dispatch simulation ───────────────────────────────────────────────────
+    # ── Dispatch ─────────────────────────────────────────────────────────────
 
     async def _dispatch(
         self,
@@ -118,31 +121,134 @@ class NotificationAgent(BaseAgent):
         task: TaskPacket,
         priority_override: str | None = None,
     ) -> dict[str, Any]:
-        lo, hi = _DISPATCH_LATENCY_MS
-        latency = random.uniform(lo / 1000, hi / 1000)
-        await asyncio.sleep(latency)
+        channel = rendered.get("channel", "in_app")
+        is_simulated = True
+        status = "SIMULATED_SENT"
+        latency_ms = 0
+
+        if channel == "email" and settings.EMAIL_ENABLED and settings.RESEND_API_KEY:
+            self.logger.info(f"[NotificationAgent] sending real email case={task.case_id}")
+            status, latency_ms, is_simulated = await self._send_email(rendered, task)
+        else:
+            self.logger.info(
+                f"[NotificationAgent] simulating channel={channel} "
+                f"email_enabled={settings.EMAIL_ENABLED} has_key={bool(settings.RESEND_API_KEY)} "
+                f"case={task.case_id}"
+            )
+            lo, hi = _DISPATCH_LATENCY_MS
+            latency = random.uniform(lo / 1000, hi / 1000)
+            await asyncio.sleep(latency)
+            latency_ms = round(latency * 1000)
 
         record: dict[str, Any] = {
             "notification_id": str(uuid4()),
             "case_id": str(task.case_id),
             "client_id": str(task.client_id),
             "template_id": rendered.get("template_id"),
-            "channel": rendered.get("channel", "in_app"),
+            "channel": channel,
             "subject": rendered.get("subject"),
-            "body_preview": (rendered.get("body") or "")[:120],
+            "body": rendered.get("body") or "",
+            "body_preview": rendered.get("body") or "",
             "priority": priority_override or str(task.priority),
-            "status": "SIMULATED_SENT",
-            "latency_ms": round(latency * 1000),
+            "status": status,
+            "latency_ms": latency_ms,
             "dispatched_at": datetime.utcnow().isoformat(),
-            "is_simulated": True,
+            "is_simulated": is_simulated,
         }
 
         self._dispatch_log.append(record)
+        prefix = "[SIMULATED]" if is_simulated else "[SENT]"
         self.logger.debug(
-            f"[SIMULATED] Notification dispatched: template={record['template_id']} "
-            f"channel={record['channel']} case={task.case_id}"
+            f"{prefix} Notification dispatched: template={record['template_id']} "
+            f"channel={channel} case={task.case_id}"
         )
+
+        _socket_payload = {
+            "notification_id": record["notification_id"],
+            "template_id": record["template_id"],
+            "channel": record["channel"],
+            "subject": record["subject"],
+            "body_preview": record["body_preview"],
+            "priority": record["priority"],
+            "status": record["status"],
+        }
+        _user_type = task.payload.get("user_type", "client")
+        if channel == "in_app" and _user_type != "advisor" and task.client_id:
+            # Client-specific in-app → send only to that user's room
+            await socket_emitter.notify_user(task.client_id, _socket_payload)
+        else:
+            # Advisor/broadcast in-app or email audit → case room
+            await socket_emitter.notification_sent(task.case_id, _socket_payload)
+
+        await self._save_to_db(record, task)
+
         return record
+
+    async def _save_to_db(self, record: dict[str, Any], task: TaskPacket) -> None:
+        """Persist the dispatched notification to the notifications table."""
+        from app.database import AsyncSessionLocal
+
+        user_type: str | None = None
+        if task.payload.get("user_type"):
+            user_type = task.payload["user_type"]
+        elif task.client_id:
+            user_type = "client"
+
+        try:
+            async with AsyncSessionLocal() as session:
+                notif = Notification(
+                    case_id=task.case_id,
+                    user_id=task.client_id,
+                    user_type=user_type,
+                    template_name=record.get("template_id"),
+                    channel=record["channel"],
+                    recipient_email=task.payload.get("recipient_email") or task.payload.get("client_email"),
+                    subject=record.get("subject"),
+                    body=(record.get("body") or task.payload.get("body") or record.get("body_preview")),
+                    status=record["status"],
+                    is_simulated=record["is_simulated"],
+                    sent_at=datetime.utcnow() if record["status"] in ("SENT", "SIMULATED_SENT") else None,
+                )
+                session.add(notif)
+                await session.commit()
+                record["notification_id"] = str(notif.id)
+        except Exception as exc:
+            self.logger.error(f"Failed to persist notification to DB: {exc}")
+
+    async def _send_email(
+        self,
+        rendered: dict[str, str],
+        task: TaskPacket,
+    ) -> tuple[str, int, bool]:
+        """Send real email via Resend. Returns (status, latency_ms, is_simulated)."""
+        import time
+
+        try:
+            import resend  # type: ignore[import-untyped]
+
+            resend.api_key = settings.RESEND_API_KEY
+            recipient = (
+                task.payload.get("recipient_email")
+                or task.payload.get("client_email", "")
+            )
+            if not recipient:
+                self.logger.warning(
+                    f"No recipient_email in payload for case={task.case_id}, simulating"
+                )
+                return "SIMULATED_SENT", 0, True
+
+            t0 = time.monotonic()
+            resend.Emails.send({
+                "from": f"{settings.NOTIFICATION_FROM_NAME} <{settings.NOTIFICATION_FROM_EMAIL}>",
+                "to": [recipient],
+                "subject": rendered.get("subject", ""),
+                "text": rendered.get("body", ""),
+            })
+            return "SENT", round((time.monotonic() - t0) * 1000), False
+
+        except Exception as exc:
+            self.logger.error(f"Email dispatch failed for case={task.case_id}: {exc}")
+            return "FAILED", 0, False
 
     # ── Private helpers ───────────────────────────────────────────────────────
 
@@ -154,8 +260,15 @@ class NotificationAgent(BaseAgent):
         product_code = payload.get("product_code", "")
         product_name = _PRODUCT_NAMES.get(product_code, product_code.replace("_", " ").title())
 
+        document_name = (
+            payload.get("document_name")
+            or payload.get("document_type")
+            or "document"
+        )
+
         return {
             "case_id": str(task.case_id),
+            "case_name": payload.get("case_name", f"Case {str(task.case_id)[:8]}"),
             "client_id": str(task.client_id),
             "client_name": payload.get("client_name", "Valued Client"),
             "products": product_names or product_name,
@@ -164,14 +277,18 @@ class NotificationAgent(BaseAgent):
             "track_status": payload.get("track_status", ""),
             "steps_completed": str(payload.get("steps_completed", "")),
             "total_steps": str(payload.get("total_steps", "")),
-            "document_type": payload.get("document_type", "document"),
-            "document_list": payload.get("document_list", ""),
+            "document_type": document_name,
+            "document_name": document_name,
+            "document_list": payload.get("document_list", document_name),
             "revision_reason": payload.get("revision_reason", ""),
             "decision": payload.get("decision", ""),
             "decision_notes": payload.get("decision_notes", ""),
             "risk_band": payload.get("risk_band", ""),
             "escalation_reason": payload.get("reason", ""),
             "evidence_packet_id": payload.get("evidence_packet_id", ""),
+            "author_name": payload.get("author_name", ""),
+            "comment_body": payload.get("comment_body", ""),
+            "account_numbers": payload.get("account_numbers", "—"),
         }
 
     # ── Public helpers ────────────────────────────────────────────────────────

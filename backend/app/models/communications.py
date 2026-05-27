@@ -15,12 +15,20 @@ class Notification(Base):
     __tablename__ = "notifications"
     __table_args__ = (
         CheckConstraint("channel IN ('email','sms','in_app')", name="notif_channel_chk"),
-        CheckConstraint("status IN ('PENDING','SENT','FAILED','BOUNCED')", name="notif_status_chk"),
+        CheckConstraint(
+            "status IN ('PENDING','SENT','FAILED','BOUNCED','SIMULATED_SENT')",
+            name="notif_status_chk",
+        ),
+        CheckConstraint(
+            "user_type IN ('client', 'advisor', 'admin')",
+            name="notif_user_type_chk",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     case_id: Mapped[UUID | None] = mapped_column(ForeignKey("onboarding_cases.id"))
-    client_id: Mapped[UUID | None] = mapped_column(ForeignKey("clients.id"))
+    user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    user_type: Mapped[str | None] = mapped_column(String(20))
     template_name: Mapped[str | None] = mapped_column(String(100))
     channel: Mapped[str] = mapped_column(String(30), nullable=False)
     recipient_email: Mapped[str | None] = mapped_column(String(255))
@@ -35,7 +43,7 @@ class Notification(Base):
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="notifications")
-    client: Mapped[Any] = relationship("Client")
+    user: Mapped[Any] = relationship("User")
 
 
 class CaseSummary(Base):

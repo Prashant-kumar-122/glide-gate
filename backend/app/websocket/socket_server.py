@@ -67,11 +67,36 @@ async def on_leave_case_room(sid: str, data: dict[str, Any]) -> None:
     logger.info(f"[WS] sid={sid} left room={room}")
 
 
+@sio.on("join_user_room")
+async def on_join_user_room(sid: str, data: dict[str, Any]) -> None:
+    user_id: str | None = data.get("user_id")
+    if not user_id:
+        return
+    room = f"user:{user_id}"
+    await sio.enter_room(sid, room)
+    logger.info(f"[WS] sid={sid} joined user room={room}")
+
+
+@sio.on("leave_user_room")
+async def on_leave_user_room(sid: str, data: dict[str, Any]) -> None:
+    user_id: str | None = data.get("user_id")
+    if not user_id:
+        return
+    await sio.leave_room(sid, f"user:{user_id}")
+
+
 # ── Helpers for agents/services ──────────────────────────────────────────────
 
 async def emit_to_case(case_id: str | UUID, event: SocketEvent | str, data: dict[str, Any]) -> None:
     """Emit an event to all sockets in a case room."""
     room = _room_name(case_id)
+    await sio.emit(str(event), data, room=room)
+
+
+async def emit_to_user(user_id: str | UUID, event: SocketEvent | str, data: dict[str, Any]) -> None:
+    """Emit an event to the user-level room (always connected, regardless of case)."""
+    room = f"user:{user_id}"
+    logger.info(f"[WS] emit_to_user room={room} event={event}")
     await sio.emit(str(event), data, room=room)
 
 
