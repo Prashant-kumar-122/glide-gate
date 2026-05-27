@@ -326,3 +326,19 @@ export async function analyseDocuments(caseId: string): Promise<AnalyseDocuments
   const { data } = await api.post<AnalyseDocumentsResponse>(`/cases/${caseId}/analyse-documents`)
   return data
 }
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+export interface NotificationItem {
+  id: string
+  template_id: string | null
+  channel: string
+  subject: string | null
+  body_preview: string | null
+  received_at: string
+}
+
+export async function fetchMyNotifications(): Promise<NotificationItem[]> {
+  const { data } = await api.get<NotificationItem[]>('/notifications')
+  return data
+}

@@ -11,6 +11,9 @@ import Signup from '@/routes/Signup'
 import Profile from '@/routes/Profile'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import UserMenu from '@/features/auth/UserMenu'
+import { NotificationBell } from '@/features/notifications/NotificationBell'
+import { NotificationToast } from '@/features/notifications/NotificationToast'
+import { useUserSocket } from '@/hooks/useUserSocket'
 import { useAuthStore } from '@/store/authStore'
 import { useThemeStore } from '@/store/themeStore'
 
@@ -59,6 +62,8 @@ function NavBar() {
 
       {/* Spacer pushes right-side items to the end */}
       <div className="flex-1" />
+
+      {isAuthenticated && <NotificationBell />}
 
       {/* Theme toggle */}
       <button
@@ -109,6 +114,8 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  useUserSocket()
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950">
@@ -180,6 +187,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </main>
+      <NotificationToast />
     </div>
   )
 }

@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { getSocket } from '@/lib/socket'
 import { useWorkspaceStore } from '@/store/workspaceStore'
+import { useNotificationStore } from '@/store/notificationStore'
+import type { NotificationRecord } from '@/store/notificationStore'
 import {
   applyDocumentStatusUpdate,
   applyDocumentUploaded,
@@ -30,6 +32,7 @@ export function useWorkspaceSocket(caseId: string | null) {
   const qc = useQueryClient()
   const setSocketConnected = useWorkspaceStore((s) => s.setSocketConnected)
   const incrementBadge = useWorkspaceStore((s) => s.incrementBadge)
+  const appendNotification = useNotificationStore((s) => s.appendNotification)
   const joinedRoom = useRef<string | null>(null)
 
   useEffect(() => {
@@ -42,15 +45,41 @@ export function useWorkspaceSocket(caseId: string | null) {
       setSocketConnected(false)
     }
 
+    function onNotificationSent(data: {
+      notification_id?: string
+      template_id?: string
+      channel?: string
+      subject?: string
+      body_preview?: string
+      priority?: string
+    }) {
+      // Only show in-app notifications in the bell — email events are case-room
+      // audit signals for the agent trace, not user-facing notifications
+      if (data.channel !== 'in_app') return
+      const record: NotificationRecord = {
+        id: data.notification_id ?? `${Date.now()}-${Math.random()}`,
+        templateId: data.template_id ?? '',
+        channel: (data.channel ?? 'in_app') as NotificationRecord['channel'],
+        subject: data.subject ?? 'New notification',
+        bodyPreview: data.body_preview ?? '',
+        priority: data.priority ?? 'NORMAL',
+        receivedAt: new Date().toISOString(),
+        read: false,
+      }
+      appendNotification(record)
+    }
+
     socket.on('connect', onConnect)
     socket.on('disconnect', onDisconnect)
+    socket.on(EVENTS.NOTIFICATION_SENT, onNotificationSent)
     if (socket.connected) setSocketConnected(true)
 
     return () => {
       socket.off('connect', onConnect)
       socket.off('disconnect', onDisconnect)
+      socket.off(EVENTS.NOTIFICATION_SENT, onNotificationSent)
     }
-  }, [setSocketConnected])
+  }, [setSocketConnected, appendNotification])
 
   useEffect(() => {
     if (!caseId) return

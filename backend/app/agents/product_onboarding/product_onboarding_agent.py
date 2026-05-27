@@ -350,21 +350,45 @@ class ProductOnboardingAgent(BaseAgent):
 
         steps_done = len([s for s in completed_steps if s.get("status") == "COMPLETED"])
 
-        await self.send_task(TaskPacket(
-            from_agent=self.agent_id,
-            to_agent=AgentID.NOTIFICATION,
-            task_type=TaskType.SEND_NOTIFICATION,
-            case_id=task.case_id,
-            client_id=task.client_id,
-            priority="LOW",
-            payload={
-                "template": "product_track_update",
-                "product_code": product_code,
-                "track_status": track_status,
-                "steps_completed": steps_done,
-                "total_steps": total_steps,
-            },
-        ))
+        if track_status in ("FAILED", "UNSUITABLE"):
+            from app.database import AsyncSessionLocal
+            from app.models.users import User
+            async with AsyncSessionLocal() as _db:
+                _user = await _db.get(User, task.client_id)
+                _client_name = _user.full_name if _user else ""
+                _client_email = _user.email if _user else ""
+
+            for _tmpl, _priority in (("product_track_failed", "HIGH"), ("product_track_failed_inapp", "HIGH")):
+                await self.send_task(TaskPacket(
+                    from_agent=self.agent_id,
+                    to_agent=AgentID.NOTIFICATION,
+                    task_type=TaskType.SEND_NOTIFICATION,
+                    case_id=task.case_id,
+                    client_id=task.client_id,
+                    priority=_priority,
+                    payload={
+                        "template": _tmpl,
+                        "product_code": product_code,
+                        "client_name": _client_name,
+                        "recipient_email": _client_email,
+                    },
+                ))
+        else:
+            await self.send_task(TaskPacket(
+                from_agent=self.agent_id,
+                to_agent=AgentID.NOTIFICATION,
+                task_type=TaskType.SEND_NOTIFICATION,
+                case_id=task.case_id,
+                client_id=task.client_id,
+                priority="LOW",
+                payload={
+                    "template": "product_track_update",
+                    "product_code": product_code,
+                    "track_status": track_status,
+                    "steps_completed": steps_done,
+                    "total_steps": total_steps,
+                },
+            ))
 
         # Notify the orchestrator so it can advance PARALLEL_PRODUCTS → REVIEW
         # once all product tracks have settled.

@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { getSocket } from '@/lib/socket'
 import { useTraceStore } from '@/store/traceStore'
 import type { AgentEdgeEvent, TraceMessage } from '@/store/traceStore'
+import { useNotificationStore } from '@/store/notificationStore'
+import type { NotificationRecord } from '@/store/notificationStore'
 import { AGENT_NODE_MAP, PRODUCT_NODE_MAP } from './agentPositions'
 import type { AgentId } from './agentPositions'
 
@@ -12,6 +14,7 @@ const EV = {
   ESCALATION_TRIGGERED: 'escalation_triggered',
   CASE_STAGE_CHANGED: 'case_stage_changed',
   PROGRESS_UPDATE: 'progress_update',
+  NOTIFICATION_SENT: 'notification_sent',
 } as const
 
 /** Resolve an A2A agent_id to one or more canvas node IDs.
@@ -34,6 +37,7 @@ export function useAgentTraceSocket(caseId: string | null) {
   useEffect(() => {
     if (!caseId) return
     const socket = getSocket()
+    const appendNotification = useNotificationStore.getState().appendNotification
 
     socket.emit('join_case_room', { case_id: caseId })
 
@@ -118,6 +122,27 @@ export function useAgentTraceSocket(caseId: string | null) {
       else if (data.stage) setNodeState('orchestrator', 'active')
     }
 
+    function onNotificationSent(data: {
+      notification_id?: string
+      template_id?: string
+      channel?: string
+      subject?: string
+      body_preview?: string
+      priority?: string
+    }) {
+      const record: NotificationRecord = {
+        id: data.notification_id ?? `${Date.now()}-${Math.random()}`,
+        templateId: data.template_id ?? '',
+        channel: (data.channel ?? 'in_app') as NotificationRecord['channel'],
+        subject: data.subject ?? 'New notification',
+        bodyPreview: data.body_preview ?? '',
+        priority: data.priority ?? 'NORMAL',
+        receivedAt: new Date().toISOString(),
+        read: false,
+      }
+      appendNotification(record)
+    }
+
     function onProgressUpdate(data: {
       event?: string
       products?: string[]
@@ -151,6 +176,7 @@ export function useAgentTraceSocket(caseId: string | null) {
     socket.on(EV.ESCALATION_TRIGGERED, onEscalation)
     socket.on(EV.CASE_STAGE_CHANGED, onStageChanged)
     socket.on(EV.PROGRESS_UPDATE, onProgressUpdate)
+    socket.on(EV.NOTIFICATION_SENT, onNotificationSent)
 
     return () => {
       socket.off(EV.AGENT_MESSAGE, onAgentMessage)
@@ -159,6 +185,7 @@ export function useAgentTraceSocket(caseId: string | null) {
       socket.off(EV.ESCALATION_TRIGGERED, onEscalation)
       socket.off(EV.CASE_STAGE_CHANGED, onStageChanged)
       socket.off(EV.PROGRESS_UPDATE, onProgressUpdate)
+      socket.off(EV.NOTIFICATION_SENT, onNotificationSent)
       socket.emit('leave_case_room', { case_id: caseId })
       reset()
     }

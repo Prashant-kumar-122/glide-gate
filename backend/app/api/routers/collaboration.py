@@ -4,16 +4,22 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+import asyncio
+
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.base.a2a_types import AgentID, TaskPacket, TaskType
 from app.api.dependencies.auth import get_current_user
 from app.api.error_handlers import NotFoundError
-from app.database import get_db
+from app.database import AsyncSessionLocal, get_db
 from app.models.cases import OnboardingCase
+from app.models.clients import Client
 from app.models.communications import CollaborationComment, CollaborationRoom
+from app.models.users import User
+from app.services.orchestration.agent_orchestration_service import orchestration_service
 
 router = APIRouter(prefix="/cases", tags=["collaboration"])
 
@@ -51,6 +57,83 @@ class CommentIn(BaseModel):
     body: str
     visibility: str = "ADVISOR_ONLY"
     document_id: UUID | None = None
+
+
+async def _notify_comment(
+    case_id: UUID,
+    comment_body: str,
+    author_name: str,
+    author_role: str,
+    visibility: str,
+    document_id: UUID | None = None,
+) -> None:
+    """Email client when comment is client-visible OR document needs attention.
+    Email advisor when client comments."""
+    from app.models.documents import Document
+
+    async with AsyncSessionLocal() as db:
+        case = await db.get(OnboardingCase, case_id)
+        if case is None:
+            return
+        client = await db.get(Client, case.client_id)
+        client_name = f"{client.first_name} {client.last_name}".strip() if client else ""
+        client_email = client.email if client else ""
+
+        advisor_email = ""
+        if case.assigned_advisor_id:
+            advisor = await db.get(User, case.assigned_advisor_id)
+            if advisor:
+                advisor_email = advisor.email
+
+        # Check if the linked document requires client attention
+        doc_needs_attention = False
+        if document_id:
+            doc = await db.get(Document, document_id)
+            if doc and doc.status in ("UNDER_REVIEW", "NEEDS_REVISION"):
+                doc_needs_attention = True
+
+    _case_name = (case.extra_metadata or {}).get("case_name", "") if case else ""
+    base = {
+        "author_name": author_name,
+        "comment_body": comment_body,
+        "client_name": client_name,
+        "case_name": _case_name,
+    }
+
+    # Notify client only when visibility is ALL AND document needs attention
+    should_notify_client = (
+        visibility == "client_visible"
+        and doc_needs_attention
+        and client_email
+    )
+    if should_notify_client:
+        await orchestration_service.publish_task(TaskPacket(
+            from_agent=AgentID.CUSTOMER_SERVICE,
+            to_agent=AgentID.NOTIFICATION,
+            task_type=TaskType.SEND_NOTIFICATION,
+            case_id=case_id,
+            client_id=case.client_id,
+            priority="NORMAL",
+            payload={"template": "document_comment", "recipient_email": client_email, **base},
+        ))
+
+    if author_role == "Client" and advisor_email:
+        await orchestration_service.publish_task(TaskPacket(
+            from_agent=AgentID.CUSTOMER_SERVICE,
+            to_agent=AgentID.NOTIFICATION,
+            task_type=TaskType.SEND_NOTIFICATION,
+            case_id=case_id,
+            client_id=case.client_id,
+            priority="NORMAL",
+            payload={
+                "template": "document_comment",
+                "recipient_email": advisor_email,
+                "author_name": client_name,
+                "comment_body": comment_body,
+                "client_name": "Advisor",
+                "case_name": _case_name,
+            },
+        ))
 
 
 async def _get_or_create_room(case_id: UUID, db: AsyncSession) -> CollaborationRoom:
@@ -140,6 +223,17 @@ async def add_comment(
     db.add(comment)
     await db.commit()
     await db.refresh(comment)
+
+    asyncio.create_task(
+        _notify_comment(
+            case_id=case_id,
+            comment_body=payload.body,
+            author_name=author_name,
+            author_role=author_role,
+            visibility=db_visibility,
+            document_id=payload.document_id,
+        )
+    )
 
     return CommentOut(
         id=comment.id,

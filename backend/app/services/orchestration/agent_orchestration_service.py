@@ -88,6 +88,9 @@ class AgentOrchestrationService:
         case_id: UUID,
         client_id: UUID,
         selected_products: list[str],
+        client_name: str = "",
+        client_email: str = "",
+        case_name: str = "",
     ) -> None:
         """Kick off a new onboarding workflow.
 
@@ -127,7 +130,12 @@ class AgentOrchestrationService:
                 case_id=case_id,
                 client_id=client_id,
                 priority="NORMAL",
-                payload={"selected_products": selected_products},
+                payload={
+                    "selected_products": selected_products,
+                    "client_name": client_name,
+                    "client_email": client_email,
+                    "case_name": case_name,
+                },
             )
         )
 

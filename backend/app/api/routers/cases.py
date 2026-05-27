@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,10 +20,13 @@ from app.database import get_db
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
 from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.models.clients import Client
+from app.models.communications import Notification
 from app.models.documents import Document
 from app.models.accounts import ClientAccount
+from app.models.users import User
 from app.services.orchestration.agent_orchestration_service import orchestration_service
 from app.services.orchestration.journey_resumption_service import journey_resumption_service
+from app.websocket.socket_emitter import socket_emitter
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -330,6 +334,86 @@ async def initiate_case(
 
     refreshed = await _get_case_or_404(case.id, db)
 
+    # Look up the client so we can pass name/email to the notification agent.
+    client_row = await db.execute(select(Client).where(Client.id == client_id))
+    client = client_row.scalar_one_or_none()
+    client_full_name = f"{client.first_name} {client.last_name}".strip() if client else ""
+    client_email_addr = client.email if client else ""
+
+    _case_name = (refreshed.extra_metadata or {}).get("case_name") or f"Case {str(refreshed.id)[:8]}"
+    _product_display = ", ".join(
+        p.replace("_", " ").title() for p in (refreshed.selected_products or [])
+    )
+    _notif_subject = f"Case created — {_case_name}"
+    _notif_body = (
+        f"Hi {client_full_name or 'there'}! Your application **{_case_name}** for "
+        f"{_product_display} has been received. We'll guide you through each step."
+    )
+
+    # Persist in-app notification to DB then push to client's user room
+    notif = Notification(
+        case_id=refreshed.id,
+        user_id=client_id,
+        user_type="client",
+        template_name="case_created_inapp",
+        channel="in_app",
+        subject=_notif_subject,
+        body=_notif_body,
+        status="SIMULATED_SENT",
+        is_simulated=True,
+        sent_at=datetime.utcnow(),
+    )
+    db.add(notif)
+    await db.commit()
+    await db.refresh(notif)
+
+    logger.info(f"[cases] notify_user → user_id={client_id} case={refreshed.id} notif={notif.id}")
+    await socket_emitter.notify_user(client_id, {
+        "notification_id": str(notif.id),
+        "template_id": "case_created_inapp",
+        "channel": "in_app",
+        "subject": _notif_subject,
+        "body_preview": _notif_body,
+        "priority": "NORMAL",
+    })
+
+    # Notify assigned advisor (if any) of the new case — use case name, not client name
+    if body.assigned_advisor_id:
+        advisor_result = await db.execute(select(User).where(User.id == body.assigned_advisor_id))
+        advisor = advisor_result.scalar_one_or_none()
+        if advisor:
+            asyncio.create_task(
+                orchestration_service.publish_task(
+                    TaskPacket(
+                        from_agent=AgentID.NOTIFICATION,
+                        to_agent=AgentID.NOTIFICATION,
+                        task_type=TaskType.SEND_NOTIFICATION,
+                        case_id=refreshed.id,
+                        client_id=client_id,
+                        priority="NORMAL",
+                        payload={
+                            "template": "advisor_case_assigned",
+                            "case_name": _case_name,
+                            "client_name": client_full_name,
+                            "selected_products": refreshed.selected_products or [],
+                            "recipient_email": advisor.email,
+                            "user_type": "advisor",
+                        },
+                    )
+                )
+            )
+            await socket_emitter.notify_user(body.assigned_advisor_id, {
+                "notification_id": "",
+                "template_id": "advisor_case_assigned_inapp",
+                "channel": "in_app",
+                "subject": f"New case — {_case_name}",
+                "body_preview": (
+                    f"A new onboarding case **{_case_name}** for {client_full_name} "
+                    f"has been assigned to you. Products: {_product_display}."
+                ),
+                "priority": "NORMAL",
+            })
+
     # Kick off agent workflow asynchronously — the HTTP response is returned
     # immediately; the orchestrator runs in the background via asyncio.Task.
     asyncio.create_task(
@@ -337,6 +421,9 @@ async def initiate_case(
             case_id=refreshed.id,
             client_id=refreshed.client_id,
             selected_products=refreshed.selected_products,
+            client_name=client_full_name,
+            client_email=client_email_addr,
+            case_name=_case_name,
         )
     )
 
@@ -752,6 +839,63 @@ async def submit_intake(
         .values(status="REVIEW", current_stage="REVIEW", percentage=60)
     )
     await db.commit()
+
+    # Send submission notifications
+    _sub_case_name = (case.extra_metadata or {}).get("case_name") or f"Case {str(case_id)[:8]}"
+    _sub_products = ", ".join(p.replace("_", " ").title() for p in (case.selected_products or []))
+
+    # Client: email + in-app
+    client_row = await db.execute(select(Client).where(Client.id == case.client_id))
+    _sub_client = client_row.scalar_one_or_none()
+    if _sub_client:
+        _sub_client_name = f"{_sub_client.first_name} {_sub_client.last_name}".strip()
+        asyncio.create_task(orchestration_service.publish_task(
+            TaskPacket(
+                from_agent=AgentID.NOTIFICATION,
+                to_agent=AgentID.NOTIFICATION,
+                task_type=TaskType.SEND_NOTIFICATION,
+                case_id=case_id,
+                client_id=case.client_id,
+                priority="NORMAL",
+                payload={
+                    "template": "case_submitted",
+                    "case_name": _sub_case_name,
+                    "client_name": _sub_client_name,
+                    "selected_products": case.selected_products or [],
+                    "recipient_email": _sub_client.email,
+                },
+            )
+        ))
+        asyncio.create_task(orchestration_service.publish_task(
+            TaskPacket(
+                from_agent=AgentID.NOTIFICATION,
+                to_agent=AgentID.NOTIFICATION,
+                task_type=TaskType.SEND_NOTIFICATION,
+                case_id=case_id,
+                client_id=case.client_id,
+                priority="NORMAL",
+                payload={
+                    "template": "case_submitted_inapp",
+                    "case_name": _sub_case_name,
+                    "client_name": _sub_client_name,
+                    "selected_products": case.selected_products or [],
+                },
+            )
+        ))
+
+    # Advisor: in-app only
+    if case.assigned_advisor_id:
+        await socket_emitter.notify_user(case.assigned_advisor_id, {
+            "notification_id": "",
+            "template_id": "advisor_case_submitted_inapp",
+            "channel": "in_app",
+            "subject": f"Case submitted — {_sub_case_name}",
+            "body_preview": (
+                f"{_sub_client_name if _sub_client else 'Client'} has submitted their "
+                f"application for **{_sub_case_name}**. Products: {_sub_products}."
+            ),
+            "priority": "NORMAL",
+        })
 
     return SubmitIntakeResponse(case_id=case_id, status="REVIEW", current_stage="REVIEW")
 
