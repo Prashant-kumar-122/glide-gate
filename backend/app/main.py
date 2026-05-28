@@ -63,6 +63,11 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 @app.on_event("startup")
 async def on_startup() -> None:
+    if settings.DEMO_MODE and settings.is_production:
+        raise RuntimeError(
+            "DEMO_MODE=True is not allowed in production. "
+            "Set APP_ENV=development or set DEMO_MODE=False."
+        )
     logger.info(
         f"GlideGate API starting — env={settings.APP_ENV} "
         f"demo_mode={settings.DEMO_MODE} "

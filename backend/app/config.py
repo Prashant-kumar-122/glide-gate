@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # ── Demo Mode ─────────────────────────────────────────────────────────────
     DEMO_MODE: bool = False
 
+    # ── Upload limits ─────────────────────────────────────────────────────────
+    MAX_UPLOAD_SIZE_MB: int = 50
+
     # ── Document Storage ─────────────────────────────────────────────────────
     DOCUMENT_STORAGE_BACKEND: Literal["local", "s3"] = "local"
     DOCUMENT_STORAGE_PATH: str = "./uploads"

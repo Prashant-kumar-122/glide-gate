@@ -17,6 +17,7 @@ from app.models.clients import Client
 from app.api.dependencies.auth import get_current_user
 from app.api.dependencies.role_guard import require_role
 from app.api.error_handlers import NotFoundError, UnprocessableError
+from app.config import settings
 from app.database import get_db
 from app.database import AsyncSessionLocal
 from app.models.cases import OnboardingCase
@@ -308,6 +309,11 @@ async def upload_document(
         )
 
     raw = await file.read()
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if len(raw) > max_bytes:
+        raise UnprocessableError(
+            f"File exceeds maximum allowed size of {settings.MAX_UPLOAD_SIZE_MB} MB"
+        )
     tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
 
     from app.models.cases import OnboardingCase
@@ -366,6 +372,8 @@ async def get_document(
     _user: dict = Depends(get_current_user),
 ) -> DocumentOut:
     doc = await _get_doc_or_404(document_id, db)
+    if _user.get("role") == "client" and str(doc.client_id) != _user.get("sub"):
+        raise NotFoundError("Document", str(document_id))
     return DocumentOut.model_validate(doc)
 
 
@@ -439,6 +447,8 @@ async def download_document(
     _user: dict = Depends(get_current_user),
 ) -> StreamingResponse:
     doc = await _get_doc_or_404(document_id, db)
+    if _user.get("role") == "client" and str(doc.client_id) != _user.get("sub"):
+        raise NotFoundError("Document", str(document_id))
 
     if not doc.storage_path:
         raise NotFoundError("File not found for this document")

@@ -20,8 +20,8 @@ class KYCCheck(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
     identity_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
     aml_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
     profile_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
@@ -51,8 +51,8 @@ class HumanReview(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    kyc_check_id: Mapped[UUID] = mapped_column(ForeignKey("kyc_checks.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    kyc_check_id: Mapped[UUID] = mapped_column(ForeignKey("kyc_checks.id"), nullable=False, index=True)
     reviewer_id: Mapped[UUID | None] = mapped_column()
     reviewer_role: Mapped[str | None] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
