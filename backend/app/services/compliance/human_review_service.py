@@ -80,7 +80,7 @@ class HumanReviewService:
             status="PENDING",
             evidence_packet=evidence_packet,
             escalation_reason=escalation_reason,
-            assigned_at=datetime.now(timezone.utc),
+            assigned_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.add(review)
         await db.flush()
@@ -169,7 +169,7 @@ class HumanReviewService:
         review.decision = decision
         review.decision_notes = decision_notes
         review.reviewer_role = reviewer_role
-        review.decided_at = datetime.now(timezone.utc)
+        review.decided_at = datetime.now(timezone.utc).replace(tzinfo=None)
         await db.commit()
 
         # Audit log — specific review event

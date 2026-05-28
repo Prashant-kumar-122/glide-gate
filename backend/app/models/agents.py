@@ -36,8 +36,8 @@ class Agent(Base):
     llm_provider: Mapped[str | None] = mapped_column(String(30))
     llm_model: Mapped[str | None] = mapped_column(String(100))
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class AgentTask(Base):
@@ -61,7 +61,7 @@ class AgentTask(Base):
     errors: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     duration_ms: Mapped[int | None] = mapped_column(Integer)
     ttl: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     started_at: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
 
@@ -86,7 +86,7 @@ class EventLog(Base):
     is_compliance_event: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     ip_address: Mapped[str | None] = mapped_column(String(45))
     user_agent: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class MCPToolCall(Base):
@@ -106,7 +106,7 @@ class MCPToolCall(Base):
     is_simulated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer)
     error_message: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     completed_at: Mapped[datetime | None] = mapped_column()
 
     case: Mapped[Any] = relationship("OnboardingCase")

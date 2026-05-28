@@ -44,8 +44,8 @@ class Client(Base):
     investment_horizon: Mapped[str | None] = mapped_column(String(20))
     kyc_status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     profile: Mapped[ClientProfile | None] = relationship("ClientProfile", back_populates="client", uselist=False, cascade="all, delete-orphan")
     addresses: Mapped[list[ClientAddress]] = relationship("ClientAddress", back_populates="client", cascade="all, delete-orphan")
@@ -65,8 +65,8 @@ class ClientProfile(Base):
     consent_data_processing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     preferred_communication_channel: Mapped[str] = mapped_column(String(20), nullable=False, default="email")
     language_preference: Mapped[str] = mapped_column(String(10), nullable=False, default="en")
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     client: Mapped[Client] = relationship("Client", back_populates="profile")
 
@@ -84,7 +84,7 @@ class ClientAddress(Base):
     postal_code: Mapped[str | None] = mapped_column(String(20))
     country: Mapped[str] = mapped_column(String(100), nullable=False)
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     client: Mapped[Client] = relationship("Client", back_populates="addresses")

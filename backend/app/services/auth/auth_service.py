@@ -131,7 +131,7 @@ class AuthService:
         if password is not None:
             user.password_hash = hash_password(password)
 
-        user.updated_at = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         await db.flush()
         return user
 
