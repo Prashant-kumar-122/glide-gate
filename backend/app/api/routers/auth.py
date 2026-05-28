@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import select
@@ -33,11 +33,11 @@ def _validate_password(v: str) -> str:
 
 
 class SignupRequest(BaseModel):
-    email: str
-    first_name: str
-    last_name: str
-    password: str
-    confirm_password: str
+    email: str = Field(max_length=254)
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=8, max_length=128)
+    confirm_password: str = Field(max_length=128)
 
     @field_validator("password")
     @classmethod
@@ -53,16 +53,16 @@ class SignupRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=128)
 
 
 class ProfileUpdateRequest(BaseModel):
-    email: str | None = None
-    first_name: str | None = None
-    last_name: str | None = None
-    password: str | None = None
-    confirm_password: str | None = None
+    email: str | None = Field(default=None, max_length=254)
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+    confirm_password: str | None = Field(default=None, max_length=128)
 
     @field_validator("password")
     @classmethod

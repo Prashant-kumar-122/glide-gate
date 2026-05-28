@@ -334,7 +334,7 @@ async def upload_document(
         category=category,
         tags=tag_list,
         parent_doc_id=parent_doc_id,
-        uploaded_by=user.get("role", "unknown"),
+        uploaded_by=user.get("name", user.get("sub")),
         db=db,
     )
     await db.commit()
