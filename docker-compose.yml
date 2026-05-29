@@ -2,6 +2,8 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: glide_gate_db
+    env_file:
+      - .env.docker
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-newpassword}
@@ -41,8 +43,7 @@ services:
       - ./backend:/app
       - ./uploads:/app/uploads
     command: >
-      sh -c "poetry run alembic upgrade head && 
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+      sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     networks:
       - glide_gate_network
     restart: unless-stopped
