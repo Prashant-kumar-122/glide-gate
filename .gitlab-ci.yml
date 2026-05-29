@@ -6,6 +6,8 @@ deploy:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
       when: always
+  tags:
+    - ec2 arm64 ubuntu
   before_script:
     - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
