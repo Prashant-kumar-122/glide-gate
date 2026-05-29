@@ -7,8 +7,9 @@ echo "Starting deployment..."
 echo "Pulling latest code from COPS_Agentic_AI_Deploy..."
 git pull origin COPS_Agentic_AI_Deploy
 
-# Ensure required directories exist
+# Ensure required directories exist with correct permissions for postgres container
 mkdir -p db/data
+sudo chown -R 999:999 db/data
 
 # Stop old containers
 echo "Stopping old containers..."
