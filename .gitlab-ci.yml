@@ -4,7 +4,8 @@ stages:
 deploy:
   stage: deploy
   rules:
-    - when: always
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
   before_script:
     - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
