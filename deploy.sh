@@ -4,16 +4,20 @@ set -e
 echo "Starting deployment..."
 
 # Pull latest code
-echo "Pulling latest code from main..."
-git pull origin main
+echo "Pulling latest code from COPS_Agentic_AI_Deploy..."
+git pull origin COPS_Agentic_AI_Deploy
 
-# Build Docker images
+# Stop old containers
+echo "Stopping old containers..."
+docker-compose down
+
+# Build new images
 echo "Building Docker images..."
 docker-compose build
 
-# Start containers in detached mode
+# Start containers via startup script
 echo "Starting containers..."
-docker-compose up -d
+bash docker-startup.sh
 
 echo "Deployment complete!"
 docker-compose ps
