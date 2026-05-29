@@ -3,8 +3,8 @@ stages:
 
 deploy:
   stage: deploy
-  only:
-    - COPS_Agentic_AI_Deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
   before_script:
     - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
