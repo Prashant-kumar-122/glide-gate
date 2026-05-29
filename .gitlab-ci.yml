@@ -9,36 +9,39 @@ deploy:
   before_script:
     - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
-    - echo "-----BEGIN RSA PRIVATE KEY-----
-MIIEpAIBAAKCAQEAzHfWEGcXMzIS3nqejnUACaFDhYVkhb5QZb6othqUsNqrcBkc
-OyVxS1qOIvLumeEKYk4ZpaeB3pL8roHhO6+ay3W2YRT9FaIFcdAS5XLcylIxAllW
-FR6JsHU207xXNuKBGvYyNAVdjVP9oo7ViFMiAg/2rbgnXhRxPxoO06glwGTB5+0z
-MtwhLCOqOYvNUrc3aHMZaVOYo2JbV3ZuBxNlgz/d5Q4snKFkHlZ9zY1xLOXfGb1V
-aEBeoRIqfhak1UJ8N4C3BpnbzAmLr3eDQm8k4MHc1Uakg9O8zApiPdjGtwCQdK8J
-/rGQW23H2Gv+HjT8uR1W5+XzoIDV8hMmZtv9FQIDAQABAoIBAHrZRXR1fCr2Wv/x
-DHLrOSqQCdGfY9Y3knaPJy7CqbPYrkibzap7xKZRsjStYU5zN5n48s/k5NKl3cu7
-nWgPCiJUh0+tHKJyxnKrYa8aZC3rVCblJiNqRbAPvPFap8wCKy/X3DIFR0AyxqF0
-0DcoO7ahgMS/cGfGQIR5U4835/a/f/rgt1vs1vrkFcq/DC1KA8pObZ/sQeW812b3
-RQMkeLC90oFauDZ0i23nmHCcuUF2XtuxUZ0uwV7lkMTP4FV8qW5qzYLuJMHgNJ5m
-ZH6GhIyGfoWnUJBGcVb/CsInObwjIyBVYtskU0JDjNDF6jB5OHednpkRs6N6HW6G
-z5iZFgECgYEA6xXoRtQIHQmEwIQI5X2CPaB1Ge8lq98mt1mPTTgGTaYx4AiPZTwj
-IwhHvEi9+XYpP7Y3nvH55K2c2wV2B1nw8iKhiorDvbH7f5w8QN1PtfOB+vnkVDNT
-k0LuEUHJPSxiYcMuV7dG1zlRxHtLMo/BALhdtFYYnuMB9n+PSrWPf+kCgYEA3qid
-GBTx2g9N+pF87mj7pvN1kpN/J6Fkv4h4RBvcv+4tEsZ13+stNVDPkqe6frH0Rc/P
-EPi3qZvTdAUNzjvHt10JObWY5vg3GAv7eX6+rBKFnBUuyDQOjxQVIJsz3jGy40Ea
-UTjpOambV81Z1RXDtjK+c0y6oNnojdZZbdkv5E0CgYBse9CTltcjpzfWq1d7p76J
-d9lyHVTyCmlQZQjnJnpqLM6JRwn9OpIwYWrRLXRVgTypxQnH1HxwFdnzjIKaA9xX
-sLmBOGX5zP91NQDtIfPd0EBkNBs06/aeV12LIyOdkjTYTny9R7tuKGpeVFMwQvxa
-u7mqNazo7XMDcHwMitpsuQKBgQCo+b1+sSZ6HnNHXXI6XGHe6ZSokFdHdCxJTwA2
-cA6vecmrHgIG1SuR8qoU2kWmMNb4xCSY9Kgth5yJx+waPzPp7Ck8KpzHbEgjb7SB
-F7cMT2ImeczvEtKZstv1ytMqJP1lidq3GUGmCRljIOyz0bidZRUz218nAziBq9Ji
-kxjNYQKBgQCgA6Kh0WDWkURWrZbUSI6nbFmdNIlspdv+I+G7YyN62iIv5DyCLLjb
-uZQ6jts77Vu60/BAuy4El+oCdHQ96y42lgT4tH0uoa18u7Lqi45s+tdo6UHRMMaR
-c6QPc/pWSlQuvOQqgYsWJc9BiDamfbrpabcMsb/CqDG8IKp096d+Hg==
------END RSA PRIVATE KEY-----" | tr -d '\r' | ssh-add -
+    - |
+      cat > /tmp/deploy_key.pem << 'KEYEOF'
+      -----BEGIN RSA PRIVATE KEY-----
+      MIIEpAIBAAKCAQEAzHfWEGcXMzIS3nqejnUACaFDhYVkhb5QZb6othqUsNqrcBkc
+      OyVxS1qOIvLumeEKYk4ZpaeB3pL8roHhO6+ay3W2YRT9FaIFcdAS5XLcylIxAllW
+      FR6JsHU207xXNuKBGvYyNAVdjVP9oo7ViFMiAg/2rbgnXhRxPxoO06glwGTB5+0z
+      MtwhLCOqOYvNUrc3aHMZaVOYo2JbV3ZuBxNlgz/d5Q4snKFkHlZ9zY1xLOXfGb1V
+      aEBeoRIqfhak1UJ8N4C3BpnbzAmLr3eDQm8k4MHc1Uakg9O8zApiPdjGtwCQdK8J
+      /rGQW23H2Gv+HjT8uR1W5+XzoIDV8hMmZtv9FQIDAQABAoIBAHrZRXR1fCr2Wv/x
+      DHLrOSqQCdGfY9Y3knaPJy7CqbPYrkibzap7xKZRsjStYU5zN5n48s/k5NKl3cu7
+      nWgPCiJUh0+tHKJyxnKrYa8aZC3rVCblJiNqRbAPvPFap8wCKy/X3DIFR0AyxqF0
+      0DcoO7ahgMS/cGfGQIR5U4835/a/f/rgt1vs1vrkFcq/DC1KA8pObZ/sQeW812b3
+      RQMkeLC90oFauDZ0i23nmHCcuUF2XtuxUZ0uwV7lkMTP4FV8qW5qzYLuJMHgNJ5m
+      ZH6GhIyGfoWnUJBGcVb/CsInObwjIyBVYtskU0JDjNDF6jB5OHednpkRs6N6HW6G
+      z5iZFgECgYEA6xXoRtQIHQmEwIQI5X2CPaB1Ge8lq98mt1mPTTgGTaYx4AiPZTwj
+      IwhHvEi9+XYpP7Y3nvH55K2c2wV2B1nw8iKhiorDvbH7f5w8QN1PtfOB+vnkVDNT
+      k0LuEUHJPSxiYcMuV7dG1zlRxHtLMo/BALhdtFYYnuMB9n+PSrWPf+kCgYEA3qid
+      GBTx2g9N+pF87mj7pvN1kpN/J6Fkv4h4RBvcv+4tEsZ13+stNVDPkqe6frH0Rc/P
+      EPi3qZvTdAUNzjvHt10JObWY5vg3GAv7eX6+rBKFnBUuyDQOjxQVIJsz3jGy40Ea
+      UTjpOambV81Z1RXDtjK+c0y6oNnojdZZbdkv5E0CgYBse9CTltcjpzfWq1d7p76J
+      d9lyHVTyCmlQZQjnJnpqLM6JRwn9OpIwYWrRLXRVgTypxQnH1HxwFdnzjIKaA9xX
+      sLmBOGX5zP91NQDtIfPd0EBkNBs06/aeV12LIyOdkjTYTny9R7tuKGpeVFMwQvxa
+      u7mqNazo7XMDcHwMitpsuQKBgQCo+b1+sSZ6HnNHXXI6XGHe6ZSokFdHdCxJTwA2
+      cA6vecmrHgIG1SuR8qoU2kWmMNb4xCSY9Kgth5yJx+waPzPp7Ck8KpzHbEgjb7SB
+      F7cMT2ImeczvEtKZstv1ytMqJP1lidq3GUGmCRljIOyz0bidZRUz218nAziBq9Ji
+      kxjNYQKBgQCgA6Kh0WDWkURWrZbUSI6nbFmdNIlspdv+I+G7YyN62iIv5DyCLLjb
+      uZQ6jts77Vu60/BAuy4El+oCdHQ96y42lgT4tH0uoa18u7Lqi45s+tdo6UHRMMaR
+      c6QPc/pWSlQuvOQqgYsWJc9BiDamfbrpabcMsb/CqDG8IKp096d+Hg==
+      -----END RSA PRIVATE KEY-----
+      KEYEOF
+    - chmod 600 /tmp/deploy_key.pem
+    - ssh-add /tmp/deploy_key.pem
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -H 18.60.103.228 >> ~/.ssh/known_hosts
   script:
     - ssh ubuntu@18.60.103.228 "cd /home/ubuntu/office_project/glidegate && bash deploy.sh"
-
-
