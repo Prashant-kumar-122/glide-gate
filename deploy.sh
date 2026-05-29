@@ -7,6 +7,9 @@ echo "Starting deployment..."
 echo "Pulling latest code from COPS_Agentic_AI_Deploy..."
 git pull origin COPS_Agentic_AI_Deploy
 
+# Ensure required directories exist
+mkdir -p db/data
+
 # Stop old containers
 echo "Stopping old containers..."
 docker-compose down
