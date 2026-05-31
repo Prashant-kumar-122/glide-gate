@@ -67,7 +67,7 @@ services:
     environment:
       VITE_API_URL: http://localhost:8000
       VITE_API_TIMEOUT: "30000"
-    command: npm run dev
+    command: npm run dev -- --host 0.0.0.0
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:5173 || exit 1"]
       interval: 30s
