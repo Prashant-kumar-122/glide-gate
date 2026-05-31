@@ -17,7 +17,7 @@ docker-compose down
 
 # Build new images
 echo "Building Docker images..."
-docker-compose build
+DOCKER_BUILDKIT=1 docker-compose build
 
 # Start containers via startup script
 echo "Starting containers..."
