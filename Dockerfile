@@ -16,14 +16,14 @@ RUN apt-get update && apt-get install -y \
 RUN pip install poetry --no-cache-dir
 
 # Copy backend files
-COPY backend/pyproject.toml backend/poetry.lock* ./
+COPY pyproject.toml poetry.lock* ./
 
 # Install Python dependencies without virtual environment
 RUN poetry config virtualenvs.create false \
     && poetry install --no-interaction --no-ansi
 
 # Copy backend application
-COPY backend/ .
+COPY . .
 
 # Create uploads directory
 RUN mkdir -p ./uploads

@@ -24,8 +24,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: ../Dockerfile
       args:
         PYTHON_VERSION: "3.12"
     container_name: glide_gate_backend

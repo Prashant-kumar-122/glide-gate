@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+*.egg-info/
+.venv/
+venv/
+.env
+.env.local
+uploads/
+alembic/versions/*.pyc
