@@ -43,12 +43,20 @@ def _esc(s: str) -> str:
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # Shift existing questions at order_index >= 12 up by 4 to make room
-    conn.execute(sa.text(
-        f"UPDATE onboarding_questions "
-        f"SET order_index = order_index + 4 "
-        f"WHERE questionnaire_id = '{_QUESTIONNAIRE_ID}' AND order_index >= 12"
-    ))
+    # Shift existing questions at order_index >= 12 up by 4, but only if the
+    # trusted-contact questions aren't already present (e.g. inserted by the seed).
+    already_seeded = conn.execute(sa.text(
+        f"SELECT 1 FROM onboarding_questions "
+        f"WHERE questionnaire_id = '{_QUESTIONNAIRE_ID}' "
+        f"AND question_key = 'trusted_contact_first_name' LIMIT 1"
+    )).fetchone()
+
+    if not already_seeded:
+        conn.execute(sa.text(
+            f"UPDATE onboarding_questions "
+            f"SET order_index = order_index + 4 "
+            f"WHERE questionnaire_id = '{_QUESTIONNAIRE_ID}' AND order_index >= 12"
+        ))
 
     for key, text, qtype, order, opts in _NEW_QUESTIONS:
         conn.execute(sa.text(
@@ -68,7 +76,7 @@ def upgrade() -> None:
             f"  {order}, "
             f"  TRUE, "
             f"  '{{}}'::jsonb"
-            f")"
+            f") ON CONFLICT ON CONSTRAINT oqn_key_uq DO NOTHING"
         ))
 
 
