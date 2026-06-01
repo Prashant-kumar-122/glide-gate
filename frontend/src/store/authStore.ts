@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 export interface AuthUser {
   id: string
@@ -26,6 +26,6 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (token, user) => set({ token, user, isAuthenticated: true }),
       clearAuth: () => set({ token: null, user: null, isAuthenticated: false }),
     }),
-    { name: 'gg_auth' }
+    { name: 'gg_auth', storage: createJSONStorage(() => sessionStorage) }
   )
 )

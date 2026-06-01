@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -21,11 +21,11 @@ class Document(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
     document_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    category: Mapped[str] = mapped_column(String(50), nullable=False)
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="NOT_REQUESTED")
+    category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="NOT_REQUESTED", index=True)
     original_filename: Mapped[str | None] = mapped_column(String(500))
     storage_path: Mapped[str | None] = mapped_column(String(1000))
     file_size_bytes: Mapped[int | None] = mapped_column(BigInteger)
@@ -35,13 +35,13 @@ class Document(Base):
     validation_result: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     diff_result: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    parent_doc_id: Mapped[UUID | None] = mapped_column(ForeignKey("documents.id"))
+    parent_doc_id: Mapped[UUID | None] = mapped_column(ForeignKey("documents.id"), index=True)
     uploaded_by: Mapped[str | None] = mapped_column(String(50))
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     uploaded_at: Mapped[datetime | None] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="documents")
     client: Mapped[Any] = relationship("Client")

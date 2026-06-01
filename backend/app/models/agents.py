@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -36,8 +36,8 @@ class Agent(Base):
     llm_provider: Mapped[str | None] = mapped_column(String(30))
     llm_model: Mapped[str | None] = mapped_column(String(100))
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class AgentTask(Base):
@@ -51,17 +51,17 @@ class AgentTask(Base):
     from_agent: Mapped[str] = mapped_column(String(50), nullable=False)
     to_agent: Mapped[str] = mapped_column(String(50), nullable=False)
     task_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
     priority: Mapped[str] = mapped_column(String(20), nullable=False, default="NORMAL")
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     expected_schema: Mapped[str | None] = mapped_column(String(200))
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING", index=True)
     result: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     errors: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     duration_ms: Mapped[int | None] = mapped_column(Integer)
     ttl: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     started_at: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
 
@@ -73,8 +73,8 @@ class EventLog(Base):
     __tablename__ = "event_logs"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID | None] = mapped_column()
-    client_id: Mapped[UUID | None] = mapped_column()
+    case_id: Mapped[UUID | None] = mapped_column(index=True)
+    client_id: Mapped[UUID | None] = mapped_column(index=True)
     agent_id: Mapped[str | None] = mapped_column(String(50))
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     event_category: Mapped[str | None] = mapped_column(String(50))
@@ -86,7 +86,7 @@ class EventLog(Base):
     is_compliance_event: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     ip_address: Mapped[str | None] = mapped_column(String(45))
     user_agent: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class MCPToolCall(Base):
@@ -96,7 +96,7 @@ class MCPToolCall(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID | None] = mapped_column(ForeignKey("onboarding_cases.id"))
+    case_id: Mapped[UUID | None] = mapped_column(ForeignKey("onboarding_cases.id"), index=True)
     agent_id: Mapped[str] = mapped_column(String(50), nullable=False)
     connector_name: Mapped[str] = mapped_column(String(100), nullable=False)
     tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -106,7 +106,7 @@ class MCPToolCall(Base):
     is_simulated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer)
     error_message: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     completed_at: Mapped[datetime | None] = mapped_column()
 
     case: Mapped[Any] = relationship("OnboardingCase")

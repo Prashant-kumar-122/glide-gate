@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -28,18 +28,18 @@ class OnboardingCase(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
-    status: Mapped[str] = mapped_column(String(30), nullable=False, default="INTAKE")
-    current_stage: Mapped[str] = mapped_column(String(30), nullable=False, default="INTAKE")
+    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="INTAKE", index=True)
+    current_stage: Mapped[str] = mapped_column(String(30), nullable=False, default="INTAKE", index=True)
     selected_products: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     shared_context: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    assigned_advisor_id: Mapped[UUID | None] = mapped_column()
+    assigned_advisor_id: Mapped[UUID | None] = mapped_column(index=True)
     sla_deadline: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     percentage: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     client: Mapped[Any] = relationship("Client", back_populates="onboarding_cases")
     case_products: Mapped[list[CaseProduct]] = relationship("CaseProduct", back_populates="case", cascade="all, delete-orphan")
@@ -70,8 +70,8 @@ class Product(Base):
     suitability_criteria: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     step_sequence: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case_products: Mapped[list[CaseProduct]] = relationship("CaseProduct", back_populates="product")
 
@@ -83,8 +83,8 @@ class CaseProduct(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    product_id: Mapped[UUID] = mapped_column(ForeignKey("products.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    product_id: Mapped[UUID] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
     product_code: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
     suitability_outcome: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
@@ -92,8 +92,8 @@ class CaseProduct(Base):
     started_at: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[OnboardingCase] = relationship("OnboardingCase", back_populates="case_products")
     product: Mapped[Product] = relationship("Product", back_populates="case_products")
@@ -107,14 +107,14 @@ class CaseProductStep(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_product_id: Mapped[UUID] = mapped_column(ForeignKey("case_products.id", ondelete="CASCADE"), nullable=False)
+    case_product_id: Mapped[UUID] = mapped_column(ForeignKey("case_products.id", ondelete="CASCADE"), nullable=False, index=True)
     step_name: Mapped[str] = mapped_column(String(100), nullable=False)
     step_index: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
     result: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     started_at: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case_product: Mapped[CaseProduct] = relationship("CaseProduct", back_populates="steps")

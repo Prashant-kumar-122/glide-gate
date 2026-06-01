@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -26,8 +26,8 @@ class Notification(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID | None] = mapped_column(ForeignKey("onboarding_cases.id"))
-    user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    case_id: Mapped[UUID | None] = mapped_column(ForeignKey("onboarding_cases.id"), index=True)
+    user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
     user_type: Mapped[str | None] = mapped_column(String(20))
     template_name: Mapped[str | None] = mapped_column(String(100))
     channel: Mapped[str] = mapped_column(String(30), nullable=False)
@@ -39,8 +39,8 @@ class Notification(Base):
     is_simulated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     sent_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="notifications")
     user: Mapped[Any] = relationship("User")
@@ -53,13 +53,13 @@ class CaseSummary(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
     summary_type: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     model_used: Mapped[str | None] = mapped_column(String(100))
-    generated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    generated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="case_summaries")
 
@@ -71,12 +71,12 @@ class CollaborationRoom(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
     room_name: Mapped[str | None] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="OPEN")
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="collaboration_rooms")
     participants: Mapped[list[CollaborationParticipant]] = relationship("CollaborationParticipant", back_populates="room", cascade="all, delete-orphan")
@@ -90,13 +90,13 @@ class CollaborationParticipant(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    room_id: Mapped[UUID] = mapped_column(ForeignKey("collaboration_rooms.id", ondelete="CASCADE"), nullable=False)
+    room_id: Mapped[UUID] = mapped_column(ForeignKey("collaboration_rooms.id", ondelete="CASCADE"), nullable=False, index=True)
     participant_id: Mapped[str] = mapped_column(String(100), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False)
-    joined_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    joined_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     left_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     room: Mapped[CollaborationRoom] = relationship("CollaborationRoom", back_populates="participants")
 
@@ -108,17 +108,17 @@ class CollaborationComment(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    room_id: Mapped[UUID] = mapped_column(ForeignKey("collaboration_rooms.id", ondelete="CASCADE"), nullable=False)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
+    room_id: Mapped[UUID] = mapped_column(ForeignKey("collaboration_rooms.id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
     author_id: Mapped[str] = mapped_column(String(100), nullable=False)
     author_role: Mapped[str | None] = mapped_column(String(50))
     content: Mapped[str] = mapped_column(Text, nullable=False)
     visibility: Mapped[str] = mapped_column(String(30), nullable=False, default="team")
-    document_id: Mapped[UUID | None] = mapped_column(ForeignKey("documents.id"))
-    parent_id: Mapped[UUID | None] = mapped_column(ForeignKey("collaboration_comments.id"))
+    document_id: Mapped[UUID | None] = mapped_column(ForeignKey("documents.id"), index=True)
+    parent_id: Mapped[UUID | None] = mapped_column(ForeignKey("collaboration_comments.id"), index=True)
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     room: Mapped[CollaborationRoom] = relationship("CollaborationRoom", back_populates="comments")
     document: Mapped[Any] = relationship("Document", back_populates="comments")
@@ -133,13 +133,13 @@ class ConversationMessage(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     tokens_used: Mapped[int | None] = mapped_column(Integer)
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="conversation_messages")
     client: Mapped[Any] = relationship("Client")

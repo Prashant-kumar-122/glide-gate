@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
@@ -20,8 +20,8 @@ class KYCCheck(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
     identity_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
     aml_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
     profile_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 4))
@@ -36,8 +36,8 @@ class KYCCheck(Base):
     decision_reason: Mapped[str | None] = mapped_column(Text)
     decided_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="kyc_checks")
     client: Mapped[Any] = relationship("Client")
@@ -51,8 +51,8 @@ class HumanReview(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    kyc_check_id: Mapped[UUID] = mapped_column(ForeignKey("kyc_checks.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    kyc_check_id: Mapped[UUID] = mapped_column(ForeignKey("kyc_checks.id"), nullable=False, index=True)
     reviewer_id: Mapped[UUID | None] = mapped_column()
     reviewer_role: Mapped[str | None] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
@@ -60,11 +60,11 @@ class HumanReview(Base):
     decision: Mapped[str | None] = mapped_column(String(30))
     decision_notes: Mapped[str | None] = mapped_column(Text)
     escalation_reason: Mapped[str | None] = mapped_column(Text)
-    assigned_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    assigned_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     decided_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="human_reviews")
     kyc_check: Mapped[KYCCheck] = relationship("KYCCheck", back_populates="human_reviews")

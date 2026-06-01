@@ -1,15 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { Menu, X, Sun, Moon, Building2 } from 'lucide-react'
-import AdvisorWorkspace from '@/routes/AdvisorWorkspace'
-import ClientPortal from '@/routes/ClientPortal'
-import ContactCentre from '@/routes/ContactCentre'
-import AgentTrace from '@/routes/AgentTrace'
-import AdminConfig from '@/routes/AdminConfig'
+
+// Login/Signup are always the first pages loaded — keep them eager
 import Login from '@/routes/Login'
 import Signup from '@/routes/Signup'
-import Profile from '@/routes/Profile'
+
+// All other routes are lazy-loaded so each role only pays for its own bundle
+const AdvisorWorkspace = lazy(() => import('@/routes/AdvisorWorkspace'))
+const ClientPortal = lazy(() => import('@/routes/ClientPortal'))
+const ContactCentre = lazy(() => import('@/routes/ContactCentre'))
+const AgentTrace = lazy(() => import('@/routes/AgentTrace'))
+const AdminConfig = lazy(() => import('@/routes/AdminConfig'))
+const Profile = lazy(() => import('@/routes/Profile'))
+
 import ProtectedRoute from '@/components/ProtectedRoute'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import UserMenu from '@/features/auth/UserMenu'
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { NotificationToast } from '@/features/notifications/NotificationToast'
@@ -121,71 +127,89 @@ export default function App() {
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950">
       <NavBar />
       <main className="flex flex-1 flex-col">
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+        <Suspense fallback={
+          <div className="flex min-h-screen items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          </div>
+        }>
+          <Routes>
+            {/* Public routes — eager, no ErrorBoundary needed */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
 
-          {/* Protected: all authenticated roles */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute allowedRoles={['client', 'advisor', 'admin']}>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected: all authenticated roles */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute allowedRoles={['client', 'advisor', 'admin']}>
+                  <ErrorBoundary>
+                    <Profile />
+                  </ErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Advisor-only */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute allowedRoles={['advisor']}>
-                <AdvisorWorkspace />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/contact-centre"
-            element={
-              <ProtectedRoute allowedRoles={['advisor']}>
-                <ContactCentre />
-              </ProtectedRoute>
-            }
-          />
+            {/* Advisor-only */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute allowedRoles={['advisor']}>
+                  <ErrorBoundary>
+                    <AdvisorWorkspace />
+                  </ErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contact-centre"
+              element={
+                <ProtectedRoute allowedRoles={['advisor']}>
+                  <ErrorBoundary>
+                    <ContactCentre />
+                  </ErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Advisor + Admin */}
-          <Route
-            path="/agent-trace"
-            element={
-              <ProtectedRoute allowedRoles={['advisor', 'admin']}>
-                <AgentTrace />
-              </ProtectedRoute>
-            }
-          />
+            {/* Advisor + Admin */}
+            <Route
+              path="/agent-trace"
+              element={
+                <ProtectedRoute allowedRoles={['advisor', 'admin']}>
+                  <ErrorBoundary>
+                    <AgentTrace />
+                  </ErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Admin-only */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminConfig />
-              </ProtectedRoute>
-            }
-          />
+            {/* Admin-only */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <ErrorBoundary>
+                    <AdminConfig />
+                  </ErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Client-only */}
-          <Route
-            path="/client"
-            element={
-              <ProtectedRoute allowedRoles={['client']}>
-                <ClientPortal />
-              </ProtectedRoute>
-            }
-          />
+            {/* Client-only */}
+            <Route
+              path="/client"
+              element={
+                <ProtectedRoute allowedRoles={['client']}>
+                  <ErrorBoundary>
+                    <ClientPortal />
+                  </ErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Suspense>
       </main>
       <NotificationToast />
     </div>

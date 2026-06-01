@@ -4,7 +4,6 @@ import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
-
 from app.config import settings
 from app.api.error_handlers import register_error_handlers
 from app.api.routers import health
@@ -25,6 +24,17 @@ app = FastAPI(
     redoc_url=f"{settings.API_PREFIX}/redoc",
     openapi_url=f"{settings.API_PREFIX}/openapi.json",
 )
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if settings.is_production:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,6 +73,11 @@ socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 @app.on_event("startup")
 async def on_startup() -> None:
+    if settings.DEMO_MODE and settings.is_production:
+        raise RuntimeError(
+            "DEMO_MODE=True is not allowed in production. "
+            "Set APP_ENV=development or set DEMO_MODE=False."
+        )
     logger.info(
         f"GlideGate API starting — env={settings.APP_ENV} "
         f"demo_mode={settings.DEMO_MODE} "

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -21,8 +21,8 @@ class OnboardingQuestionnaire(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     sections: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     questions: Mapped[list[OnboardingQuestion]] = relationship("OnboardingQuestion", back_populates="questionnaire", cascade="all, delete-orphan")
     answers: Mapped[list[OnboardingAnswer]] = relationship("OnboardingAnswer", back_populates="questionnaire")
@@ -40,7 +40,7 @@ class OnboardingQuestion(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    questionnaire_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questionnaires.id", ondelete="CASCADE"), nullable=False)
+    questionnaire_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questionnaires.id", ondelete="CASCADE"), nullable=False, index=True)
     section: Mapped[str] = mapped_column(String(100), nullable=False)
     question_key: Mapped[str] = mapped_column(String(100), nullable=False)
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -51,8 +51,8 @@ class OnboardingQuestion(Base):
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     questionnaire: Mapped[OnboardingQuestionnaire] = relationship("OnboardingQuestionnaire", back_populates="questions")
     rules: Mapped[list[OnboardingQuestionRule]] = relationship("OnboardingQuestionRule", back_populates="question", cascade="all, delete-orphan")
@@ -66,12 +66,12 @@ class OnboardingQuestionRule(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    question_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questions.id", ondelete="CASCADE"), nullable=False)
+    question_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questions.id", ondelete="CASCADE"), nullable=False, index=True)
     rule_type: Mapped[str] = mapped_column(String(50), nullable=False)
     condition: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     action: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     question: Mapped[OnboardingQuestion] = relationship("OnboardingQuestion", back_populates="rules")
 
@@ -83,16 +83,16 @@ class OnboardingAnswer(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
-    questionnaire_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questionnaires.id"), nullable=False)
-    question_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questions.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
+    questionnaire_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questionnaires.id"), nullable=False, index=True)
+    question_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questions.id"), nullable=False, index=True)
     question_key: Mapped[str] = mapped_column(String(100), nullable=False)
     answer_value: Mapped[Any] = mapped_column(JSONB)
-    answered_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
+    answered_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="answers")
     client: Mapped[Any] = relationship("Client")
@@ -108,9 +108,9 @@ class OnboardingQuestionSession(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False)
-    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False)
-    questionnaire_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questionnaires.id"), nullable=False)
+    case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
+    client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
+    questionnaire_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_questionnaires.id"), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="IN_PROGRESS")
     current_section: Mapped[str | None] = mapped_column(String(100))
     current_question_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -120,8 +120,8 @@ class OnboardingQuestionSession(Base):
     resumed_at: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[Any] = relationship("OnboardingCase", back_populates="question_sessions")
     client: Mapped[Any] = relationship("Client")
