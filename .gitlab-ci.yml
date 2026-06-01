@@ -1,13 +1,15 @@
 stages:
+  - validate
+  - build
   - deploy
 
-deploy:
-  stage: deploy
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-      when: always
+# ── SSH setup reused across build and deploy stages ──────────────────────────
+.ssh_setup: &ssh_setup
   tags:
     - ec2 arm64 ubuntu
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
+      when: always
   before_script:
     - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
@@ -45,5 +47,81 @@ deploy:
     - ssh-add /tmp/deploy_key.pem
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -H 18.60.103.228 >> ~/.ssh/known_hosts
+
+# ── Stage 1: Validate ─────────────────────────────────────────────────────────
+validate-frontend:
+  stage: validate
+  tags:
+    - ec2 arm64 ubuntu
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
+      when: always
   script:
-    - ssh ubuntu@18.60.103.228 "cd /home/ubuntu/office_project/glidegate && bash deploy.sh"
+    - echo "=========================================="
+    - echo "   Validating Frontend Build"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - cd frontend
+    - npm install --legacy-peer-deps
+    - npm run build
+    - echo "✓ Frontend build validation passed"
+
+validate-backend:
+  stage: validate
+  tags:
+    - ec2 arm64 ubuntu
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
+      when: always
+  script:
+    - echo "=========================================="
+    - echo "   Validating Backend Syntax"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - find backend/app -name "*.py" | xargs python3 -m py_compile
+    - echo "✓ Backend syntax check passed"
+
+# ── Stage 2: Build ────────────────────────────────────────────────────────────
+build:
+  stage: build
+  <<: *ssh_setup
+  script:
+    - echo "=========================================="
+    - echo "   Building Docker Images"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        echo '--- Pulling latest code ---' &&
+        git pull origin COPS_Agentic_AI_Deploy &&
+        echo '--- Preparing directories ---' &&
+        mkdir -p db/data &&
+        sudo chown -R 999:999 db/data &&
+        echo '--- Building Docker images ---' &&
+        DOCKER_BUILDKIT=0 docker-compose build &&
+        echo '--- Tagging images with $CI_COMMIT_SHORT_SHA ---' &&
+        docker tag glidegate_backend:latest glidegate_backend:$CI_COMMIT_SHORT_SHA &&
+        docker tag glidegate_frontend:latest glidegate_frontend:$CI_COMMIT_SHORT_SHA &&
+        echo '--- Pruning old images keeping last 3 ---' &&
+        docker images glidegate_backend --format '{{.Tag}}' | grep -v latest | sort -r | tail -n +4 | xargs -I {} docker rmi glidegate_backend:{} 2>/dev/null || true &&
+        docker images glidegate_frontend --format '{{.Tag}}' | grep -v latest | sort -r | tail -n +4 | xargs -I {} docker rmi glidegate_frontend:{} 2>/dev/null || true &&
+        echo '✓ Build complete'"
+
+# ── Stage 3: Deploy ───────────────────────────────────────────────────────────
+deploy:
+  stage: deploy
+  <<: *ssh_setup
+  script:
+    - echo "=========================================="
+    - echo "   Deploying to EC2"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        echo '--- Stopping old containers ---' &&
+        docker-compose down &&
+        echo '--- Starting new containers ---' &&
+        bash docker-startup.sh &&
+        echo '--- Container Status ---' &&
+        docker-compose ps &&
+        echo '✓ Deployment complete - Commit $CI_COMMIT_SHORT_SHA is live'"
