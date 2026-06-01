@@ -36,12 +36,12 @@ function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
 
-  const ROLE_LABELS: Record<string, string> = {
-    client: 'Client Portal',
-    advisor: 'Advisor Portal',
-    admin: 'Admin Portal',
+  const ROLE_HOME: Record<string, string> = {
+    client: '/client',
+    advisor: '/',
+    admin: '/admin',
   }
-  const pageLabel = user ? ROLE_LABELS[user.role] : undefined
+  const homeRoute = user ? (ROLE_HOME[user.role] ?? '/login') : '/login'
 
   const visibleLinks = isAuthenticated && user
     ? NAV_LINKS.filter((l) => l.roles.includes(user.role))
@@ -49,15 +49,12 @@ function NavBar() {
 
   return (
     <nav className="sticky top-0 z-50 flex items-center bg-gray-900 px-4 py-3 text-sm text-gray-300 lg:px-6">
-      <div className="flex items-center gap-3 mr-4">
+      <Link to={homeRoute} className="flex items-center gap-3 mr-4 hover:opacity-80 transition-opacity">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
           <Building2 className="w-4 h-4 text-white" />
         </div>
         <span className="font-semibold text-white">GlideGate</span>
-        {pageLabel && (
-          <span className="text-gray-400 text-sm hidden md:block">/ {pageLabel}</span>
-        )}
-      </div>
+      </Link>
 
       {/* Desktop nav links — hidden on mobile */}
       {visibleLinks.map((l) => (
