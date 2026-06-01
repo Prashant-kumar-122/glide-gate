@@ -11,6 +11,7 @@ python = "^3.12"
 # Web framework
 fastapi = "^0.115.0"
 uvicorn = { version = "^0.32.0", extras = ["standard"] }
+gunicorn = "^23.0.0"
 
 # WebSocket
 python-socketio = "^5.11.0"

@@ -25,6 +25,9 @@ RUN poetry config virtualenvs.create false \
 # Copy backend application
 COPY . .
 
+# Build check - verify all imports resolve
+RUN python -c "from app.main import app; print('Build check passed')"
+
 # Create uploads directory
 RUN mkdir -p ./uploads
 
@@ -37,3 +40,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 
 # Default command (can be overridden by docker-compose)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
