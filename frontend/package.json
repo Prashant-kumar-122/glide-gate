@@ -13,32 +13,33 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.62.0",
+    "@xyflow/react": "^12.3.0",
+    "axios": "^1.7.9",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
-    "@xyflow/react": "^12.3.0",
-    "zustand": "^5.0.1",
-    "@tanstack/react-query": "^5.62.0",
     "socket.io-client": "^4.8.1",
-    "axios": "^1.7.9",
-    "lucide-react": "^0.468.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.5"
+    "tailwind-merge": "^2.5.5",
+    "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.62.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.16.0",
+    "@typescript-eslint/parser": "^8.16.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/ui": "^2.1.8",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.15.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
     "typescript": "^5.6.3",
     "vite": "^6.0.3",
-    "vitest": "^2.1.8",
-    "@vitest/ui": "^2.1.8",
-    "tailwindcss": "^3.4.16",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "@tanstack/react-query-devtools": "^5.62.0",
-    "eslint": "^9.15.0",
-    "@typescript-eslint/eslint-plugin": "^8.16.0",
-    "@typescript-eslint/parser": "^8.16.0"
+    "vitest": "^2.1.8"
   }
 }
