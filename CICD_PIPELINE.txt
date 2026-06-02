@@ -45,8 +45,11 @@ Developer Machine       GitLab Server            AWS EC2 (18.60.103.228)
 
 TRIGGER
 -------
-Branch  : COPS_Agentic_AI_Deploy (only)
-Event   : Any git push to this branch
+Branch   : COPS_Agentic_AI_Deploy (only)
+Event 1  : Any git push to this branch
+Event 2  : When a Merge Request is raised from this branch
+           (pending - add CI_PIPELINE_SOURCE == merge_request_event rule
+            to .gitlab-ci.yml)
 
 
 RUNNER
