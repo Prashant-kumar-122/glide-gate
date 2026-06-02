@@ -75,12 +75,10 @@ export default function ClientPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <CaseDashboard
-        firstName={user.firstName}
-        onOpenNewAccount={openWizard}
-        onOpenCase={openCase}
-      />
-    </div>
+    <CaseDashboard
+      firstName={user.firstName}
+      onOpenNewAccount={openWizard}
+      onOpenCase={openCase}
+    />
   )
 }

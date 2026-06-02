@@ -50,18 +50,30 @@ function NavBar() {
   return (
     <nav className="sticky top-0 z-50 flex items-center bg-gray-900 px-4 py-3 text-sm text-gray-300 lg:px-6">
       <Link to={homeRoute} className="flex items-center gap-3 mr-4 hover:opacity-80 transition-opacity">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center shrink-0">
           <Building2 className="w-4 h-4 text-white" />
         </div>
         <span className="font-semibold text-white">GlideGate</span>
       </Link>
 
       {/* Desktop nav links — hidden on mobile */}
-      {visibleLinks.map((l) => (
-        <Link key={l.to} to={l.to} className="hidden lg:block px-3 py-1.5 rounded-lg hover:bg-gray-700 hover:text-white transition-colors">
-          {l.label}
-        </Link>
-      ))}
+      {visibleLinks.map((l) => {
+        const isActive = location.pathname === l.to
+        return (
+          <Link
+            key={l.to}
+            to={l.to}
+            className={[
+              'hidden lg:block px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+              isActive
+                ? 'bg-gray-700 text-white'
+                : 'text-gray-400 hover:bg-gray-700 hover:text-white',
+            ].join(' ')}
+          >
+            {l.label}
+          </Link>
+        )
+      })}
 
       {/* Spacer pushes right-side items to the end */}
       <div className="flex-1" />
@@ -95,16 +107,24 @@ function NavBar() {
       {/* Mobile dropdown — slides down from navbar */}
       {menuOpen && (
         <div className="absolute left-0 right-0 top-full z-50 border-t border-gray-700 bg-gray-900 py-1 shadow-xl lg:hidden">
-          {visibleLinks.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              onClick={() => setMenuOpen(false)}
-              className="block px-5 py-3.5 text-sm text-gray-300 transition-colors hover:bg-gray-800 hover:text-white active:bg-gray-700"
-            >
-              {l.label}
-            </Link>
-          ))}
+          {visibleLinks.map((l) => {
+            const isActive = location.pathname === l.to
+            return (
+              <Link
+                key={l.to}
+                to={l.to}
+                onClick={() => setMenuOpen(false)}
+                className={[
+                  'block py-3.5 text-sm transition-colors',
+                  isActive
+                    ? 'border-l-2 border-gray-400 pl-[19px] pr-5 bg-gray-800 text-white font-medium'
+                    : 'px-5 text-gray-300 hover:bg-gray-800 hover:text-white',
+                ].join(' ')}
+              >
+                {l.label}
+              </Link>
+            )
+          })}
         </div>
       )}
     </nav>
@@ -121,9 +141,9 @@ export default function App() {
   useUserSocket()
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50 dark:bg-gray-800">
       <NavBar />
-      <main className="flex flex-1 flex-col">
+      <main className="flex flex-1 flex-col overflow-y-auto">
         <Suspense fallback={
           <div className="flex min-h-screen items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />

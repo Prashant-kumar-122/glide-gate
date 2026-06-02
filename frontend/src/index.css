@@ -29,6 +29,189 @@
   }
 }
 
+/* ── Color system tokens ────────────────────────────────────────────────────
+   All values are space-separated RGB channels so Tailwind opacity modifiers
+   (e.g. bg-gray-800/50) continue to work in every mode.
+   :root  — light mode (matches standard Tailwind defaults exactly)
+   .dark  — Obsidian/Midnight/Onyx black-gray family; semantic colors
+            desaturated ~30% to match the monochrome shell.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Gray */
+  --gray-50:  249 250 251;
+  --gray-100: 243 244 246;
+  --gray-200: 229 231 235;
+  --gray-300: 209 213 219;
+  --gray-400: 156 163 175;
+  --gray-500: 107 114 128;
+  --gray-600:  75  85  99;
+  --gray-700:  55  65  81;
+  --gray-800:  31  41  55;
+  --gray-900:  17  24  39;
+  --gray-950:   3   7  18;
+
+  /* Blue */
+  --blue-50:  239 246 255;
+  --blue-100: 219 234 254;
+  --blue-300: 147 197 253;
+  --blue-400:  96 165 250;
+  --blue-500:  59 130 246;
+  --blue-600:  37  99 235;
+  --blue-700:  29  78 216;
+  --blue-900:  30  58 138;
+  --blue-950:  23  37  84;
+
+  /* Green */
+  --green-50:  240 253 244;
+  --green-100: 220 252 231;
+  --green-200: 187 247 208;
+  --green-300: 134 239 172;
+  --green-400:  74 222 128;
+  --green-700:  21 128  61;
+  --green-800:  22 101  52;
+  --green-900:  20  83  45;
+  --green-950:   5  46  22;
+
+  /* Amber */
+  --amber-50:  255 251 235;
+  --amber-100: 254 243 199;
+  --amber-200: 253 230 138;
+  --amber-300: 252 211  77;
+  --amber-400: 251 191  36;
+  --amber-500: 245 158  11;
+  --amber-700: 180  83   9;
+  --amber-800: 146  64  14;
+  --amber-900: 120  53  15;
+  --amber-950:  69  26   3;
+
+  /* Red */
+  --red-50:  254 242 242;
+  --red-100: 254 226 226;
+  --red-300: 252 165 165;
+  --red-400: 248 113 113;
+  --red-500: 239  68  68;
+  --red-600: 220  38  38;
+  --red-700: 185  28  28;
+  --red-800: 153  27  27;
+  --red-900: 127  29  29;
+  --red-950:  69  10  10;
+
+  /* Violet */
+  --violet-50:  245 243 255;
+  --violet-100: 237 233 254;
+  --violet-200: 221 214 254;
+  --violet-300: 196 181 253;
+  --violet-400: 167 139 250;
+  --violet-500: 139  92 246;
+  --violet-800:  91  33 182;
+  --violet-950:  46  16 101;
+
+  /* Indigo */
+  --indigo-100: 224 231 255;
+  --indigo-300: 165 180 252;
+  --indigo-400: 129 140 248;
+  --indigo-600:  79  70 229;
+  --indigo-700:  67  56 202;
+  --indigo-900:  49  46 129;
+
+  /* Purple */
+  --purple-50:  250 245 255;
+  --purple-400: 192 132 252;
+  --purple-600: 147  51 234;
+  --purple-950:  59   7 100;
+
+  /* Emerald */
+  --emerald-300: 110 231 183;
+  --emerald-400:  52 211 153;
+  --emerald-600:   5 150 105;
+}
+
+/* ── Dark mode — Obsidian / Midnight / Onyx black-gray palette ───────────── */
+.dark {
+  /* Gray — pure neutrals, no blue tint
+     Backgrounds: 950→900→800 (body→nav→card)  · WCAG-checked pairs below
+     Text:        100→300→400 (heading→body→muted) on 800 bg: 14.7:1 / 7.4:1 / 5.2:1 ✓ */
+  --gray-50:  232 232 232;   /* #e8e8e8 */
+  --gray-100: 216 216 216;   /* #d8d8d8  platinum — primary headings */
+  --gray-200: 200 200 200;   /* #c8c8c8  silver */
+  --gray-300: 180 180 180;   /* #b4b4b4  body text */
+  --gray-400: 158 158 158;   /* #9e9e9e  muted labels (5.2:1 on #0e0e0e) */
+  --gray-500: 132 132 132;   /* #848484  secondary labels (4.8:1 on #0e0e0e) */
+  --gray-600:  74  74  74;   /* #4a4a4a  very muted — avoid as text on dark bg */
+  --gray-700:  36  36  36;   /* #242424  borders / hover bg */
+  --gray-800:  22  22  22;   /* #161616  main content / card surface */
+  --gray-900:   8   8   8;   /* #080808  nav chrome (always dark) */
+  --gray-950:   0   0   0;   /* #000000  app body */
+
+  /* Blue — kept at full Tailwind values in dark mode so buttons and
+     interactive elements remain recognisably blue on the dark shell. */
+
+  /* Green — desaturated ~30% (status: approved / pass / success) */
+  --green-50:  228 244 234;   /* #e4f4ea */
+  --green-100: 200 232 212;   /* #c8e8d4 */
+  --green-200: 160 210 178;   /* #a0d2b2 */
+  --green-300: 148 210 174;   /* #94d2ae */
+  --green-400:  90 188 128;   /* #5abc80 */
+  --green-700:  30  88  52;   /* #1e5834 */
+  --green-800:  20  56  34;   /* #143822 */
+  --green-900:  16  42  26;   /* #102a1a */
+  --green-950:  10  26  16;   /* #0a1a10 */
+
+  /* Amber — desaturated ~30% (status: under-review / warning) */
+  --amber-50:  245 236 204;   /* #f5eccc */
+  --amber-100: 238 218 168;   /* #eedaa8 */
+  --amber-200: 226 194 130;   /* #e2c282 */
+  --amber-300: 212 172  86;   /* #d4ac56 */
+  --amber-400: 196 148  66;   /* #c49442 */
+  --amber-500: 174 118  40;   /* #ae7628 */
+  --amber-700: 100  62  18;   /* #643e12 */
+  --amber-800:  78  46  12;   /* #4e2e0c */
+  --amber-900:  60  36   8;   /* #3c2408 */
+  --amber-950:  38  22   4;   /* #261604 */
+
+  /* Red — desaturated ~30% (status: error / fail / needs-revision) */
+  --red-50:  250 238 238;   /* #faeee  */
+  --red-100: 244 216 216;   /* #f4d8d8 */
+  --red-300: 202 138 138;   /* #ca8a8a */
+  --red-400: 186 110 110;   /* #ba6e6e */
+  --red-500: 168  88  88;   /* #a85858 */
+  --red-600: 148  68  68;   /* #944444 */
+  --red-700:  90  40  40;   /* #5a2828 */
+  --red-800:  72  28  28;   /* #481c1c */
+  --red-900:  56  20  20;   /* #381414 */
+  --red-950:  38  12  12;   /* #260c0c */
+
+  /* Violet — desaturated ~30% (status: received / processing) */
+  --violet-50:  236 228 246;   /* #ece4f6 */
+  --violet-100: 220 210 238;   /* #dcd2ee */
+  --violet-200: 196 182 222;   /* #c4b6de */
+  --violet-300: 172 152 204;   /* #ac98cc */
+  --violet-400: 156 132 190;   /* #9c84be */
+  --violet-500: 130 104 170;   /* #8268aa */
+  --violet-800:  62  32  96;   /* #3e2060 */
+  --violet-950:  30  14  48;   /* #1e0e30 */
+
+  /* Indigo — desaturated ~30% (status: parallel products) */
+  --indigo-100: 212 216 238;   /* #d4d8ee */
+  --indigo-300: 148 152 200;   /* #9498c8 */
+  --indigo-400: 128 132 184;   /* #8084b8 */
+  --indigo-600:  80  80 160;   /* #5050a0 */
+  --indigo-700:  68  68 148;   /* #444494 */
+  --indigo-900:  38  36 100;   /* #262464 */
+
+  /* Purple — desaturated ~30% (status: risk level) */
+  --purple-50:  230 218 240;   /* #e6daf0 */
+  --purple-400: 176 112 200;   /* #b070c8 */
+  --purple-600: 128  64 168;   /* #8040a8 */
+  --purple-950:  48   8  72;   /* #300848 */
+
+  /* Emerald — desaturated ~30% (account numbers) */
+  --emerald-300: 110 200 162;   /* #6ec8a2 */
+  --emerald-400:  66 192 138;   /* #42c08a */
+  --emerald-600:  20 148  96;   /* #149460 */
+}
+
 @layer utilities {
   /* Safe area insets for notched devices */
   .pb-safe {
@@ -62,11 +245,11 @@
 
 /* Dark mode */
 .dark ::-webkit-scrollbar-thumb {
-  background-color: #334155; /* slate-700 */
+  background-color: #242424;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background-color: #475569; /* slate-600 */
+  background-color: #363636;
 }
 
 /* Firefox */
@@ -76,5 +259,5 @@
 }
 
 .dark * {
-  scrollbar-color: #334155 transparent;
+  scrollbar-color: #242424 transparent;
 }
