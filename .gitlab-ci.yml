@@ -56,6 +56,8 @@ validate-frontend:
   rules:
     - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
       when: always
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq nodejs npm
   script:
     - echo "=========================================="
     - echo "   Validating Frontend Build"
