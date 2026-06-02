@@ -45,8 +45,7 @@ Developer Machine          GitLab Server              AWS EC2 (18.60.103.228)
 ## Trigger
 
 - **Branch:** `COPS_Agentic_AI_Deploy` only
-- **Event 1:** Any push to this branch (`$CI_PIPELINE_SOURCE == "push"`)
-- **Event 2:** When a Merge Request is raised from this branch *(pending — add `$CI_PIPELINE_SOURCE == "merge_request_event"` rule to `.gitlab-ci.yml`)*
+- **Event:** Any push to this branch (`$CI_PIPELINE_SOURCE == "push"`)
 
 ---
 
