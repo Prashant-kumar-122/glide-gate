@@ -57,7 +57,9 @@ validate-frontend:
     - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
       when: always
   before_script:
-    - apt-get update -qq && apt-get install -y -qq nodejs npm
+    - apt-get update -qq && apt-get install -y -qq curl
+    - curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    - apt-get install -y nodejs
   script:
     - echo "=========================================="
     - echo "   Validating Frontend Build"
