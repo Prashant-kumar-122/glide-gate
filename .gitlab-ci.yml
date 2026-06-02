@@ -88,7 +88,7 @@ validate-backend:
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
         cd /home/ubuntu/office_project/glidegate &&
-        find backend/app -name '*.py' | xargs python3 -m py_compile &&
+        find backend/app -name '*.py' | xargs python3 -B -m py_compile &&
         echo '✓ Backend syntax check passed'"
 
 # ── Stage 3: Build ───────────────────────────────────────────────────────────
