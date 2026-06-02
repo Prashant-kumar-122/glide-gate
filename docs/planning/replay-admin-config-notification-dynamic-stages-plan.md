@@ -4,9 +4,21 @@
 
 Four action items to implement next. Each item has a clear scope, lists the exact files to create or modify, and describes the approach in enough detail to execute without ambiguity.
 
+## Progress
+
+| Action | Status | Completed |
+|--------|--------|-----------|
+| 1 — Replay Button in Agent Trace Screen | ✅ Done | 2026-06-02 |
+| 2 — Enhance Admin Config (Onboarding Questions, Agents, Skills) | ⬜ Pending | — |
+| 3 — Client Document Upload Notification | ⬜ Pending | — |
+| 4 — Dynamic Stage Insertion | ⬜ Pending | — |
+
 ---
 
-## Action 1 — Replay Button in Agent Trace Screen
+## Action 1 — Replay Button in Agent Trace Screen ✅ Done (2026-06-02)
+
+> **Implemented files:** `frontend/src/store/traceStore.ts` · `frontend/src/features/agent-trace/ReplayControls.tsx` (new) · `frontend/src/features/agent-trace/AgentTraceCanvas.tsx`
+> Speed options extended to include 0.25× (2400 ms) in addition to the planned 0.5×/1×/2×.
 
 ### Goal
 Add a Replay button to the Agent Trace screen that rewinds all agent nodes to idle and then animates the full historical execution flow — edge-by-edge, state-change-by-state-change — for a selected case.
