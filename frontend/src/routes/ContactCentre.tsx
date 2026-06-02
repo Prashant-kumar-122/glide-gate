@@ -116,7 +116,7 @@ export default function ContactCentre() {
 
         <div
           className={[
-            'flex-col overflow-hidden bg-gray-50 dark:bg-gray-900',
+            'flex-col overflow-hidden bg-gray-50 dark:bg-gray-800',
             mobileView === 'detail' ? 'flex flex-1' : 'hidden',
             'md:flex md:flex-1',
           ].join(' ')}

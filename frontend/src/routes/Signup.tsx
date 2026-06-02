@@ -10,7 +10,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-900">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-800">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">GlideGate</h1>
