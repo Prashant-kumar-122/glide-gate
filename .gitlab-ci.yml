@@ -60,8 +60,9 @@ prepare:
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
         cd /home/ubuntu/office_project/glidegate &&
-        git pull origin COPS_Agentic_AI_Deploy &&
-        echo '✓ Code pulled successfully'"
+        git fetch origin &&
+        git reset --hard origin/COPS_Agentic_AI_Deploy &&
+        echo '✓ Code synced successfully'"
 
 # ── Stage 2: Validate ────────────────────────────────────────────────────────
 validate-frontend:
