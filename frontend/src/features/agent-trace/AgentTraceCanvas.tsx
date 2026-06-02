@@ -17,6 +17,7 @@ import { useThemeStore } from '@/store/themeStore'
 import { AgentNode } from './AgentNode'
 import { AgentDetailPopover } from './AgentDetailPopover'
 import { MessageLog } from './MessageLog'
+import { ReplayControls } from './ReplayControls'
 import { useAgentTraceSocket } from './useAgentTraceSocket'
 import { AGENT_IDS, AGENT_LABELS, AGENT_POSITIONS, STATIC_EDGES, AGENT_NODE_MAP, PRODUCT_NODE_MAP } from './agentPositions'
 import { useAgentTrace } from '@/hooks/useAgentTrace'
@@ -58,6 +59,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
   const setSelectedAgent = useTraceStore((s) => s.setSelectedAgent)
   const setNodeState = useTraceStore((s) => s.setNodeState)
   const initMessages = useTraceStore((s) => s.initMessages)
+  const replayState = useTraceStore((s) => s.replayState)
   const theme = useThemeStore((s) => s.theme)
 
   const { data: traceData } = useAgentTrace(activeCaseId)
@@ -77,6 +79,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
   // Hydrate node states and message log from persisted task history on load / poll
   useEffect(() => {
     if (!traceData?.tasks?.length) return
+    if (replayState === 'playing') return
 
     const agentTasks: Record<string, { status: string }[]> = {}
     for (const task of traceData.tasks) {
@@ -120,7 +123,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
         timestamp: task.created_at,
       }))
     initMessages(historicalMessages)
-  }, [traceData, setNodeState, initMessages])
+  }, [traceData, setNodeState, initMessages, replayState])
 
   // Build edge set: static structural + animated in-flight messages
   useEffect(() => {
@@ -173,7 +176,10 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
   return (
     <div className="flex h-full">
       {/* ── React Flow canvas ─────────────────────────────────────────────── */}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <ReplayControls activeCaseId={activeCaseId} tasks={traceData?.tasks ?? []} />
+
+        <div className="relative flex-1 overflow-hidden">
 
         {/* Mobile: "Log" button — top-right floating */}
         <button
@@ -217,6 +223,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
           <Controls />
           <MiniMap nodeColor={miniMapNodeColor} className="hidden sm:block !bottom-4 !right-4" />
         </ReactFlow>
+        </div>
       </div>
 
       {/* ── Right panel: agent detail + message log ───────────────────────── */}
