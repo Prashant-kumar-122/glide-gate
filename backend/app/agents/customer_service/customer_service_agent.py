@@ -95,8 +95,8 @@ class CustomerServiceAgent(BaseAgent):
         self._memory.clear(task.case_id)
  
         async with AsyncSessionLocal() as db:
-            await self._dco.load_questions_from_db(task.case_id, db)
- 
+            await self._dco.load_questions_from_db(task.case_id, selected_products, db)
+
         greeting = await self._greeting(selected_products)
         self._memory.add(task.case_id, "assistant", greeting)
 
@@ -131,7 +131,9 @@ class CustomerServiceAgent(BaseAgent):
         # Load DB questions if not yet loaded for this case
         if not self._dco.is_db_loaded(task.case_id):
             async with AsyncSessionLocal() as db:
-                await self._dco.load_questions_from_db(task.case_id, db)
+                await self._dco.load_questions_from_db(
+                    task.case_id, task.payload.get("selected_products", []), db
+                )
  
         self._memory.add(task.case_id, "user", user_message)
 

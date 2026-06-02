@@ -78,14 +78,16 @@ async def clean_all() -> None:
 
 
 SEED_FILES = [
-    ("01 — Products",             "01_products.py"),
-    ("02 — Agents",               "02_agents.py"),
-    ("03 — Questionnaire",        "03_questionnaire.py"),
-    ("04 — Client: Aarav Mehta",  "04_client_aarav_mehta.py"),
-    ("05 — Sample Case",          "05_sample_case.py"),
-    ("06 — Sample Events",        "06_sample_events.py"),
-    ("07 — Auth Users",           "07_users.py"),
-    ("08 — Admin Config",         "08_admin_config.py"),
+    ("01 — Products",                    "01_products.py"),
+    ("02 — Agents",                      "02_agents.py"),
+    ("03 — Questionnaire",               "03_questionnaire.py"),
+    ("04 — Client: Aarav Mehta",         "04_client_aarav_mehta.py"),
+    ("05 — Sample Case",                 "05_sample_case.py"),
+    ("06 — Sample Events",               "06_sample_events.py"),
+    ("07 — Auth Users",                  "07_users.py"),
+    ("08 — Admin Config",                "08_admin_config.py"),
+    ("09 — Institutional Products",      "09_institutional_products.py"),
+    ("10 — Trading Questionnaires",      "10_trading_questionnaires.py"),
 ]
 
 

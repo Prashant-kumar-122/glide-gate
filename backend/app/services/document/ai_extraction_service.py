@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.models.cases import OnboardingCase, Product
 from app.models.documents import Document
 from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.services.document.document_storage_adapter import storage_adapter
@@ -68,39 +69,68 @@ class AIExtractionService:
     # ── Internal helpers ──────────────────────────────────────────────────────
 
     async def _fetch_schema(self, case_id: UUID, db: AsyncSession) -> list[dict[str, str]]:
-        questionnaire_id: UUID | None = None
-        session_row = await db.execute(
-            select(OnboardingQuestionSession.questionnaire_id)
-            .where(OnboardingQuestionSession.case_id == case_id)
-            .limit(1)
+        # Resolve the case's selected products → questionnaire IDs
+        case_row = await db.execute(
+            select(OnboardingCase.selected_products).where(OnboardingCase.id == case_id)
         )
-        questionnaire_id = session_row.scalar_one_or_none()
+        selected_products: list[str] = case_row.scalar_one_or_none() or []
 
-        if questionnaire_id is None:
-            q_row = await db.execute(
-                select(OnboardingQuestionnaire.id)
-                .where(OnboardingQuestionnaire.is_active.is_(True))
+        questionnaire_ids: list[UUID] = []
+        if selected_products:
+            prod_result = await db.execute(
+                select(Product.id).where(Product.product_code.in_(selected_products))
+            )
+            product_ids = list(prod_result.scalars().all())
+            if product_ids:
+                q_id_result = await db.execute(
+                    select(OnboardingQuestion.questionnaire_id)
+                    .where(OnboardingQuestion.product_id.in_(product_ids))
+                    .distinct()
+                )
+                questionnaire_ids = list(q_id_result.scalars().all())
+
+        # Fall back to session-linked questionnaire, then first active questionnaire
+        if not questionnaire_ids:
+            session_row = await db.execute(
+                select(OnboardingQuestionSession.questionnaire_id)
+                .where(OnboardingQuestionSession.case_id == case_id)
                 .limit(1)
             )
-            questionnaire_id = q_row.scalar_one_or_none()
+            fallback_id = session_row.scalar_one_or_none()
+            if fallback_id is None:
+                q_row = await db.execute(
+                    select(OnboardingQuestionnaire.id)
+                    .where(OnboardingQuestionnaire.is_active.is_(True))
+                    .limit(1)
+                )
+                fallback_id = q_row.scalar_one_or_none()
+            if fallback_id:
+                questionnaire_ids = [fallback_id]
 
-        if questionnaire_id is None:
+        if not questionnaire_ids:
             return []
 
         result = await db.execute(
             select(OnboardingQuestion)
-            .where(OnboardingQuestion.questionnaire_id == questionnaire_id)
+            .where(OnboardingQuestion.questionnaire_id.in_(questionnaire_ids))
             .order_by(OnboardingQuestion.order_index)
         )
         questions = result.scalars().all()
-        return [
-            {
+
+        # Deduplicate by (question_key, section) — same rule as the schema endpoint
+        seen: set[tuple[str, str]] = set()
+        schema: list[dict[str, str]] = []
+        for q in questions:
+            dedup_key = (q.question_key, q.section)
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
+            schema.append({
                 "key": q.question_key,
                 "label": q.question_text or q.question_key.replace("_", " ").title(),
                 "description": q.question_text or "",
-            }
-            for q in questions
-        ]
+            })
+        return schema
 
     async def _fetch_documents(self, case_id: UUID, db: AsyncSession) -> list[Document]:
         result = await db.execute(

@@ -35,6 +35,7 @@ PRODUCTS = [
             {"step": "account_activation", "name": "Account Activation"},
             {"step": "welcome_notification", "name": "Welcome Communication"},
         ],
+        "product_type": "retail",
         "metadata": {"product_family": "banking", "regulatory_category": "deposit"},
     },
     {
@@ -67,6 +68,7 @@ PRODUCTS = [
             {"step": "account_activation", "name": "Account Activation"},
             {"step": "welcome_notification", "name": "Welcome Communication"},
         ],
+        "product_type": "retail",
         "metadata": {"product_family": "retirement", "regulatory_category": "pension"},
     },
 ]

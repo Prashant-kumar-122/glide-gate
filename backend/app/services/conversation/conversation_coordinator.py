@@ -177,14 +177,6 @@ class ConversationCoordinator:
     # ── Session resolution ────────────────────────────────────────────────────
 
     async def _resolve_session(self, case_id: UUID, client_id: UUID) -> ConversationSession:
-        existing = session_manager.get(case_id)
-        if existing:
-            # Load DB questions if not yet loaded for this case (e.g. after server restart)
-            if not existing.dco.is_db_loaded(case_id):
-                async with AsyncSessionLocal() as db:
-                    await existing.dco.load_questions_from_db(case_id, db)
-            return existing
-
         selected_products: list[str] = []
         existing_data: dict = {}
         try:
@@ -194,11 +186,19 @@ class ConversationCoordinator:
         except Exception as exc:
             logger.warning(f"ConversationCoordinator: context load failed for {case_id}: {exc}")
 
+        existing = session_manager.get(case_id)
+        if existing:
+            # Load DB questions if not yet loaded for this case (e.g. after server restart)
+            if not existing.dco.is_db_loaded(case_id):
+                async with AsyncSessionLocal() as db:
+                    await existing.dco.load_questions_from_db(case_id, selected_products, db)
+            return existing
+
         session = session_manager.get_or_create(case_id, client_id, selected_products)
 
         # Load questions from DB into this session's DCO
         async with AsyncSessionLocal() as db:
-            await session.dco.load_questions_from_db(case_id, db)
+            await session.dco.load_questions_from_db(case_id, selected_products, db)
 
         # Hydrate already-collected fields from ContextStore
         for field_id, value in existing_data.items():
@@ -363,7 +363,7 @@ class ConversationCoordinator:
 
         # 2. Upsert OnboardingAnswer + update OnboardingQuestionSession
         question_id = session.dco.get_question_id(case_id, field_id)
-        questionnaire_id = session.dco.get_questionnaire_id(case_id)
+        questionnaire_id = session.dco.get_question_questionnaire_id(case_id, field_id)
 
         if question_id is None or questionnaire_id is None:
             # Questions loaded from hardcoded fallback — no DB question UUIDs available
