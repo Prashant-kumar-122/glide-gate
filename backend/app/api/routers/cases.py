@@ -179,6 +179,7 @@ class ProductOut(BaseModel):
     product_code: str
     name: str
     description: str | None
+    product_type: str
 
     model_config = {"from_attributes": True}
 
@@ -227,9 +228,13 @@ def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
 @router.get("/products", response_model=list[ProductOut])
 async def list_products(
     db: AsyncSession = Depends(get_db),
-    _current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ) -> list[ProductOut]:
-    result = await db.execute(select(Product).where(Product.is_active.is_(True)).order_by(Product.name))
+    query = select(Product).where(Product.is_active.is_(True))
+    product_type = "retail" if current_user.get("role") == "client" else "institutional"
+    query = query.where(Product.product_type == product_type)
+    query = query.order_by(Product.name)
+    result = await db.execute(query)
     return [ProductOut.model_validate(p) for p in result.scalars().all()]
 
 
@@ -551,41 +556,61 @@ async def get_questionnaire_schema(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> QuestionnaireSchemaOut:
-    """Return all questions (key + section + label) for the questionnaire bound to this case."""
-    # Verify case access
+    """Return all questions for questionnaires that match the case's selected products."""
+    # Verify case access and fetch selected products in one query
     case_row = await db.execute(
-        select(OnboardingCase.client_id).where(OnboardingCase.id == case_id)
+        select(OnboardingCase.client_id, OnboardingCase.selected_products)
+        .where(OnboardingCase.id == case_id)
     )
-    client_id = case_row.scalar_one_or_none()
-    if client_id is None:
+    row = case_row.one_or_none()
+    if row is None:
         raise NotFoundError("OnboardingCase", str(case_id))
+    client_id, selected_products = row
     if current_user.get("role") == "client" and str(client_id) != current_user["sub"]:
         raise NotFoundError("OnboardingCase", str(case_id))
 
-    # Resolve questionnaire: prefer the one linked via the case's session
-    questionnaire_id: UUID | None = None
-    session_row = await db.execute(
-        select(OnboardingQuestionSession.questionnaire_id)
-        .where(OnboardingQuestionSession.case_id == case_id)
-        .limit(1)
-    )
-    questionnaire_id = session_row.scalar_one_or_none()
+    # Resolve product codes → product IDs
+    product_ids: list[UUID] = []
+    if selected_products:
+        prod_result = await db.execute(
+            select(Product.id).where(Product.product_code.in_(selected_products))
+        )
+        product_ids = list(prod_result.scalars().all())
 
-    # Fall back to the active questionnaire
-    if questionnaire_id is None:
-        q_row = await db.execute(
-            select(OnboardingQuestionnaire.id)
-            .where(OnboardingQuestionnaire.is_active.is_(True))
+    # Find questionnaire IDs whose questions are linked to the selected products
+    questionnaire_ids: list[UUID] = []
+    if product_ids:
+        q_id_result = await db.execute(
+            select(OnboardingQuestion.questionnaire_id)
+            .where(OnboardingQuestion.product_id.in_(product_ids))
+            .distinct()
+        )
+        questionnaire_ids = list(q_id_result.scalars().all())
+
+    # Fall back to session-linked questionnaire, then first active questionnaire
+    if not questionnaire_ids:
+        session_row = await db.execute(
+            select(OnboardingQuestionSession.questionnaire_id)
+            .where(OnboardingQuestionSession.case_id == case_id)
             .limit(1)
         )
-        questionnaire_id = q_row.scalar_one_or_none()
+        fallback_id = session_row.scalar_one_or_none()
+        if fallback_id is None:
+            q_row = await db.execute(
+                select(OnboardingQuestionnaire.id)
+                .where(OnboardingQuestionnaire.is_active.is_(True))
+                .limit(1)
+            )
+            fallback_id = q_row.scalar_one_or_none()
+        if fallback_id:
+            questionnaire_ids = [fallback_id]
 
-    if questionnaire_id is None:
+    if not questionnaire_ids:
         return QuestionnaireSchemaOut(fields=[])
 
     oq_result = await db.execute(
         select(OnboardingQuestion)
-        .where(OnboardingQuestion.questionnaire_id == questionnaire_id)
+        .where(OnboardingQuestion.questionnaire_id.in_(questionnaire_ids))
         .order_by(OnboardingQuestion.order_index)
     )
     questions = oq_result.scalars().all()
@@ -596,26 +621,37 @@ async def get_questionnaire_schema(
         "boolean": "choice", "currency": "number",
     }
 
-    fields = []
+    # Deduplicate on (question_key, section): the same question in the same
+    # section across multiple product questionnaires is shown only once.
+    # A question_key that appears in different sections across products is kept
+    # in each of its sections independently.
+    seen: set[tuple[str, str]] = set()
+    fields: list[QuestionSchemaItem] = []
+
     for q in questions:
+        dedup_key = (q.question_key, q.section)
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
+
         label = q.question_text or (q.extra_metadata or {}).get("label") or _fmt_key(q.question_key)
         field_type = _DB_TYPE_MAP.get(q.question_type, "text")
         options = list(q.options) if q.options else None
         if q.question_type == "boolean":
             options = ["Yes", "No"]
-        fields.append(
-            QuestionSchemaItem(
-                question_key=q.question_key,
-                section=q.section,
-                label=label,
-                question_text=q.question_text,
-                order_index=q.order_index,
-                field_type=field_type,
-                options=options,
-                validation_rules=dict(q.validation_rules) if q.validation_rules else None,
-                show_if=dict(q.show_if) if q.show_if else None,
-            )
-        )
+
+        fields.append(QuestionSchemaItem(
+            question_key=q.question_key,
+            section=q.section,
+            label=label,
+            question_text=q.question_text,
+            order_index=q.order_index,
+            field_type=field_type,
+            options=options,
+            validation_rules=dict(q.validation_rules) if q.validation_rules else None,
+            show_if=dict(q.show_if) if q.show_if else None,
+        ))
+
     return QuestionnaireSchemaOut(fields=fields)
 
 

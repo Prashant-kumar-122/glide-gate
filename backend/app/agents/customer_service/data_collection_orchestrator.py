@@ -418,47 +418,63 @@ class DataCollectionOrchestrator:
         self._fields_cache: dict[UUID, list[QuestionnaireField]] = {}
         # field_id → DB question UUID per case
         self._question_id_map: dict[UUID, dict[str, UUID]] = {}
-        # case_id → DB questionnaire UUID
-        self._questionnaire_id_map: dict[UUID, UUID] = {}
+        # field_id → DB questionnaire UUID per case (supports multiple questionnaires per case)
+        self._question_questionnaire_map: dict[UUID, dict[str, UUID]] = {}
 
     # ── DB loading ────────────────────────────────────────────────────────────
 
-    async def load_questions_from_db(self, case_id: UUID, db: AsyncSession) -> None:
+    async def load_questions_from_db(
+        self, case_id: UUID, selected_products: list[str], db: AsyncSession
+    ) -> None:
         """
-        Load questions from onboarding_questions into per-case memory cache.
-        Gracefully falls back to hardcoded _FIELDS on any error.
+        Load questions for the given selected products into per-case memory cache.
+
+        - Questions with product_id IS NULL are universal retail questions, loaded
+          whenever any retail product is selected.
+        - Questions with a specific product_id are loaded only when that product is selected.
+        - Gracefully falls back to hardcoded _FIELDS on any error.
         """
         try:
             from sqlalchemy import select
+            from app.models.cases import Product
             from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire
 
-            q_result = await db.execute(
-                select(OnboardingQuestionnaire)
-                .where(OnboardingQuestionnaire.is_active == True)  # noqa: E712
-                .limit(1)
+            # Resolve product rows for the selected product codes
+            product_result = await db.execute(
+                select(Product).where(Product.product_code.in_(selected_products))
             )
-            questionnaire = q_result.scalar_one_or_none()
-            if questionnaire is None:
-                logger.warning(f"DCO: no active questionnaire found, using fallback for case {case_id}")
+            products = product_result.scalars().all()
+
+            if not products:
+                logger.warning(f"DCO: no products matched {selected_products}, using fallback for case {case_id}")
                 return
 
-            self._questionnaire_id_map[case_id] = questionnaire.id
+            # Every product (retail and institutional) now has explicit question mappings
+            all_product_ids = [p.id for p in products]
 
             oq_result = await db.execute(
-                select(OnboardingQuestion)
-                .where(OnboardingQuestion.questionnaire_id == questionnaire.id)
+                select(OnboardingQuestion, OnboardingQuestionnaire.id.label("q_id"))
+                .join(
+                    OnboardingQuestionnaire,
+                    OnboardingQuestion.questionnaire_id == OnboardingQuestionnaire.id,
+                )
+                .where(
+                    OnboardingQuestionnaire.is_active.is_(True),
+                    OnboardingQuestion.product_id.in_(all_product_ids),
+                )
                 .order_by(OnboardingQuestion.order_index)
             )
-            questions = oq_result.scalars().all()
+            rows = oq_result.all()
 
-            if not questions:
-                logger.warning(f"DCO: questionnaire has no questions, using fallback for case {case_id}")
+            if not rows:
+                logger.warning(f"DCO: no questions found for products {selected_products}, using fallback for case {case_id}")
                 return
 
             fields: list[QuestionnaireField] = []
             question_id_map: dict[str, UUID] = {}
+            question_questionnaire_map: dict[str, UUID] = {}
 
-            for q in questions:
+            for q, questionnaire_uuid in rows:
                 options = list(q.options) if q.options else None
                 # boolean questions get Yes/No options for the choice extractor
                 if q.question_type == "boolean":
@@ -477,10 +493,12 @@ class DataCollectionOrchestrator:
                 )
                 fields.append(field)
                 question_id_map[q.question_key] = q.id
+                question_questionnaire_map[q.question_key] = questionnaire_uuid
 
             self._fields_cache[case_id] = fields
             self._question_id_map[case_id] = question_id_map
-            logger.info(f"DCO: loaded {len(fields)} questions from DB for case {case_id}")
+            self._question_questionnaire_map[case_id] = question_questionnaire_map
+            logger.info(f"DCO: loaded {len(fields)} questions from DB for case {case_id} (products: {selected_products})")
 
         except Exception as exc:
             logger.warning(f"DCO: DB load failed for case {case_id}, using fallback: {exc}")
@@ -491,9 +509,9 @@ class DataCollectionOrchestrator:
         """Return the DB UUID for a question_key, or None if not DB-loaded."""
         return self._question_id_map.get(case_id, {}).get(field_id)
 
-    def get_questionnaire_id(self, case_id: UUID) -> UUID | None:
-        """Return the DB UUID for the active questionnaire, or None if not DB-loaded."""
-        return self._questionnaire_id_map.get(case_id)
+    def get_question_questionnaire_id(self, case_id: UUID, field_id: str) -> UUID | None:
+        """Return the DB questionnaire UUID for a specific question_key."""
+        return self._question_questionnaire_map.get(case_id, {}).get(field_id)
 
     def is_db_loaded(self, case_id: UUID) -> bool:
         return case_id in self._fields_cache

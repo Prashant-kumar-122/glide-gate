@@ -59,6 +59,7 @@ class Product(Base):
     __tablename__ = "products"
     __table_args__ = (
         UniqueConstraint("product_code", name="products_code_uq"),
+        CheckConstraint("product_type IN ('retail', 'institutional')", name="products_type_chk"),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -66,6 +67,7 @@ class Product(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    product_type: Mapped[str] = mapped_column(String(20), nullable=False, default="retail")
     required_documents: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     suitability_criteria: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     step_sequence: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)

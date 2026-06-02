@@ -24,12 +24,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
     LOCAL_MODEL_ENDPOINT: str = "http://localhost:11434/v1"
-    LOCAL_MODEL_NAME: str = "llama3:latest"
+    LOCAL_MODEL_NAME: str = "qwen2.5vl:7b"
     VISION_MODEL_NAME: str = "qwen2.5vl:7b"
 
     # ── Primary LLM Config ───────────────────────────────────────────────────
     PRIMARY_LLM_PROVIDER: Literal["anthropic", "openai", "google", "local"] = "local"
-    PRIMARY_LLM_MODEL: str = "llama3:latest"
+    PRIMARY_LLM_MODEL: str = "qwen2.5vl:7b"
     LLM_TEMPERATURE: float = 0.3
     LLM_TOP_P: float = 0.95
     LLM_SEED: int = 42

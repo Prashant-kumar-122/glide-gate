@@ -1,4 +1,11 @@
-"""Seed: GlideGate standard onboarding questionnaire — 11 sections, 49 questions.
+"""Seed: GlideGate retail onboarding questionnaires — 11 sections, 49 questions each.
+
+Two questionnaires are seeded (one per retail product):
+  - Cash Management Account  (CASH_QUESTIONNAIRE_ID   → CASH_PRODUCT_ID)
+  - Retirement Savings Plan  (RETIREMENT_QUESTIONNAIRE_ID → RETIREMENT_PRODUCT_ID)
+
+Every question is explicitly mapped to its product via product_id.
+Running this script purges and re-seeds both questionnaires safely.
 
 Sections (in order):
     1.  personal_information     (10 questions)
@@ -12,9 +19,6 @@ Sections (in order):
     9.  tax                      (4 questions)
     10. acknowledgement          (1 question)
     11. sign                     (3 questions)
-
-Running this script purges any existing questionnaire, answers, and sessions
-for QUESTIONNAIRE_ID before re-seeding, so it is safe to run repeatedly.
 """
 from __future__ import annotations
 
@@ -32,8 +36,12 @@ from app.models.questionnaire import (
     OnboardingQuestionRule,
     OnboardingQuestionSession,
 )
-
-QUESTIONNAIRE_ID = UUID("c0000000-0001-0001-0001-000000000001")
+from seed_constants import (
+    CASH_PRODUCT_ID,
+    CASH_QUESTIONNAIRE_ID,
+    RETIREMENT_PRODUCT_ID,
+    RETIREMENT_QUESTIONNAIRE_ID,
+)
 
 SECTIONS = [
     "personal_information",
@@ -553,42 +561,68 @@ QUESTIONS: list[dict] = [
     },
 ]
 
+# One questionnaire definition per retail product
+RETAIL_QUESTIONNAIRES = [
+    {
+        "id": CASH_QUESTIONNAIRE_ID,
+        "product_id": CASH_PRODUCT_ID,
+        "name": "Cash Management Account Questionnaire",
+        "description": "Standard onboarding questionnaire for Cash Management Account applicants.",
+    },
+    {
+        "id": RETIREMENT_QUESTIONNAIRE_ID,
+        "product_id": RETIREMENT_PRODUCT_ID,
+        "name": "Retirement Savings Plan Questionnaire",
+        "description": "Standard onboarding questionnaire for Retirement Savings Plan applicants.",
+    },
+]
+
+
+async def _purge(session: AsyncSession, questionnaire_id: UUID) -> None:
+    await session.execute(
+        delete(OnboardingAnswer).where(OnboardingAnswer.questionnaire_id == questionnaire_id)
+    )
+    await session.execute(
+        delete(OnboardingQuestionSession).where(OnboardingQuestionSession.questionnaire_id == questionnaire_id)
+    )
+    existing = await session.get(OnboardingQuestionnaire, questionnaire_id)
+    if existing:
+        await session.delete(existing)
+    await session.commit()
+
 
 async def seed(session: AsyncSession) -> None:
-    existing = await session.get(OnboardingQuestionnaire, QUESTIONNAIRE_ID)
-    if existing:
-        print("  [purge] removing existing questionnaire, answers, and sessions")
-        await session.execute(
-            delete(OnboardingAnswer).where(OnboardingAnswer.questionnaire_id == QUESTIONNAIRE_ID)
+    for qdef in RETAIL_QUESTIONNAIRES:
+        q_id: UUID = qdef["id"]
+        product_id: UUID = qdef["product_id"]
+
+        existing = await session.get(OnboardingQuestionnaire, q_id)
+        if existing:
+            print(f"  [purge] removing existing questionnaire '{qdef['name']}'")
+            await _purge(session, q_id)
+
+        questionnaire = OnboardingQuestionnaire(
+            id=q_id,
+            name=qdef["name"],
+            description=qdef["description"],
+            version=1,
+            is_active=True,
+            sections=SECTIONS,
+            extra_metadata={"brd_ref": "Section 15.3"},
         )
-        await session.execute(
-            delete(OnboardingQuestionSession).where(OnboardingQuestionSession.questionnaire_id == QUESTIONNAIRE_ID)
-        )
-        await session.delete(existing)
+        session.add(questionnaire)
+        print(f"  [seed] questionnaire '{questionnaire.name}'")
+
+        for q_data in QUESTIONS:
+            question = OnboardingQuestion(
+                questionnaire_id=q_id,
+                product_id=product_id,
+                **q_data,
+            )
+            session.add(question)
+
         await session.commit()
-
-    questionnaire = OnboardingQuestionnaire(
-        id=QUESTIONNAIRE_ID,
-        name="GlideGate Standard Onboarding Questionnaire",
-        description="Comprehensive client data collection questionnaire for all CADF onboarding flows.",
-        version=1,
-        is_active=True,
-        sections=SECTIONS,
-        extra_metadata={"brd_ref": "Section 15.3"},
-    )
-    session.add(questionnaire)
-    print(f"  [seed] questionnaire '{questionnaire.name}'")
-
-    for q_data in QUESTIONS:
-        question = OnboardingQuestion(
-            questionnaire_id=QUESTIONNAIRE_ID,
-            **q_data,
-        )
-        session.add(question)
-        print(f"    [seed] question {q_data['question_key']}")
-
-    await session.commit()
-    print(f"  [done] {len(QUESTIONS)} questions seeded across {len(SECTIONS)} sections")  # 49 questions
+        print(f"  [done] {len(QUESTIONS)} questions seeded for '{qdef['name']}'")
 
 
 if __name__ == "__main__":
