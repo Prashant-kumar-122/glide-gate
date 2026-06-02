@@ -86,24 +86,7 @@ validate-backend:
     - echo "   Validating Backend Syntax"
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
-    - ssh ubuntu@18.60.103.228 "
-        cd /home/ubuntu/office_project/glidegate &&
-        docker run --rm -v \$(pwd)/backend:/app python:3.12-slim python -B -c \"
-import os, py_compile, sys
-errors = []
-for root, dirs, files in os.walk('/app/app'):
-    for f in files:
-        if f.endswith('.py'):
-            path = os.path.join(root, f)
-            try:
-                py_compile.compile(path, doraise=True)
-            except py_compile.PyCompileError as e:
-                errors.append(str(e))
-if errors:
-    print('\\n'.join(errors))
-    sys.exit(1)
-print('✓ Backend syntax check passed')
-\""
+    - ssh ubuntu@18.60.103.228 'cd /home/ubuntu/office_project/glidegate && docker run --rm -v $(pwd)/backend:/app python:3.12-slim sh -c "find /app/app -name '\''*.py'\'' | xargs python -B -m py_compile && echo Backend syntax check passed"'
 
 # ── Stage 3: Build ───────────────────────────────────────────────────────────
 build:
