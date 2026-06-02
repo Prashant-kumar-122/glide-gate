@@ -73,6 +73,7 @@ validate-frontend:
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
+        sudo rm -rf /home/ubuntu/office_project/glidegate/frontend/node_modules &&
         cd /home/ubuntu/office_project/glidegate/frontend &&
         npm install --legacy-peer-deps &&
         npm run build &&
