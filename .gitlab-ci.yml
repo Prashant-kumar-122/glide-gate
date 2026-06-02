@@ -1,9 +1,10 @@
 stages:
+  - prepare
   - validate
   - build
   - deploy
 
-# ── SSH setup reused across build and deploy stages ──────────────────────────
+# ── SSH setup reused across all stages ───────────────────────────────────────
 .ssh_setup: &ssh_setup
   tags:
     - ec2 arm64 ubuntu
@@ -48,44 +49,49 @@ stages:
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -H 18.60.103.228 >> ~/.ssh/known_hosts
 
-# ── Stage 1: Validate ─────────────────────────────────────────────────────────
+# ── Stage 1: Prepare ─────────────────────────────────────────────────────────
+prepare:
+  stage: prepare
+  <<: *ssh_setup
+  script:
+    - echo "=========================================="
+    - echo "   Pulling Latest Code on EC2"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        git pull origin COPS_Agentic_AI_Deploy &&
+        echo '✓ Code pulled successfully'"
+
+# ── Stage 2: Validate ────────────────────────────────────────────────────────
 validate-frontend:
   stage: validate
-  tags:
-    - ec2 arm64 ubuntu
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
-      when: always
-  before_script:
-    - apt-get update -qq && apt-get install -y -qq curl
-    - curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    - apt-get install -y nodejs
+  <<: *ssh_setup
   script:
     - echo "=========================================="
     - echo "   Validating Frontend Build"
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
-    - cd frontend
-    - npm install --legacy-peer-deps
-    - npm run build
-    - echo "✓ Frontend build validation passed"
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate/frontend &&
+        npm install --legacy-peer-deps &&
+        npm run build &&
+        echo '✓ Frontend build validation passed'"
 
 validate-backend:
   stage: validate
-  tags:
-    - ec2 arm64 ubuntu
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
-      when: always
+  <<: *ssh_setup
   script:
     - echo "=========================================="
     - echo "   Validating Backend Syntax"
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
-    - find backend/app -name "*.py" | xargs python3 -m py_compile
-    - echo "✓ Backend syntax check passed"
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        find backend/app -name '*.py' | xargs python3 -m py_compile &&
+        echo '✓ Backend syntax check passed'"
 
-# ── Stage 2: Build ────────────────────────────────────────────────────────────
+# ── Stage 3: Build ───────────────────────────────────────────────────────────
 build:
   stage: build
   <<: *ssh_setup
@@ -96,8 +102,6 @@ build:
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
         cd /home/ubuntu/office_project/glidegate &&
-        echo '--- Pulling latest code ---' &&
-        git pull origin COPS_Agentic_AI_Deploy &&
         echo '--- Preparing directories ---' &&
         mkdir -p db/data &&
         sudo chown -R 999:999 db/data &&
@@ -111,7 +115,7 @@ build:
         docker images glidegate_frontend --format '{{.Tag}}' | grep -v latest | sort -r | tail -n +4 | xargs -I {} docker rmi glidegate_frontend:{} 2>/dev/null || true &&
         echo '✓ Build complete'"
 
-# ── Stage 3: Deploy ───────────────────────────────────────────────────────────
+# ── Stage 4: Deploy ──────────────────────────────────────────────────────────
 deploy:
   stage: deploy
   <<: *ssh_setup
