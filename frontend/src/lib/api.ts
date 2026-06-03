@@ -32,7 +32,7 @@ export interface UserOut {
   email: string
   first_name: string
   last_name: string
-  role: 'client' | 'advisor' | 'admin'
+  role: 'client' | 'advisor' | 'admin' | 'sales_manager'
 }
 
 export interface TokenResponse {

@@ -148,7 +148,7 @@ async def _get_client_or_404(client_id: UUID, db: AsyncSession) -> Client:
 async def create_client(
     body: CreateClientRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin")),
+    _user: dict = Depends(require_role("Advisor", "Admin", "sales_manager")),
 ) -> ClientSummaryOut:
     existing = await db.execute(select(Client).where(Client.email == body.email))
     if existing.scalar_one_or_none():
@@ -205,7 +205,7 @@ async def patch_client(
     client_id: UUID,
     body: PatchClientRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin")),
+    _user: dict = Depends(require_role("Advisor", "Admin", "sales_manager")),
 ) -> ClientSummaryOut:
     client = await _get_client_or_404(client_id, db)
 

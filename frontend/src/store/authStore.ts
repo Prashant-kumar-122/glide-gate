@@ -6,7 +6,7 @@ export interface AuthUser {
   email: string
   firstName: string
   lastName: string
-  role: 'client' | 'advisor' | 'admin'
+  role: 'client' | 'advisor' | 'admin' | 'sales_manager'
 }
 
 interface AuthState {

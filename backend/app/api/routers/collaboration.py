@@ -40,6 +40,7 @@ _ROLE_MAP: dict[str, str] = {
     "admin": "Admin",
     "complianceofficer": "ComplianceOfficer",
     "ccrep": "CCRep",
+    "sales_manager": "SalesManager",
 }
 
 

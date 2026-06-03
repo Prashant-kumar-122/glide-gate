@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { DocumentOut, CaseSummary, DiffResult, ValidationResult, CaseOut, ProductOut, AdvisorOut, ClientAccountOut } from '@/lib/api'
+import type { DocumentOut, CaseSummary, DiffResult, ValidationResult, CaseOut, ProductOut, AdvisorOut, ClientAccountOut, UserOut } from '@/lib/api'
 
 // ── Query keys ────────────────────────────────────────────────────────────────
 
@@ -214,13 +214,23 @@ export function useInitiateCase() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: {
-      case_name: string
+      case_name?: string
       selected_products: string[]
-      assigned_advisor_id: string | null
+      assigned_advisor_id?: string | null
+      client_id?: string | null
+      legal_entity_name?: string | null
+      metadata?: Record<string, unknown>
     }) => api.post('/cases', body).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.cases })
     },
+  })
+}
+
+export function useLookupClient() {
+  return useMutation({
+    mutationFn: (email: string) =>
+      api.get<UserOut>('/auth/lookup-client', { params: { email } }).then((r) => r.data),
   })
 }
 
