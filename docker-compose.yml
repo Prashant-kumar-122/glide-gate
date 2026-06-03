@@ -40,7 +40,6 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./backend:/app
       - ./uploads:/app/uploads
     command: >
       sh -c "gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
