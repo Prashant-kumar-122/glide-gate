@@ -24,9 +24,9 @@ import { useAuthStore } from '@/store/authStore'
 import { useThemeStore } from '@/store/themeStore'
 
 const NAV_LINKS: { to: string; label: string; roles: string[] }[] = [
-  { to: '/', label: 'Advisor Workspace', roles: ['advisor', 'sales_manager'] },
+  { to: '/', label: 'Workspace', roles: ['advisor', 'sales_manager'] },
   { to: '/contact-centre', label: 'Contact Centre', roles: ['advisor', 'sales_manager'] },
-  { to: '/agent-trace', label: 'Agent Trace', roles: ['advisor', 'admin'] },
+  { to: '/agent-trace', label: 'Agent Trace', roles: ['advisor', 'sales_manager', 'admin'] },
   { to: '/admin', label: 'Admin Config', roles: ['admin'] },
 ]
 
