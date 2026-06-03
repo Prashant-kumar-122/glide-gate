@@ -80,7 +80,7 @@ export default function AdvisorWorkspace() {
       {activeTabId === 'dashboard' ? (
         <CaseListTable />
       ) : (
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
           {selectedCaseId && <WorkflowTracker caseId={selectedCaseId} />}
           {selectedCaseId && <DocumentWorkspacePanel caseId={selectedCaseId} />}
           {selectedCaseId && isDrawerOpen && <DocumentDetailDrawer caseId={selectedCaseId} />}

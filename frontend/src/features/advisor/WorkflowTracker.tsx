@@ -1,4 +1,5 @@
-import { Check } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
+import { useState } from 'react'
 import { useCaseProgress, useCaseDetail } from '@/hooks/useDocuments'
 
 const WORKFLOW_STEPS = [
@@ -46,14 +47,36 @@ interface Props {
 export default function WorkflowTracker({ caseId }: Props) {
   const { data: summary, isLoading: summaryLoading } = useCaseProgress(caseId)
   const { data: caseDetail } = useCaseDetail(caseId)
+  const [mobileExpanded, setMobileExpanded] = useState(false)
 
   const currentStage = summary?.current_stage ?? 'INTAKE'
   const isEscalated = summary?.escalated ?? false
 
+  const currentStepIndex = STAGE_INDEX[currentStage] ?? 0
+  const currentStepLabel = WORKFLOW_STEPS[currentStepIndex]?.label ?? currentStage
+
   return (
-    <aside className="flex w-52 shrink-0 flex-col border-r border-gray-700/60 bg-gray-900">
-      {/* Case meta info */}
-      <div className="border-b border-gray-700/60 px-5 py-4">
+    <aside className="flex w-full shrink-0 flex-col border-b border-gray-700/60 bg-gray-900 md:w-52 md:border-b-0 md:border-r">
+      {/* Mobile toggle */}
+      <button
+        onClick={() => setMobileExpanded((v) => !v)}
+        className="flex items-center justify-between px-5 py-3 text-sm text-gray-300 md:hidden"
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Workflow</span>
+          <span className={[
+            'rounded px-1.5 py-0.5 text-[10px] font-semibold',
+            isEscalated ? 'bg-amber-900/50 text-amber-400' : 'bg-gray-700/80 text-gray-300',
+          ].join(' ')}>
+            {isEscalated ? 'Escalated' : currentStepLabel}
+          </span>
+        </span>
+        <ChevronDown className={['h-4 w-4 text-gray-500 transition-transform', mobileExpanded ? 'rotate-180' : ''].join(' ')} />
+      </button>
+
+      {/* Collapsible content: hidden on mobile until toggled, always visible on md+ */}
+      <div className={['flex-col flex-1 overflow-y-auto', mobileExpanded ? 'flex' : 'hidden md:flex'].join(' ')}>
+        <div className="border-b border-gray-700/60 px-5 py-4">
         {caseDetail ? (
           <>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Case Info</p>
@@ -88,7 +111,7 @@ export default function WorkflowTracker({ caseId }: Props) {
       </div>
 
       {/* Workflow steps */}
-      <div className="flex-1 overflow-y-auto py-5">
+      <div className="flex-1 py-5">
         <p className="mb-4 px-5 text-[10px] font-semibold uppercase tracking-widest text-gray-500">
           Workflow Progress
         </p>
@@ -175,6 +198,7 @@ export default function WorkflowTracker({ caseId }: Props) {
             })}
           </div>
         )}
+      </div>
       </div>
     </aside>
   )

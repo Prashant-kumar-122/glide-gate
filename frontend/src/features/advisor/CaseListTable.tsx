@@ -341,18 +341,18 @@ export default function CaseListTable() {
   }, [])
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-gray-900 p-6">
+    <div className="flex flex-1 flex-col overflow-hidden bg-gray-900 p-3 sm:p-6">
       {/* Filters + count */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               placeholder="Search cases..."
               value={search}
               onChange={onQuickFilter}
-              className="w-52 rounded-md border border-gray-600 bg-gray-800 py-1.5 pl-9 pr-8 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-600 bg-gray-800 py-1.5 pl-9 pr-8 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:w-52"
             />
             {search && (
               <button
