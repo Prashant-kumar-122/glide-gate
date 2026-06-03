@@ -244,4 +244,4 @@ cd /home/ubuntu/office_project/glidegate
 1. ✅ ~~**Move SSH key to GitLab CI/CD Variable**~~ — done, stored as `EC2_SSH_KEY` File type variable
 2. **Fix Alembic migration** — `0005_trusted_contact_questions.py` has FK seed issue; re-enable in `docker-compose.yml` after fix
 3. **Attach EBS volume** — for persistent PostgreSQL storage in production
-4. **Upgrade Node.js to 20** — `eslint-visitor-keys` requires Node 20+; update EC2 and `frontend/Dockerfile`
+4. ✅ ~~**Upgrade Node.js to 20**~~ — `frontend/Dockerfile` updated to `node:20-alpine`; update Node.js on EC2 manually via NodeSource setup_20.x

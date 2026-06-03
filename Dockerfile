@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
-RUN pip install poetry --no-cache-dir
+RUN pip install poetry==2.4.1 --no-cache-dir
 
 # Copy backend files
 COPY pyproject.toml poetry.lock* ./

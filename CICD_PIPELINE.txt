@@ -257,8 +257,9 @@ PENDING TODOs
     - For persistent PostgreSQL storage in production
     - Currently db/data is local - lost if EC2 is terminated
 
-[PENDING] Upgrade Node.js to 20
-    - eslint-visitor-keys requires Node 20+
-    - Update EC2 and frontend/Dockerfile from node:18-alpine to node:20-alpine
+[DONE] Upgrade Node.js to 20
+    - frontend/Dockerfile updated to node:20-alpine
+    - Run on EC2: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+                  sudo apt-get install -y nodejs
 
 ================================================================================
