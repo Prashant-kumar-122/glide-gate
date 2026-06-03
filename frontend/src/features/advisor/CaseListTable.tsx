@@ -1,31 +1,11 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { Search, Eye, X, ChevronDown, Check } from 'lucide-react'
 import { AgGridReact } from 'ag-grid-react'
-import { themeQuartz, colorSchemeDarkBlue, AllCommunityModule, ModuleRegistry } from 'ag-grid-community'
 import type { ColDef, ICellRendererParams, GridReadyEvent, ModelUpdatedEvent, CellStyle } from 'ag-grid-community'
-
-ModuleRegistry.registerModules([AllCommunityModule])
+import { BaseGrid, TruncatedCell } from '@/components/grid/BaseGrid'
 import { useCases } from '@/hooks/useDocuments'
 import type { CaseOut } from '@/lib/api'
 import { useWorkspaceStore } from '@/store/workspaceStore'
-
-// ── Theme ─────────────────────────────────────────────────────────────────────
-
-const gridTheme = themeQuartz.withPart(colorSchemeDarkBlue).withParams({
-  backgroundColor: 'rgb(17 24 39)',
-  headerBackgroundColor: 'rgb(31 41 55)',
-  borderColor: 'rgba(55 65 81 / 0.5)',
-  rowBorder: true,
-  foregroundColor: 'rgb(209 213 219)',
-  headerTextColor: 'rgb(156 163 175)',
-  fontFamily: 'inherit',
-  fontSize: 13,
-  rowHoverColor: 'rgba(31 41 55 / 0.7)',
-  selectedRowBackgroundColor: 'rgba(59 130 246 / 0.15)',
-  accentColor: 'rgb(59 130 246)',
-  oddRowBackgroundColor: 'rgb(17 24 39)',
-})
 
 // ── Stage config ──────────────────────────────────────────────────────────────
 
@@ -39,12 +19,12 @@ const STAGE_LABELS: Record<string, string> = {
 }
 
 const STAGE_STYLES: Record<string, { badge: string; dot: string; optionDot: string }> = {
-  INTAKE:            { badge: 'border border-gray-500/60 text-gray-400',    dot: 'bg-gray-400',    optionDot: 'bg-gray-400' },
-  KYC:               { badge: 'border border-blue-500/60 text-blue-400',    dot: 'bg-blue-400',    optionDot: 'bg-blue-400' },
-  PARALLEL_PRODUCTS: { badge: 'border border-purple-500/60 text-purple-400', dot: 'bg-purple-400', optionDot: 'bg-purple-400' },
-  REVIEW:            { badge: 'border border-cyan-500/60 text-cyan-400',    dot: 'bg-cyan-400',    optionDot: 'bg-cyan-400' },
-  COMPLETE:          { badge: 'border border-teal-500/60 text-teal-400',    dot: 'bg-teal-400',    optionDot: 'bg-teal-400' },
-  ESCALATED:         { badge: 'border border-red-500/60 text-red-400',      dot: 'bg-red-400',     optionDot: 'bg-red-400' },
+  INTAKE:            { badge: 'border border-gray-500/60 text-gray-400',     dot: 'bg-gray-400',    optionDot: 'bg-gray-400' },
+  KYC:               { badge: 'border border-blue-500/60 text-blue-400',     dot: 'bg-blue-400',    optionDot: 'bg-blue-400' },
+  PARALLEL_PRODUCTS: { badge: 'border border-purple-500/60 text-purple-400', dot: 'bg-purple-400',  optionDot: 'bg-purple-400' },
+  REVIEW:            { badge: 'border border-cyan-500/60 text-cyan-400',     dot: 'bg-cyan-400',    optionDot: 'bg-cyan-400' },
+  COMPLETE:          { badge: 'border border-teal-500/60 text-teal-400',     dot: 'bg-teal-400',    optionDot: 'bg-teal-400' },
+  ESCALATED:         { badge: 'border border-red-500/60 text-red-400',       dot: 'bg-red-400',     optionDot: 'bg-red-400' },
 }
 
 const ALL_STAGES = ['INTAKE', 'KYC', 'PARALLEL_PRODUCTS', 'REVIEW', 'COMPLETE', 'ESCALATED']
@@ -69,67 +49,15 @@ function relativeTime(dateStr: string): string {
   return `${Math.floor(diffMs / 60_000)}m ago`
 }
 
-// ── Cell renderers ────────────────────────────────────────────────────────────
-
-const TRUNCATE: React.CSSProperties = {
-  display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-}
-
-type TooltipState = { text: string; x: number; y: number } | null
-
-function CellTooltip({ tip }: { tip: TooltipState }) {
-  if (!tip) return null
-  return createPortal(
-    <div
-      style={{ position: 'fixed', left: tip.x + 14, top: tip.y - 10, zIndex: 9999, pointerEvents: 'none' }}
-      className="max-w-xs rounded-md border border-gray-600 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-100 shadow-xl"
-    >
-      {tip.text}
-    </div>,
-    document.body,
-  )
-}
-
-function TruncatedCell({ value, valueFormatted, style }: ICellRendererParams & { style?: React.CSSProperties }) {
-  const spanRef = useRef<HTMLSpanElement>(null)
-  const [tip, setTip] = useState<TooltipState>(null)
-  const display = valueFormatted ?? (typeof value === 'string' ? value : '') ?? ''
-
-  function handleMouseEnter(e: React.MouseEvent) {
-    const el = spanRef.current
-    if (el && el.scrollWidth > el.clientWidth)
-      setTip({ text: display, x: e.clientX, y: e.clientY })
-  }
-
-  return (
-    <>
-      <span ref={spanRef} onMouseEnter={handleMouseEnter} onMouseLeave={() => setTip(null)} style={{ ...TRUNCATE, ...style }}>
-        {display}
-      </span>
-      <CellTooltip tip={tip} />
-    </>
-  )
-}
+// ── Cell renderers — stateless, no hooks, safe for virtualized scroll ─────────
 
 function ProductsCell({ value }: ICellRendererParams<CaseOut, string[]>) {
-  const spanRef = useRef<HTMLSpanElement>(null)
-  const [tip, setTip] = useState<TooltipState>(null)
   const label = value?.length ? value.map((p) => p.replace(/_/g, ' ').toUpperCase()).join(', ') : ''
-
-  function handleMouseEnter(e: React.MouseEvent) {
-    const el = spanRef.current
-    if (el && el.scrollWidth > el.clientWidth)
-      setTip({ text: label, x: e.clientX, y: e.clientY })
-  }
-
   if (!label) return <span style={{ color: 'rgb(107 114 128)' }}>—</span>
   return (
-    <>
-      <span ref={spanRef} onMouseEnter={handleMouseEnter} onMouseLeave={() => setTip(null)} style={{ ...TRUNCATE, color: 'rgb(147 197 253)' }}>
-        {label}
-      </span>
-      <CellTooltip tip={tip} />
-    </>
+    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgb(147 197 253)' }}>
+      {label}
+    </span>
   )
 }
 
@@ -155,6 +83,12 @@ function ViewCell({ data, context }: ICellRendererParams<CaseOut>) {
       View
     </button>
   )
+}
+
+// ── No-rows overlay — module-level so BaseGrid never receives a new reference ──
+
+function NoCasesOverlay() {
+  return <span className="text-sm text-gray-500">No cases found</span>
 }
 
 // ── Stage dropdown ────────────────────────────────────────────────────────────
@@ -234,23 +168,36 @@ function StageDropdown({ value, onChange }: StageDropdownProps) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function CaseListTable() {
+  // TanStack Query — server state
   const { data: cases, isLoading, isError } = useCases()
+  // Zustand — workspace UI state
   const { openCaseTab } = useWorkspaceStore()
+
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState('')
   const [filteredCount, setFilteredCount] = useState<number | null>(null)
   const gridRef = useRef<AgGridReact<CaseOut>>(null)
 
-  const rowData = useMemo(() => {
-    let list = cases ?? []
-    if (stageFilter) list = list.filter((c) => c.current_stage === stageFilter)
-    return list
-  }, [cases, stageFilter])
+  // Full dataset — row identity is stable; AG Grid filters in-place via filterModel.
+  const rowData = useMemo(() => cases ?? [], [cases])
+
+  // Drive stage filter through AG Grid's own filter engine instead of slicing rowData.
+  // This preserves row identity so virtualization doesn't re-mount all rows on filter change.
+  useEffect(() => {
+    const api = gridRef.current?.api
+    if (!api) return
+    if (stageFilter) {
+      api.setFilterModel({ current_stage: { filterType: 'text', type: 'equals', filter: stageFilter } })
+    } else {
+      api.setFilterModel(null)
+    }
+  }, [stageFilter])
 
   const colDefs = useMemo<ColDef<CaseOut>[]>(() => [
     {
       headerName: 'Case Name',
       valueGetter: (p) => caseName(p.data!),
+      tooltipValueGetter: (p) => caseName(p.data!),
       flex: 1.5,
       minWidth: 160,
       filter: 'agTextColumnFilter',
@@ -259,6 +206,7 @@ export default function CaseListTable() {
     {
       headerName: 'Client',
       field: 'client_name',
+      tooltipField: 'client_name',
       flex: 1.2,
       minWidth: 130,
       filter: 'agTextColumnFilter',
@@ -268,6 +216,8 @@ export default function CaseListTable() {
     {
       headerName: 'Products',
       field: 'selected_products',
+      tooltipValueGetter: (p) =>
+        p.data?.selected_products?.map((pr) => pr.replace(/_/g, ' ').toUpperCase()).join(', ') ?? '',
       flex: 1.5,
       minWidth: 160,
       cellRenderer: ProductsCell,
@@ -286,6 +236,7 @@ export default function CaseListTable() {
     {
       headerName: 'Assigned To',
       field: 'assigned_advisor_name',
+      tooltipField: 'assigned_advisor_name',
       flex: 1,
       minWidth: 130,
       filter: 'agTextColumnFilter',
@@ -315,17 +266,7 @@ export default function CaseListTable() {
     },
   ], [])
 
-  const defaultColDef = useMemo<ColDef>(() => ({
-    sortable: true,
-    resizable: true,
-    filter: false,
-    floatingFilter: false,
-    suppressMovable: true,
-    filterParams: { debounceMs: 200, maxNumConditions: 1 },
-  }), [])
-
   const context = useMemo(() => ({ openCaseTab }), [openCaseTab])
-
   const totalCount = cases?.length ?? 0
 
   const onGridReady = useCallback((e: GridReadyEvent) => {
@@ -366,7 +307,6 @@ export default function CaseListTable() {
           <StageDropdown value={stageFilter} onChange={setStageFilter} />
         </div>
 
-        {/* Case count */}
         {!isLoading && totalCount > 0 && (
           <p className="text-sm text-gray-400">
             {filteredCount !== null && filteredCount !== totalCount ? (
@@ -393,33 +333,15 @@ export default function CaseListTable() {
             <p className="text-sm text-red-400">Failed to load cases. Is the backend running?</p>
           </div>
         ) : (
-          <AgGridReact<CaseOut>
-            ref={gridRef}
-            theme={gridTheme}
+          <BaseGrid<CaseOut>
+            gridRef={gridRef}
             rowData={isLoading ? undefined : rowData}
             columnDefs={colDefs}
-            defaultColDef={defaultColDef}
             context={context}
             quickFilterText={search}
             onGridReady={onGridReady}
             onModelUpdated={onModelUpdated}
-            rowHeight={56}
-            headerHeight={44}
-            animateRows
-            suppressCellFocus
-            suppressRowClickSelection
-            // Virtualization — both are on by default; listed here explicitly
-            suppressRowVirtualisation={false}
-            suppressColumnVirtualisation={false}
-            loadingOverlayComponent={() => (
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-blue-500" />
-                Loading cases…
-              </div>
-            )}
-            noRowsOverlayComponent={() => (
-              <span className="text-sm text-gray-500">No cases found</span>
-            )}
+            noRowsOverlayComponent={NoCasesOverlay}
           />
         )}
       </div>
