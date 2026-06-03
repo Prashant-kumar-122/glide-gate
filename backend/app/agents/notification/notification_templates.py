@@ -61,10 +61,12 @@ _REGISTRY: dict[str, NotificationTemplate] = {
         subject_tmpl="Application Submitted — $case_name",
         body_tmpl=(
             "Dear $client_name,\n\n"
-            "Your application **$case_name** has been submitted successfully. "
-            "Our team will now review your documents and complete the necessary checks.\n\n"
+            "Your application **$case_name** has been submitted successfully.\n\n"
             "Product(s): $products\n\n"
-            "We'll be in touch within 1–2 business days.\n\n"
+            "**Next Step — Upload Your Documents**\n"
+            "To help us process your application quickly, please log in to the GlideGate "
+            "client portal and upload the required documents.\n\n"
+            "Our team will review your documents and be in touch within 1–2 business days.\n\n"
             "Kind regards,\nThe GlideGate Onboarding Team"
         ),
     ),
@@ -74,7 +76,7 @@ _REGISTRY: dict[str, NotificationTemplate] = {
         subject_tmpl="Application submitted — $case_name",
         body_tmpl=(
             "Your application **$case_name** has been submitted. "
-            "We'll review your documents and be in touch shortly."
+            "Please upload the required documents via the portal to proceed."
         ),
     ),
     "advisor_case_submitted_inapp": NotificationTemplate(

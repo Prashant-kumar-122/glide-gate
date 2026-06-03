@@ -21,7 +21,6 @@ from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Produ
 from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.models.clients import Client
 from app.models.users import User
-from app.models.communications import Notification
 from app.models.documents import Document
 from app.models.accounts import ClientAccount
 from app.models.users import User
@@ -359,39 +358,6 @@ async def initiate_case(
     _product_display = ", ".join(
         p.replace("_", " ").title() for p in (refreshed.selected_products or [])
     )
-    _notif_subject = f"Case created — {_case_name}"
-    _notif_body = (
-        f"Hi {client_full_name or 'there'}! Your application **{_case_name}** for "
-        f"{_product_display} has been received. We'll guide you through each step."
-    )
-
-    # Persist in-app notification to DB then push to client's user room
-    notif = Notification(
-        case_id=refreshed.id,
-        user_id=client_id,
-        user_type="client",
-        template_name="case_created_inapp",
-        channel="in_app",
-        subject=_notif_subject,
-        body=_notif_body,
-        status="SIMULATED_SENT",
-        is_simulated=True,
-        sent_at=datetime.utcnow(),
-    )
-    db.add(notif)
-    await db.commit()
-    await db.refresh(notif)
-
-    logger.info(f"[cases] notify_user → user_id={client_id} case={refreshed.id} notif={notif.id}")
-    await socket_emitter.notify_user(client_id, {
-        "notification_id": str(notif.id),
-        "template_id": "case_created_inapp",
-        "channel": "in_app",
-        "subject": _notif_subject,
-        "body_preview": _notif_body,
-        "priority": "NORMAL",
-    })
-
     # Notify assigned advisor (if any) of the new case — use case name, not client name
     if body.assigned_advisor_id:
         advisor_result = await db.execute(select(User).where(User.id == body.assigned_advisor_id))

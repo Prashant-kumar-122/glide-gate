@@ -10,7 +10,7 @@ Four action items to implement next. Each item has a clear scope, lists the exac
 |--------|--------|-----------|
 | 1 — Replay Button in Agent Trace Screen | ✅ Done | 2026-06-02 |
 | 2 — Enhance Admin Config (Onboarding Questions, Agents, Skills) | ⬜ Pending | — |
-| 3 — Client Document Upload Notification | ⬜ Pending | — |
+| 3 — Client Document Upload Notification | ✅ Done | 2026-06-03 |
 | 4 — Dynamic Stage Insertion | ⬜ Pending | — |
 
 ---
@@ -292,101 +292,51 @@ New interfaces in `frontend/src/lib/api.ts`:
 
 ---
 
-## Action 3 — Client Document Upload Notification
+## Action 3 — Client Document Upload Notification ✅ Done (2026-06-03)
+
+> **Implemented files:** `backend/app/agents/notification/notification_templates.py`
 
 ### Goal
-When the onboarding questionnaire is fully completed, send the client a notification (in-app + email) asking them to upload required documents via the portal.
+When the onboarding questionnaire is fully completed, prompt the client (in-app + email) to upload required documents via the portal.
 
-### Trigger Point
-`ConversationCoordinator.handle_message()` in `backend/app/services/conversation/conversation_coordinator.py` already signals `ADVANCE_STAGE → KYC` when `session.collection_complete` is True (post-streaming step). This is the right place to add the notification trigger — immediately after the advance-stage signal.
+### Approach
+The existing `case_submitted` (email) and `case_submitted_inapp` (in-app) templates already fire at questionnaire completion. Updated both to include a document upload call-to-action — no new templates, no new backend method, no wiring changes.
 
-### Implementation
-
-**`backend/app/agents/notification/notification_templates.py`** — add two templates:
+**`backend/app/agents/notification/notification_templates.py`** — updated bodies:
 
 ```python
-"document_upload_request": NotificationTemplate(
-    template_id="document_upload_request",
+"case_submitted": NotificationTemplate(
+    template_id="case_submitted",
     channel="email",
-    subject_tmpl="Action Required — Please upload your documents for $case_name",
+    subject_tmpl="Application Submitted — $case_name",
     body_tmpl=(
         "Dear $client_name,\n\n"
-        "Thank you for completing your onboarding questionnaire for $case_name!\n\n"
-        "To proceed with your $products application, please log in to the GlideGate "
-        "client portal and upload the following documents:\n\n"
-        "$required_documents\n\n"
-        "Our team will review your documents and keep you updated on your progress.\n\n"
+        "Your application **$case_name** has been submitted successfully.\n\n"
+        "Product(s): $products\n\n"
+        "**Next Step — Upload Your Documents**\n"
+        "To help us process your application quickly, please log in to the GlideGate "
+        "client portal and upload the required documents.\n\n"
+        "Our team will review your documents and be in touch within 1–2 business days.\n\n"
         "Kind regards,\nThe GlideGate Onboarding Team"
     ),
 ),
-"document_upload_request_inapp": NotificationTemplate(
-    template_id="document_upload_request_inapp",
+"case_submitted_inapp": NotificationTemplate(
+    template_id="case_submitted_inapp",
     channel="in_app",
-    subject_tmpl="Please upload your documents",
+    subject_tmpl="Application submitted — $case_name",
     body_tmpl=(
-        "Your form is complete! Please upload the required documents "
-        "to proceed with your $products application."
+        "Your application **$case_name** has been submitted. "
+        "Please upload the required documents via the portal to proceed."
     ),
 ),
-```
-
-**`backend/app/services/conversation/conversation_coordinator.py`** — add private method and wire it:
-
-```python
-async def _send_document_upload_notification(
-    self,
-    case_id: UUID,
-    client_id: UUID,
-    state: OnboardingState,
-) -> None:
-    """Fires SEND_NOTIFICATION to NotificationAgent after questionnaire completion."""
-    products_str = ", ".join(state.selected_products) if state.selected_products else "your product"
-    required_docs = (
-        "• Identity Document (Passport or National ID)\n"
-        "• Proof of Address (utility bill or bank statement)\n"
-        "• Financial Statement (last 3 months)\n"
-        "• Source of Funds Declaration"
-    )
-    for template_id in ("document_upload_request", "document_upload_request_inapp"):
-        task = TaskPacket(
-            id=uuid4(),
-            from_agent=AgentID.CUSTOMER_SERVICE,
-            to_agent=AgentID.NOTIFICATION,
-            task_type=TaskType.SEND_NOTIFICATION,
-            case_id=case_id,
-            client_id=client_id,
-            priority="NORMAL",
-            payload={
-                "template_id": template_id,
-                "recipient_id": str(client_id),
-                "variables": {
-                    "client_name": state.client_data.get("full_name", "Valued Client"),
-                    "case_name": str(case_id)[:8].upper(),
-                    "products": products_str,
-                    "required_documents": required_docs,
-                },
-            },
-            expected_schema="NotificationResult",
-            created_at=datetime.utcnow(),
-            ttl=3600,
-        )
-        await self._bus.publish(task)
-```
-
-In `handle_message()`, after the existing `ADVANCE_STAGE` signal block, add:
-```python
-asyncio.create_task(
-    self._send_document_upload_notification(case_id, client_id, state)
-)
 ```
 
 ### Files
 | File | Action |
 |------|--------|
-| `backend/app/agents/notification/notification_templates.py` | Add 2 notification templates |
-| `backend/app/services/conversation/conversation_coordinator.py` | Add `_send_document_upload_notification()` + wire it |
+| `backend/app/agents/notification/notification_templates.py` | Updated `case_submitted` + `case_submitted_inapp` body text |
 
-No DB migrations. No frontend changes. The existing in-app notification rendering in the client portal already displays `SEND_NOTIFICATION` results via the notifications table and the `GET /api/notifications` endpoint (if wired) — or via the socket `NOTIFICATION_SENT` event.
+No new templates. No DB migrations. No frontend changes.
 
 ---
 
@@ -584,7 +534,7 @@ Then create `backend/app/agents/sales_manager/sales_manager_agent.py` (new agent
 |--------|----------------|-----------------|-----------|-----------|
 | 1 — Replay Button | None | 3 files (traceStore + 2 components) | `ReplayControls.tsx` | None |
 | 2 — Admin Config Tabs | 3 new routers + 4 light edits | 3 new editors + 3 hooks + 2 updates | 9 | None |
-| 3 — Document Notification | 2 files | None | None | None |
+| 3 — Document Notification | 1 file (template edit only) | None | None | None |
 | 4 — Dynamic Stages | 3 updated core files + registry | None | `stage_registry.py` + migration | ALTER TABLE |
 
 ---
