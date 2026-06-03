@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Wifi, WifiOff, Users, ChevronLeft } from 'lucide-react'
+import { Wifi, WifiOff, Users, X } from 'lucide-react'
 import { getSocket } from '@/lib/socket'
 import { useCCStore } from '@/store/ccStore'
 import { useAllCases, useClientDetail } from '@/hooks/useAllCases'
@@ -43,10 +43,11 @@ function useCCSocket(onRefresh: React.MutableRefObject<() => void>) {
 
 export default function ContactCentre() {
   const qc = useQueryClient()
-  const { selectedClientId, socketStatus } = useCCStore()
-  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
+  const { selectedClientId, socketStatus, openTabs, activeTabId, closeClientTab, setActiveTab } = useCCStore()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const activeTabRef = useRef<HTMLDivElement>(null)
 
-  const { data: cases = [], isLoading, isError } = useAllCases()
+  const { data: cases = [] } = useAllCases()
   const selectedCase = cases.find((c) => c.id === selectedClientId) ?? null
   const { data: summary, isLoading: summaryLoading } = useClientDetail(selectedCase?.id ?? null)
   const {
@@ -67,60 +68,80 @@ export default function ContactCentre() {
   useCCSocket(onRefreshRef)
 
   useEffect(() => {
-    if (selectedClientId) setMobileView('detail')
-  }, [selectedClientId])
+    activeTabRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+  }, [activeTabId])
 
   return (
-    <div className="flex h-[calc(100vh-49px)] flex-col overflow-hidden">
-      {/* Top bar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-3 sm:px-6 dark:border-gray-700 dark:bg-gray-800">
-        <div className="flex items-center gap-2">
-          {mobileView === 'detail' && (
-            <button
-              onClick={() => setMobileView('list')}
-              className="mr-1 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 md:hidden dark:text-gray-400 dark:hover:bg-gray-700"
-              aria-label="Back to client list"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          )}
-          <Users className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Contact Centre</h1>
-          {cases.length > 0 && (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-              {cases.length}
-            </span>
-          )}
+    <div className="flex h-[calc(100vh-48px)] flex-col overflow-hidden bg-gray-900">
+      {/* Tab bar */}
+      <div className="flex shrink-0 items-end border-b border-gray-700 bg-gray-900">
+        {/* Clients — always visible, never scrolls away */}
+        <div className="shrink-0 px-2">
+          <button
+            onClick={() => setActiveTab('clients')}
+            className={[
+              'flex items-center gap-2 border-b-2 px-4 pb-3 pt-3 text-sm font-medium transition-colors whitespace-nowrap',
+              activeTabId === 'clients'
+                ? 'border-blue-500 text-white'
+                : 'border-transparent text-gray-400 hover:text-gray-200',
+            ].join(' ')}
+          >
+            <Users className="h-3.5 w-3.5" />
+            Clients
+          </button>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+
+        {/* Scrollable client tabs */}
+        <div
+          ref={scrollRef}
+          className="flex min-w-0 flex-1 items-end overflow-x-auto [&::-webkit-scrollbar]:h-[3px] [&::-webkit-scrollbar-track]:bg-gray-900 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-600"
+        >
+          {openTabs.map((tab) => {
+            const isActive = activeTabId === tab.clientId
+            return (
+              <div
+                key={tab.clientId}
+                ref={isActive ? activeTabRef : undefined}
+                onClick={() => setActiveTab(tab.clientId)}
+                className={[
+                  'group flex shrink-0 cursor-pointer items-center gap-1.5 border-b-2 px-4 pb-3 pt-3 text-sm transition-colors whitespace-nowrap',
+                  isActive
+                    ? 'border-blue-500 text-white'
+                    : 'border-transparent text-gray-400 hover:text-gray-200',
+                ].join(' ')}
+              >
+                <span className="font-medium">{tab.label}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    closeClientTab(tab.clientId)
+                  }}
+                  className="rounded p-0.5 text-gray-500 transition-colors hover:bg-gray-700 hover:text-gray-200"
+                  aria-label="Close tab"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Socket status */}
+        <div className="shrink-0 flex items-center gap-1.5 px-4 pb-3 pt-3 text-xs text-gray-400">
           {socketStatus === 'connected' ? (
             <Wifi className="h-3.5 w-3.5 text-green-500" />
           ) : (
-            <WifiOff className="h-3.5 w-3.5 text-gray-400" />
+            <WifiOff className="h-3.5 w-3.5 text-gray-500" />
           )}
           <span className="hidden sm:inline">{socketStatus === 'connected' ? 'Live' : 'Reconnecting…'}</span>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        <div
-          className={[
-            'shrink-0 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800',
-            mobileView === 'list' ? 'flex w-full' : 'hidden',
-            'md:flex md:w-80',
-          ].join(' ')}
-        >
-          <ClientStatusTable cases={cases} isLoading={isLoading} isError={isError} />
-        </div>
-
-        <div
-          className={[
-            'flex-col overflow-hidden bg-gray-50 dark:bg-gray-800',
-            mobileView === 'detail' ? 'flex flex-1' : 'hidden',
-            'md:flex md:flex-1',
-          ].join(' ')}
-        >
+      {/* Content */}
+      {activeTabId === 'clients' ? (
+        <ClientStatusTable />
+      ) : (
+        <div className="flex-1 overflow-y-auto">
           <ClientDetailPanel
             summary={summary}
             summaryLoading={summaryLoading && !!selectedClientId}
@@ -136,7 +157,7 @@ export default function ContactCentre() {
             }}
           />
         </div>
-      </div>
+      )}
     </div>
   )
 }

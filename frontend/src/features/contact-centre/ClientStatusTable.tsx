@@ -1,167 +1,343 @@
-import { Search, AlertTriangle, CheckCircle } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { Search, Eye, X, ChevronDown, Check } from 'lucide-react'
+import { AgGridReact } from 'ag-grid-react'
+import type { ColDef, ICellRendererParams, GridReadyEvent, ModelUpdatedEvent, CellStyle } from 'ag-grid-community'
+import { BaseGrid, TruncatedCell } from '@/components/grid/BaseGrid'
+import { useAllCases } from '@/hooks/useAllCases'
 import { useCCStore } from '@/store/ccStore'
-import ProgressBar from '@/components/ProgressBar'
 import type { CaseOut } from '@/lib/api'
+
+// ── Stage config ──────────────────────────────────────────────────────────────
 
 const STAGE_LABELS: Record<string, string> = {
   INTAKE: 'Intake',
-  KYC: 'Identity Check',
-  PARALLEL_PRODUCTS: 'Account Setup',
-  REVIEW: 'Final Review',
-  COMPLETE: 'Complete',
+  KYC: 'KYC',
+  PARALLEL_PRODUCTS: 'Products',
+  REVIEW: 'Review',
+  COMPLETE: 'Live',
   ESCALATED: 'Escalated',
 }
 
-function caseDisplayName(c: CaseOut): string {
+const STAGE_STYLES: Record<string, { badge: string; dot: string; optionDot: string }> = {
+  INTAKE:            { badge: 'border border-gray-500/60 text-gray-400',     dot: 'bg-gray-400',   optionDot: 'bg-gray-400' },
+  KYC:               { badge: 'border border-blue-500/60 text-blue-400',     dot: 'bg-blue-400',   optionDot: 'bg-blue-400' },
+  PARALLEL_PRODUCTS: { badge: 'border border-purple-500/60 text-purple-400', dot: 'bg-purple-400', optionDot: 'bg-purple-400' },
+  REVIEW:            { badge: 'border border-cyan-500/60 text-cyan-400',     dot: 'bg-cyan-400',   optionDot: 'bg-cyan-400' },
+  COMPLETE:          { badge: 'border border-teal-500/60 text-teal-400',     dot: 'bg-teal-400',   optionDot: 'bg-teal-400' },
+  ESCALATED:         { badge: 'border border-red-500/60 text-red-400',       dot: 'bg-red-400',    optionDot: 'bg-red-400' },
+}
+
+const ALL_STAGES = ['INTAKE', 'KYC', 'PARALLEL_PRODUCTS', 'REVIEW', 'COMPLETE', 'ESCALATED']
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function caseName(c: CaseOut): string {
   if (c.case_name) return c.case_name
   if (c.selected_products.length > 0)
     return c.selected_products
       .map((p) => p.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()))
       .join(' & ')
-  return c.client_name ?? 'Case'
+  return c.id
 }
 
-const STAGE_BADGE: Record<string, string> = {
-  INTAKE: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-  KYC: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
-  PARALLEL_PRODUCTS: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
-  REVIEW: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
-  COMPLETE: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
-  ESCALATED: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+function relativeTime(dateStr: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime()
+  const days = Math.floor(diffMs / 86_400_000)
+  if (days > 0) return `${days}d ago`
+  const hours = Math.floor(diffMs / 3_600_000)
+  if (hours > 0) return `${hours}h ago`
+  return `${Math.floor(diffMs / 60_000)}m ago`
 }
 
+// ── Cell renderers ────────────────────────────────────────────────────────────
 
-interface Props {
-  cases: CaseOut[]
-  isLoading: boolean
-  isError: boolean
+function ProductsCell({ value }: ICellRendererParams<CaseOut, string[]>) {
+  const label = value?.length ? value.map((p) => p.replace(/_/g, ' ').toUpperCase()).join(', ') : ''
+  if (!label) return <span style={{ color: 'rgb(107 114 128)' }}>—</span>
+  return (
+    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgb(147 197 253)' }}>
+      {label}
+    </span>
+  )
 }
 
-export default function ClientStatusTable({ cases, isLoading, isError }: Props) {
-  const { selectedClientId, filterText, setSelectedClient, setFilterText } = useCCStore()
+function StageCell({ value }: ICellRendererParams<CaseOut, string>) {
+  if (!value) return null
+  const style = STAGE_STYLES[value] ?? { badge: 'border border-gray-600 text-gray-400', dot: 'bg-gray-400', optionDot: 'bg-gray-400' }
+  return (
+    <span className={['inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium', style.badge].join(' ')}>
+      <span className={['h-1.5 w-1.5 rounded-full', style.dot].join(' ')} />
+      {STAGE_LABELS[value] ?? value}
+    </span>
+  )
+}
 
-  const filtered = cases.filter((c) => {
-    if (!filterText) return true
-    const q = filterText.toLowerCase()
-    return (
-      caseDisplayName(c).toLowerCase().includes(q) ||
-      (c.client_name ?? '').toLowerCase().includes(q) ||
-      c.current_stage.toLowerCase().includes(q) ||
-      c.selected_products.some((p) => p.toLowerCase().includes(q))
-    )
-  })
+function ViewCell({ data, context }: ICellRendererParams<CaseOut>) {
+  if (!data) return null
+  return (
+    <button
+      onClick={() => context.openClientTab(data.id, caseName(data))}
+      className="flex items-center gap-1.5 rounded-md border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:border-blue-500 hover:bg-blue-500/10 hover:text-blue-300"
+    >
+      <Eye className="h-3.5 w-3.5" />
+      View
+    </button>
+  )
+}
+
+function NoCasesOverlay() {
+  return <span className="text-sm text-gray-500">No cases found</span>
+}
+
+// ── Stage dropdown ────────────────────────────────────────────────────────────
+
+interface StageDropdownProps {
+  value: string
+  onChange: (v: string) => void
+}
+
+function StageDropdown({ value, onChange }: StageDropdownProps) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
+  const selectedLabel = value ? STAGE_LABELS[value] : 'All Stages'
+  const selectedDot = value ? STAGE_STYLES[value]?.dot : null
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Search */}
-      <div className="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search clients, stage, products…"
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500 dark:focus:bg-gray-700"
-          />
-        </div>
-        {filterText && (
-          <p className="mt-1.5 text-[11px] text-gray-400">
-            {filtered.length} of {cases.length} cases
-          </p>
-        )}
-      </div>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={[
+          'flex min-w-[140px] items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors',
+          open ? 'border-blue-500 bg-gray-800 text-white' : 'border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500',
+        ].join(' ')}
+      >
+        <span className="flex items-center gap-2">
+          {selectedDot && <span className={['h-2 w-2 rounded-full', selectedDot].join(' ')} />}
+          {selectedLabel}
+        </span>
+        <ChevronDown className={['h-3.5 w-3.5 text-gray-400 transition-transform', open ? 'rotate-180' : ''].join(' ')} />
+      </button>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto">
-        {isLoading && (
-          <div className="space-y-1 p-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700" />
-            ))}
-          </div>
-        )}
-
-        {isError && (
-          <div className="p-4">
-            <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600 dark:bg-red-950 dark:text-red-400">
-              Failed to load clients. Is the backend running?
-            </p>
-          </div>
-        )}
-
-        {!isLoading && !isError && filtered.length === 0 && (
-          <div className="flex flex-col items-center py-16 text-center">
-            <Search className="h-8 w-8 text-gray-200 dark:text-gray-700" />
-            <p className="mt-2 text-sm text-gray-400">No cases match your search</p>
-          </div>
-        )}
-
-        {filtered.map((c) => {
-          const isSelected = selectedClientId === c.id
-          const progress = Math.round(c.percentage ?? 0)
-          const badgeClass = STAGE_BADGE[c.current_stage] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-          const stageLabel = STAGE_LABELS[c.current_stage] ?? c.current_stage
-          const isEscalated = c.current_stage === 'ESCALATED' || c.status === 'ESCALATED'
-
-          return (
-            <button
-              key={c.id}
-              onClick={() => setSelectedClient(c.id)}
-              className={[
-                'w-full border-b border-gray-100 px-4 py-3 text-left transition-colors dark:border-gray-700',
-                isSelected ? 'bg-blue-50 dark:bg-blue-950' : 'bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700',
-              ].join(' ')}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {caseDisplayName(c)}
-                    </p>
-                    {isEscalated && <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />}
-                    {c.current_stage === 'COMPLETE' && (
-                      <CheckCircle className="h-3.5 w-3.5 shrink-0 text-green-500" />
-                    )}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className={['rounded-full px-2 py-0.5 text-[10px] font-medium', badgeClass].join(' ')}>
-                      {stageLabel}
-                    </span>
-                    <span className="text-[10px] text-gray-400">
-                      {c.selected_products.length} product{c.selected_products.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-                <span className="text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">{progress}%</span>
-              </div>
-
-              <div className="mt-2">
-                <ProgressBar
-                  value={progress}
-                  size="sm"
-                  color={
-                    c.current_stage === 'COMPLETE'
-                      ? 'success'
-                      : isEscalated
-                      ? 'warning'
-                      : 'default'
-                  }
-                />
-              </div>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Footer */}
-      {!isLoading && !isError && (
-        <div className="border-t border-gray-100 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900">
-          <p className="text-[11px] text-gray-400">
-            {cases.length} active case{cases.length !== 1 ? 's' : ''}
-          </p>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-md border border-gray-600 bg-gray-800 shadow-xl">
+          <button
+            onClick={() => { onChange(''); setOpen(false) }}
+            className={['flex w-full items-center justify-between px-3 py-2 text-sm transition-colors', !value ? 'bg-blue-600/30 text-white' : 'text-gray-300 hover:bg-gray-700'].join(' ')}
+          >
+            <span className="flex items-center gap-2.5">
+              <span className="h-2 w-2 rounded-full opacity-0" />
+              All Stages
+            </span>
+            {!value && <Check className="h-3.5 w-3.5 text-blue-400" />}
+          </button>
+          <div className="mx-2 border-t border-gray-700/60" />
+          {ALL_STAGES.map((s) => {
+            const style = STAGE_STYLES[s]
+            const active = value === s
+            return (
+              <button
+                key={s}
+                onClick={() => { onChange(s); setOpen(false) }}
+                className={['flex w-full items-center justify-between px-3 py-2 text-sm transition-colors', active ? 'bg-blue-600/30 text-white' : 'text-gray-300 hover:bg-gray-700'].join(' ')}
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className={['h-2 w-2 rounded-full', style.optionDot].join(' ')} />
+                  {STAGE_LABELS[s]}
+                </span>
+                {active && <Check className="h-3.5 w-3.5 text-blue-400" />}
+              </button>
+            )
+          })}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export default function ClientStatusTable() {
+  const { data: cases, isLoading, isError } = useAllCases()
+  const { openClientTab } = useCCStore()
+
+  const [search, setSearch] = useState('')
+  const [stageFilter, setStageFilter] = useState('')
+  const [filteredCount, setFilteredCount] = useState<number | null>(null)
+  const gridRef = useRef<AgGridReact<CaseOut>>(null)
+
+  const rowData = useMemo(() => cases ?? [], [cases])
+
+  useEffect(() => {
+    const api = gridRef.current?.api
+    if (!api) return
+    if (stageFilter) {
+      api.setFilterModel({ current_stage: { filterType: 'text', type: 'equals', filter: stageFilter } })
+    } else {
+      api.setFilterModel(null)
+    }
+  }, [stageFilter])
+
+  const colDefs = useMemo<ColDef<CaseOut>[]>(() => [
+    {
+      headerName: 'Case Name',
+      valueGetter: (p) => caseName(p.data!),
+      tooltipValueGetter: (p) => caseName(p.data!),
+      flex: 1.5,
+      minWidth: 160,
+      filter: 'agTextColumnFilter',
+      cellRenderer: TruncatedCell,
+    },
+    {
+      headerName: 'Client',
+      field: 'client_name',
+      tooltipField: 'client_name',
+      flex: 1.2,
+      minWidth: 130,
+      filter: 'agTextColumnFilter',
+      cellRenderer: TruncatedCell,
+      cellRendererParams: { style: { fontWeight: '600', color: 'white' } },
+    },
+    {
+      headerName: 'Products',
+      field: 'selected_products',
+      tooltipValueGetter: (p) =>
+        p.data?.selected_products?.map((pr) => pr.replace(/_/g, ' ').toUpperCase()).join(', ') ?? '',
+      flex: 1.5,
+      minWidth: 160,
+      cellRenderer: ProductsCell,
+      sortable: false,
+      filter: false,
+    },
+    {
+      headerName: 'Stage',
+      field: 'current_stage',
+      flex: 1,
+      minWidth: 140,
+      cellRenderer: StageCell,
+      filter: 'agTextColumnFilter',
+      filterValueGetter: (p) => STAGE_LABELS[p.data?.current_stage ?? ''] ?? p.data?.current_stage,
+    },
+    {
+      headerName: 'Assigned To',
+      field: 'assigned_advisor_name',
+      tooltipField: 'assigned_advisor_name',
+      flex: 1,
+      minWidth: 130,
+      filter: 'agTextColumnFilter',
+      cellRenderer: TruncatedCell,
+      cellRendererParams: { style: { color: 'rgb(209 213 219)' } },
+      valueFormatter: (p) => p.value ?? '—',
+    },
+    {
+      headerName: 'Updated',
+      field: 'updated_at',
+      flex: 0.8,
+      minWidth: 110,
+      filter: false,
+      cellRenderer: TruncatedCell,
+      cellRendererParams: { style: { color: 'rgb(156 163 175)', fontVariantNumeric: 'tabular-nums' } },
+      valueFormatter: (p) => relativeTime(p.value),
+    },
+    {
+      headerName: '',
+      field: 'id',
+      width: 110,
+      sortable: false,
+      filter: false,
+      resizable: false,
+      cellRenderer: ViewCell,
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end' } as CellStyle,
+    },
+  ], [])
+
+  const context = useMemo(() => ({ openClientTab }), [openClientTab])
+  const totalCount = cases?.length ?? 0
+
+  const onGridReady = useCallback((e: GridReadyEvent) => {
+    setFilteredCount(e.api.getDisplayedRowCount())
+  }, [])
+
+  const onModelUpdated = useCallback((e: ModelUpdatedEvent) => {
+    setFilteredCount(e.api.getDisplayedRowCount())
+  }, [])
+
+  const onQuickFilter = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value)
+  }, [])
+
+  return (
+    <div className="flex flex-1 flex-col overflow-hidden bg-gray-900 p-3 sm:p-6">
+      {/* Filters + count */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative w-full sm:w-auto">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search cases..."
+              value={search}
+              onChange={onQuickFilter}
+              className="w-full rounded-md border border-gray-600 bg-gray-800 py-1.5 pl-9 pr-8 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:w-52"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-500 hover:text-gray-300"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <StageDropdown value={stageFilter} onChange={setStageFilter} />
+        </div>
+
+        {!isLoading && totalCount > 0 && (
+          <p className="text-sm text-gray-400">
+            {filteredCount !== null && filteredCount !== totalCount ? (
+              <>
+                <span className="font-semibold text-white">{filteredCount}</span>
+                <span className="text-gray-500"> of </span>
+                <span className="font-semibold text-white">{totalCount}</span>
+                <span className="text-gray-500"> cases</span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-white">{totalCount}</span>
+                <span className="text-gray-500"> cases</span>
+              </>
+            )}
+          </p>
+        )}
+      </div>
+
+      {/* Grid */}
+      <div className="flex-1 overflow-hidden rounded-lg border border-gray-700/60">
+        {isError ? (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-red-400">Failed to load cases. Is the backend running?</p>
+          </div>
+        ) : (
+          <BaseGrid<CaseOut>
+            gridRef={gridRef}
+            rowData={isLoading ? undefined : rowData}
+            columnDefs={colDefs}
+            context={context}
+            quickFilterText={search}
+            onGridReady={onGridReady}
+            onModelUpdated={onModelUpdated}
+            noRowsOverlayComponent={NoCasesOverlay}
+          />
+        )}
+      </div>
     </div>
   )
 }
