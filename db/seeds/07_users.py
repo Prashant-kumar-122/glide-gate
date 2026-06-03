@@ -1,9 +1,10 @@
 """Seed users for auth system.
 
 Users (separate from onboarding clients):
-  - admin@glide-gate.local       / Admin123!    / admin
-  - advisor@glide-gate.local     / Advisor123!  / advisor
-  - aarav.mehta@demo.glide-gate.local / Client123! / client
+  - admin@glide-gate.local              / Admin123!    / admin
+  - advisor@glide-gate.local            / Advisor123!  / advisor
+  - salesmanager@glide-gate.local       / Sales123!    / sales_manager
+  - aarav.mehta@demo.glide-gate.local   / Client123!   / client
 """
 from __future__ import annotations
 
@@ -15,10 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.users import User
 from app.services.auth.auth_service import hash_password
 
-ADMIN_USER_ID   = UUID("b0000000-0001-0001-0001-000000000001")
-ADVISOR_USER_ID = UUID("b0000000-0002-0002-0002-000000000002")
+ADMIN_USER_ID         = UUID("b0000000-0001-0001-0001-000000000001")
+ADVISOR_USER_ID       = UUID("b0000000-0002-0002-0002-000000000002")
+SALES_MANAGER_USER_ID = UUID("b0000000-0003-0003-0003-000000000003")
 # Must match the clients.id for Aarav Mehta so case lookups by user sub work
-CLIENT_USER_ID  = UUID("d0000000-0001-0001-0001-000000000001")
+CLIENT_USER_ID        = UUID("d0000000-0001-0001-0001-000000000001")
 
 _USERS = [
     {
@@ -36,6 +38,14 @@ _USERS = [
         "last_name": "Advisor",
         "password": "Advisor123!",
         "role": "advisor",
+    },
+    {
+        "id": SALES_MANAGER_USER_ID,
+        "email": "salesmanager@glide-gate.local",
+        "first_name": "Demo",
+        "last_name": "SalesManager",
+        "password": "Sales123!",
+        "role": "sales_manager",
     },
     {
         "id": CLIENT_USER_ID,

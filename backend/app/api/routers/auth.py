@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.dependencies.auth import get_current_user
 from app.database import get_db
@@ -163,3 +163,20 @@ async def list_advisors(
         select(User).where(User.role == "advisor", User.is_active.is_(True)).order_by(User.first_name)
     )
     return [UserOut.model_validate(u) for u in result.scalars().all()]
+
+
+@router.get("/lookup-client", response_model=UserOut)
+async def lookup_client(
+    email: str,
+    _current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserOut:
+    result = await db.execute(
+        select(User).where(func.lower(User.email) == email.strip().lower(), User.is_active.is_(True))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no_account_found")
+    if user.role != "client":
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="not_a_client")
+    return UserOut.model_validate(user)

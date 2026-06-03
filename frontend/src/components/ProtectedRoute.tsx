@@ -6,6 +6,7 @@ import type { AuthUser } from '@/store/authStore'
 const DEFAULT_ROUTE: Record<AuthUser['role'], string> = {
   client: '/client',
   advisor: '/',
+  sales_manager: '/',
   admin: '/admin',
 }
 

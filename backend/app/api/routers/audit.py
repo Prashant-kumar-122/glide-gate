@@ -52,7 +52,7 @@ class PaginatedLogsOut(BaseModel):
 
 @router.get("/event-types", response_model=list[str])
 async def list_event_types(
-    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin")),
+    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin", "sales_manager")),
 ) -> list[str]:
     """Return all known audit event type strings for filter dropdowns."""
     return sorted(str(e) for e in AuditEventType)
@@ -71,7 +71,7 @@ async def get_audit_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin")),
+    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin", "sales_manager")),
 ) -> PaginatedLogsOut:
     query = select(EventLog).order_by(EventLog.created_at.desc())
 

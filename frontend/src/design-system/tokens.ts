@@ -6,7 +6,7 @@ export type DocumentStatus =
   | 'NEEDS_REVISION'
   | 'APPROVED'
 
-export type TeamRole = 'Advisor' | 'Client' | 'ComplianceOfficer' | 'CCRep' | 'Admin'
+export type TeamRole = 'Advisor' | 'Client' | 'ComplianceOfficer' | 'CCRep' | 'Admin' | 'SalesManager'
 
 export type VisibilityLevel = 'ALL' | 'ADVISOR_ONLY' | 'CLIENT_VISIBLE'
 
@@ -123,6 +123,11 @@ export const ROLE_COLORS: Record<TeamRole, { bg: string; text: string; dark: { b
     text: 'text-slate-700',
     dark: { bg: 'dark:bg-slate-800', text: 'dark:text-slate-300' },
   },
+  SalesManager: {
+    bg: 'bg-indigo-100',
+    text: 'text-indigo-800',
+    dark: { bg: 'dark:bg-indigo-900', text: 'dark:text-indigo-300' },
+  },
 }
 
 export const ROLE_LABEL: Record<TeamRole, string> = {
@@ -131,6 +136,7 @@ export const ROLE_LABEL: Record<TeamRole, string> = {
   ComplianceOfficer: 'Compliance',
   CCRep: 'CC Rep',
   Admin: 'Admin',
+  SalesManager: 'Sales Mgr',
 }
 
 export const PROGRESS_COLOR = {

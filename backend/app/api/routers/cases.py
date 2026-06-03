@@ -39,6 +39,7 @@ class InitiateCaseRequest(BaseModel):
     selected_products: list[str]
     assigned_advisor_id: UUID | None = None
     case_name: str | None = None        # stored in metadata
+    legal_entity_name: str | None = None  # for institutional cases; used as case_name when no case_name supplied
     metadata: dict[str, Any] = {}
 
 
@@ -306,22 +307,26 @@ async def initiate_case(
     if unknown:
         raise ConflictError(f"Unknown product codes: {sorted(unknown)}")
 
-    if body.case_name:
+    effective_case_name = body.case_name or body.legal_entity_name
+    if effective_case_name:
         duplicate = await db.execute(
             select(OnboardingCase).where(
                 OnboardingCase.client_id == client_id,
                 func.lower(OnboardingCase.extra_metadata["case_name"].astext)
-                == body.case_name.strip().lower(),
+                == effective_case_name.strip().lower(),
             )
         )
         if duplicate.scalar_one_or_none() is not None:
             raise ConflictError(
-                f"A case named '{body.case_name.strip()}' already exists. Please choose a different name."
+                f"A case named '{effective_case_name.strip()}' already exists. Please choose a different name."
             )
 
+    resolved_case_name = body.case_name or body.legal_entity_name
     metadata = dict(body.metadata)
-    if body.case_name:
-        metadata["case_name"] = body.case_name
+    if resolved_case_name:
+        metadata["case_name"] = resolved_case_name
+    if body.legal_entity_name:
+        metadata["legal_entity_name"] = body.legal_entity_name
 
     case = OnboardingCase(
         client_id=client_id,
@@ -812,7 +817,7 @@ async def patch_case_percentage(
     case_id: UUID,
     body: PatchPercentageRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("client", "advisor", "admin")),
+    _user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
 ) -> PatchPercentageResponse:
     await _get_case_or_404(case_id, db)
     await db.execute(
@@ -839,7 +844,7 @@ async def patch_case_status(
     case_id: UUID,
     body: PatchStatusRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("client", "advisor", "admin")),
+    _user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
 ) -> PatchStatusResponse:
     await _get_case_or_404(case_id, db)
     values: dict = {"status": body.status}
@@ -864,7 +869,7 @@ class SubmitIntakeResponse(BaseModel):
 async def submit_intake(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role("client", "advisor", "admin")),
+    current_user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
 ) -> SubmitIntakeResponse:
     """Signal that the wizard form has been completed.
 
@@ -945,7 +950,7 @@ async def submit_intake(
 async def resume_case(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("advisor", "admin")),
+    _user: dict = Depends(require_role("advisor", "admin", "sales_manager")),
 ) -> ResumeResponse:
     case = await _get_case_or_404(case_id, db)
     asyncio.create_task(journey_resumption_service.resume_case(case_id=case.id))

@@ -24,8 +24,8 @@ import { useAuthStore } from '@/store/authStore'
 import { useThemeStore } from '@/store/themeStore'
 
 const NAV_LINKS: { to: string; label: string; roles: string[] }[] = [
-  { to: '/', label: 'Advisor Workspace', roles: ['advisor'] },
-  { to: '/contact-centre', label: 'Contact Centre', roles: ['advisor'] },
+  { to: '/', label: 'Advisor Workspace', roles: ['advisor', 'sales_manager'] },
+  { to: '/contact-centre', label: 'Contact Centre', roles: ['advisor', 'sales_manager'] },
   { to: '/agent-trace', label: 'Agent Trace', roles: ['advisor', 'admin'] },
   { to: '/admin', label: 'Admin Config', roles: ['admin'] },
 ]
@@ -39,6 +39,7 @@ function NavBar() {
   const ROLE_HOME: Record<string, string> = {
     client: '/client',
     advisor: '/',
+    sales_manager: '/',
     admin: '/admin',
   }
   const homeRoute = user ? (ROLE_HOME[user.role] ?? '/login') : '/login'
@@ -158,7 +159,7 @@ export default function App() {
             <Route
               path="/profile"
               element={
-                <ProtectedRoute allowedRoles={['client', 'advisor', 'admin']}>
+                <ProtectedRoute allowedRoles={['client', 'advisor', 'admin', 'sales_manager']}>
                   <ErrorBoundary>
                     <Profile />
                   </ErrorBoundary>
@@ -166,11 +167,11 @@ export default function App() {
               }
             />
 
-            {/* Advisor-only */}
+            {/* Advisor + Sales Manager */}
             <Route
               path="/"
               element={
-                <ProtectedRoute allowedRoles={['advisor']}>
+                <ProtectedRoute allowedRoles={['advisor', 'sales_manager']}>
                   <ErrorBoundary>
                     <AdvisorWorkspace />
                   </ErrorBoundary>
@@ -180,7 +181,7 @@ export default function App() {
             <Route
               path="/contact-centre"
               element={
-                <ProtectedRoute allowedRoles={['advisor']}>
+                <ProtectedRoute allowedRoles={['advisor', 'sales_manager']}>
                   <ErrorBoundary>
                     <ContactCentre />
                   </ErrorBoundary>
@@ -188,11 +189,11 @@ export default function App() {
               }
             />
 
-            {/* Advisor + Admin */}
+            {/* Advisor + Admin + Sales Manager */}
             <Route
               path="/agent-trace"
               element={
-                <ProtectedRoute allowedRoles={['advisor', 'admin']}>
+                <ProtectedRoute allowedRoles={['advisor', 'admin', 'sales_manager']}>
                   <ErrorBoundary>
                     <AgentTrace />
                   </ErrorBoundary>

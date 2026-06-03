@@ -1,11 +1,13 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Search, Eye, X, ChevronDown, Check } from 'lucide-react'
+import { Search, Eye, X, ChevronDown, Check, Plus } from 'lucide-react'
 import { AgGridReact } from 'ag-grid-react'
 import type { ColDef, ICellRendererParams, GridReadyEvent, ModelUpdatedEvent, CellStyle } from 'ag-grid-community'
 import { BaseGrid, TruncatedCell } from '@/components/grid/BaseGrid'
 import { useCases } from '@/hooks/useDocuments'
 import type { CaseOut } from '@/lib/api'
 import { useWorkspaceStore } from '@/store/workspaceStore'
+import { useAuthStore } from '@/store/authStore'
+import InstitutionalCaseModal from './InstitutionalCaseModal'
 
 // ── Stage config ──────────────────────────────────────────────────────────────
 
@@ -172,10 +174,12 @@ export default function CaseListTable() {
   const { data: cases, isLoading, isError } = useCases()
   // Zustand — workspace UI state
   const { openCaseTab } = useWorkspaceStore()
+  const { user } = useAuthStore()
 
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState('')
   const [filteredCount, setFilteredCount] = useState<number | null>(null)
+  const [showInstModal, setShowInstModal] = useState(false)
   const gridRef = useRef<AgGridReact<CaseOut>>(null)
 
   // Full dataset — row identity is stable; AG Grid filters in-place via filterModel.
@@ -305,6 +309,15 @@ export default function CaseListTable() {
             )}
           </div>
           <StageDropdown value={stageFilter} onChange={setStageFilter} />
+          {user?.role === 'sales_manager' && (
+            <button
+              onClick={() => setShowInstModal(true)}
+              className="flex items-center gap-1.5 rounded-md border border-indigo-500 bg-indigo-600/20 px-3 py-1.5 text-sm font-medium text-indigo-300 transition-colors hover:bg-indigo-600/40 hover:text-indigo-200"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Open New Account
+            </button>
+          )}
         </div>
 
         {!isLoading && totalCount > 0 && (
@@ -345,6 +358,16 @@ export default function CaseListTable() {
           />
         )}
       </div>
+
+      {showInstModal && (
+        <InstitutionalCaseModal
+          onCreated={(caseId, clientId, label) => {
+            setShowInstModal(false)
+            openCaseTab(caseId, clientId, label)
+          }}
+          onClose={() => setShowInstModal(false)}
+        />
+      )}
     </div>
   )
 }

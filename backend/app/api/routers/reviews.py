@@ -74,7 +74,7 @@ async def list_pending_reviews(
     case_id: UUID | None = None,
     include_decided: bool = False,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
+    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin", "sales_manager")),
 ) -> list[ReviewOut]:
     query = select(HumanReview)
 
@@ -94,7 +94,7 @@ async def list_pending_reviews(
 async def get_review(
     review_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
+    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin", "sales_manager")),
 ) -> ReviewOut:
     review = await _get_review_or_404(review_id, db)
     return ReviewOut.model_validate(review)
@@ -104,7 +104,7 @@ async def get_review(
 async def get_evidence_packet(
     review_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
+    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin", "sales_manager")),
 ) -> dict:
     review = await _get_review_or_404(review_id, db)
 
