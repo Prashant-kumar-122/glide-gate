@@ -20,6 +20,7 @@ from app.database import get_db
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
 from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.models.clients import Client
+from app.models.users import User
 from app.models.communications import Notification
 from app.models.documents import Document
 from app.models.accounts import ClientAccount
@@ -133,6 +134,7 @@ class CaseListOut(BaseModel):
     percentage: float
     created_at: datetime
     updated_at: datetime
+    assigned_advisor_name: str | None = None
 
 
 class ResumeResponse(BaseModel):
@@ -243,9 +245,11 @@ async def list_cases(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> list[CaseListOut]:
+    AdvisorUser = User.__table__.alias("advisor_user")
     query = (
-        select(OnboardingCase, Client)
+        select(OnboardingCase, Client, AdvisorUser.c.first_name, AdvisorUser.c.last_name)
         .join(Client, OnboardingCase.client_id == Client.id)
+        .outerjoin(AdvisorUser, OnboardingCase.assigned_advisor_id == AdvisorUser.c.id)
         .order_by(OnboardingCase.updated_at.desc())
     )
 
@@ -267,8 +271,9 @@ async def list_cases(
             percentage=case.percentage,
             created_at=case.created_at,
             updated_at=case.updated_at,
+            assigned_advisor_name=f"{adv_first} {adv_last}" if adv_first else None,
         )
-        for case, client in rows
+        for case, client, adv_first, adv_last in rows
     ]
 
 
