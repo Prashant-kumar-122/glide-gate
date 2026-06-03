@@ -36,9 +36,9 @@ services:
       DATABASE_URL_SYNC: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-Root}@postgres:5432/${DB_NAME:-glide_gate}
     ports:
       - "8000:8000"
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - ./uploads:/app/uploads
