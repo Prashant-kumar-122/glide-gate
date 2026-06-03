@@ -68,6 +68,7 @@ export interface CaseOut {
   percentage: number
   created_at: string
   updated_at: string
+  assigned_advisor_name?: string | null
 }
 
 export interface CaseSummary {
