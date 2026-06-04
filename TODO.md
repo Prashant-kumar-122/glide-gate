@@ -1,57 +1,40 @@
 # TODO
 
-## Migration - HIGH PRIORITY
+## ✅ Completed
 
-- [ ] **Fix and re-enable Alembic migration in `docker-compose.yml`**
-  - Migration `0005_trusted_contact_questions.py` fails with a `ForeignKeyViolationError`
-  - Questionnaire `c0000000-0001-0001-0001-000000000001` is never seeded in any migration
-  - Fix: add `INSERT INTO onboarding_questionnaires ... ON CONFLICT DO NOTHING` at the start of `0005` upgrade()
-  - Once fixed, restore the command in `docker-compose.yml`:
-    ```
-    sh -c "poetry run alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-    ```
+- [x] Move SSH key to GitLab CI/CD Variable (`EC2_SSH_KEY`, File type)
+- [x] Fix Alembic migration `0005` FK seed issue and re-enable in `docker-compose.yml`
+- [x] Upgrade Node.js to 20 (EC2 + `frontend/Dockerfile`)
+- [x] Pin Poetry to `2.4.1` in `Dockerfile`
+- [x] Fix ASGI entrypoint to use `socket_app`
+- [x] Remove `./backend:/app` volume mount
+- [x] Enable `depends_on` with `service_healthy` for backend → postgres
 
+---
 
+## 🔴 High Priority
 
-## EC2 Setup - Required Before First Deploy
+- [ ] **Secrets** — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `SECRET_KEY` are in `.env.docker` (committed to git). Move to AWS Secrets Manager or GitLab CI variables
+- [ ] **`SECRET_KEY`** — still default value. Generate: `openssl rand -hex 32`
+- [ ] **SSL/TLS** — services exposed on HTTP only. Add HTTPS with domain + AWS Certificate Manager
+- [ ] **PostgreSQL persistence** — `db/data/` is on root EBS volume, lost if EC2 terminated. Switch to RDS
 
-- [ ] SSH into the EC2 and checkout the correct branch first:
-  ```bash
-  ssh -i your-key.pem ubuntu@18.60.103.228
-  cd /home/ubuntu/office_project/glidegate
-  git fetch origin
-  git checkout COPS_Agentic_AI_Deploy
-  git pull origin COPS_Agentic_AI_Deploy
-  ```
-  This ensures `deploy.sh` can do `git pull` without branch mismatch errors.
+---
 
-- [ ] **Attach a persistence layer to PostgreSQL on EC2**
-  - Currently `db/data/` is a local volume — data will be lost if the container is removed
-  - Mount a dedicated EBS volume or use a managed RDS instance for production persistence
+## 🟡 Medium Priority
 
-## Migration - HIGH PRIORITY
+- [ ] **`APP_ENV=development`** — change to `production` in `.env.docker`
+- [ ] **DB password** — `Root` is weak for production
+- [ ] **CORS origins** — currently allows localhost. Lock down to actual domain
+- [ ] **Container resource limits** — no memory/CPU limits in `docker-compose.yml`
+- [ ] **Rate limiting** — no API rate limiting
 
-- [ ] **Fix and re-enable Alembic migration in `docker-compose.yml`**
-  - Migration `0005_trusted_contact_questions.py` fails with a `ForeignKeyViolationError`
-  - Questionnaire `c0000000-0001-0001-0001-000000000001` is never seeded in any migration
-  - Fix: add `INSERT INTO onboarding_questionnaires ... ON CONFLICT DO NOTHING` at the start of `0005` upgrade()
-  - Once fixed, restore the command in `docker-compose.yml`:
-    ```
-    sh -c "poetry run alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-    ```
+---
 
-## Security - HIGH PRIORITY
+## 🟢 Lower Priority
 
-- [ ] **Remove hardcoded SSH private key from `.gitlab-ci.yml`**
-  - Currently the EC2 SSH key is hardcoded directly in the CI file as a temporary workaround
-  - Once maintainer access is available, move it to a GitLab CI/CD Variable (`EC2_SSH_KEY`)
-  - Rotate/replace the EC2 SSH key pair after moving it to the variable
-  - Reference: GitLab → Settings → CI/CD → Variables
-
-
-- ## Attach a persistence layer to PostgreSQL on EC2
-  - Currently `db/data/` is a local volume — data will be lost if the container is removed
-  - Mount a dedicated EBS volume or use a managed RDS instance for production persistence
-
-
-
+- [ ] **Centralized logging** — no CloudWatch or similar
+- [ ] **Error monitoring** — no Sentry or equivalent
+- [ ] **Frontend** — Vite dev server not suitable for high production traffic (nginx recommended)
+- [ ] **DB backups** — no automated backup strategy
+- [ ] **Staging environment** — no separate staging before production deploy
