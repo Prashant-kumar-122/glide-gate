@@ -55,9 +55,9 @@ function relativeTime(dateStr: string): string {
 
 function ProductsCell({ value }: ICellRendererParams<CaseOut, string[]>) {
   const label = value?.length ? value.map((p) => p.replace(/_/g, ' ').toUpperCase()).join(', ') : ''
-  if (!label) return <span style={{ color: 'rgb(107 114 128)' }}>—</span>
+  if (!label) return <span style={{ color: 'rgb(var(--gray-500))' }}>—</span>
   return (
-    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgb(147 197 253)' }}>
+    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgb(var(--blue-500))' }}>
       {label}
     </span>
   )
@@ -79,7 +79,7 @@ function ViewCell({ data, context }: ICellRendererParams<CaseOut>) {
   return (
     <button
       onClick={() => context.openCaseTab(data.id, data.client_id, data.case_name ?? data.id)}
-      className="flex items-center gap-1.5 rounded-md border border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:border-blue-500 hover:bg-blue-500/10 hover:text-blue-300"
+      className="flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-blue-500 hover:bg-blue-500/10 hover:text-blue-600 dark:border-gray-600 dark:text-gray-300 dark:hover:text-blue-300"
     >
       <Eye className="h-3.5 w-3.5" />
       View
@@ -121,29 +121,31 @@ function StageDropdown({ value, onChange }: StageDropdownProps) {
         onClick={() => setOpen((o) => !o)}
         className={[
           'flex min-w-[140px] items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors',
-          open ? 'border-blue-500 bg-gray-800 text-white' : 'border-gray-600 bg-gray-800 text-gray-300 hover:border-gray-500',
+          open
+            ? 'border-blue-500 bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-500',
         ].join(' ')}
       >
         <span className="flex items-center gap-2">
           {selectedDot && <span className={['h-2 w-2 rounded-full', selectedDot].join(' ')} />}
           {selectedLabel}
         </span>
-        <ChevronDown className={['h-3.5 w-3.5 text-gray-400 transition-transform', open ? 'rotate-180' : ''].join(' ')} />
+        <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform" style={{ transform: open ? 'rotate(180deg)' : undefined }} />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-md border border-gray-600 bg-gray-800 shadow-xl">
+        <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-md border border-gray-200 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-800">
           <button
             onClick={() => { onChange(''); setOpen(false) }}
-            className={['flex w-full items-center justify-between px-3 py-2 text-sm transition-colors', !value ? 'bg-blue-600/30 text-white' : 'text-gray-300 hover:bg-gray-700'].join(' ')}
+            className={['flex w-full items-center justify-between px-3 py-2 text-sm transition-colors', !value ? 'bg-blue-600/30 text-gray-900 dark:text-white' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'].join(' ')}
           >
             <span className="flex items-center gap-2.5">
               <span className="h-2 w-2 rounded-full opacity-0" />
               All Stages
             </span>
-            {!value && <Check className="h-3.5 w-3.5 text-blue-400" />}
+            {!value && <Check className="h-3.5 w-3.5 text-blue-500" />}
           </button>
-          <div className="mx-2 border-t border-gray-700/60" />
+          <div className="mx-2 border-t border-gray-200/60 dark:border-gray-700/60" />
           {ALL_STAGES.map((s) => {
             const style = STAGE_STYLES[s]
             const active = value === s
@@ -151,13 +153,13 @@ function StageDropdown({ value, onChange }: StageDropdownProps) {
               <button
                 key={s}
                 onClick={() => { onChange(s); setOpen(false) }}
-                className={['flex w-full items-center justify-between px-3 py-2 text-sm transition-colors', active ? 'bg-blue-600/30 text-white' : 'text-gray-300 hover:bg-gray-700'].join(' ')}
+                className={['flex w-full items-center justify-between px-3 py-2 text-sm transition-colors', active ? 'bg-blue-600/30 text-gray-900 dark:text-white' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'].join(' ')}
               >
                 <span className="flex items-center gap-2.5">
                   <span className={['h-2 w-2 rounded-full', style.optionDot].join(' ')} />
                   {STAGE_LABELS[s]}
                 </span>
-                {active && <Check className="h-3.5 w-3.5 text-blue-400" />}
+                {active && <Check className="h-3.5 w-3.5 text-blue-500" />}
               </button>
             )
           })}
@@ -215,7 +217,7 @@ export default function CaseListTable() {
       minWidth: 130,
       filter: 'agTextColumnFilter',
       cellRenderer: TruncatedCell,
-      cellRendererParams: { style: { fontWeight: '600', color: 'white' } },
+      cellRendererParams: { style: { fontWeight: '600' } },
     },
     {
       headerName: 'Products',
@@ -245,7 +247,7 @@ export default function CaseListTable() {
       minWidth: 130,
       filter: 'agTextColumnFilter',
       cellRenderer: TruncatedCell,
-      cellRendererParams: { style: { color: 'rgb(209 213 219)' } },
+      cellRendererParams: { style: { color: 'rgb(var(--gray-500))' } },
       valueFormatter: (p) => p.value ?? '—',
     },
     {
@@ -255,7 +257,7 @@ export default function CaseListTable() {
       minWidth: 110,
       filter: false,
       cellRenderer: TruncatedCell,
-      cellRendererParams: { style: { color: 'rgb(156 163 175)', fontVariantNumeric: 'tabular-nums' } },
+      cellRendererParams: { style: { color: 'rgb(var(--gray-400))', fontVariantNumeric: 'tabular-nums' } },
       valueFormatter: (p) => relativeTime(p.value),
     },
     {
@@ -286,23 +288,23 @@ export default function CaseListTable() {
   }, [])
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-gray-900 p-3 sm:p-6">
+    <div className="flex flex-1 flex-col overflow-hidden bg-white p-3 dark:bg-gray-900 sm:p-6">
       {/* Filters + count */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-full sm:w-auto">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search cases..."
               value={search}
               onChange={onQuickFilter}
-              className="w-full rounded-md border border-gray-600 bg-gray-800 py-1.5 pl-9 pr-8 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:w-52"
+              className="w-full rounded-md border border-gray-300 bg-white py-1.5 pl-9 pr-8 text-sm text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-500 sm:w-52"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-500 hover:text-gray-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -312,7 +314,7 @@ export default function CaseListTable() {
           {user?.role === 'sales_manager' && (
             <button
               onClick={() => setShowInstModal(true)}
-              className="flex items-center gap-1.5 rounded-md border border-indigo-500 bg-indigo-600/20 px-3 py-1.5 text-sm font-medium text-indigo-300 transition-colors hover:bg-indigo-600/40 hover:text-indigo-200"
+              className="flex items-center gap-1.5 rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-500 dark:bg-indigo-600/20 dark:text-indigo-300 dark:hover:bg-indigo-600/40 dark:hover:text-indigo-200"
             >
               <Plus className="h-3.5 w-3.5" />
               Open New Account
@@ -321,18 +323,18 @@ export default function CaseListTable() {
         </div>
 
         {!isLoading && totalCount > 0 && (
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {filteredCount !== null && filteredCount !== totalCount ? (
               <>
-                <span className="font-semibold text-white">{filteredCount}</span>
-                <span className="text-gray-500"> of </span>
-                <span className="font-semibold text-white">{totalCount}</span>
-                <span className="text-gray-500"> cases</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{filteredCount}</span>
+                <span> of </span>
+                <span className="font-semibold text-gray-900 dark:text-white">{totalCount}</span>
+                <span> cases</span>
               </>
             ) : (
               <>
-                <span className="font-semibold text-white">{totalCount}</span>
-                <span className="text-gray-500"> cases</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{totalCount}</span>
+                <span> cases</span>
               </>
             )}
           </p>
@@ -340,7 +342,7 @@ export default function CaseListTable() {
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-hidden rounded-lg border border-gray-700/60">
+      <div className="flex-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700/60">
         {isError ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-red-400">Failed to load cases. Is the backend running?</p>

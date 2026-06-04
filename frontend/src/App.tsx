@@ -49,12 +49,12 @@ function NavBar() {
     : []
 
   return (
-    <nav className="sticky top-0 z-50 flex items-center bg-gray-900 px-4 py-3 text-sm text-gray-300 lg:px-6">
+    <nav className="sticky top-0 z-50 flex items-center bg-gray-900 border-b border-gray-700 px-4 py-3 text-sm text-gray-300 lg:px-6">
       <Link to={homeRoute} className="flex items-center gap-3 mr-4 hover:opacity-80 transition-opacity">
-        <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
           <Building2 className="w-4 h-4 text-white" />
         </div>
-        <span className="font-semibold text-white">GlideGate</span>
+        <span className="font-semibold text-gray-100">GlideGate</span>
       </Link>
 
       {/* Desktop nav links — hidden on mobile */}
@@ -67,8 +67,8 @@ function NavBar() {
             className={[
               'hidden lg:block px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
               isActive
-                ? 'bg-gray-700 text-white'
-                : 'text-gray-400 hover:bg-gray-700 hover:text-white',
+                ? 'bg-gray-700 text-gray-100'
+                : 'text-gray-500 hover:bg-gray-700 hover:text-gray-100',
             ].join(' ')}
           >
             {l.label}
@@ -84,7 +84,7 @@ function NavBar() {
       {/* Theme toggle */}
       <button
         onClick={toggleTheme}
-        className="mr-2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
+        className="mr-2 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-700 hover:text-gray-100"
         aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
       >
         {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -97,7 +97,7 @@ function NavBar() {
       {visibleLinks.length > 0 && (
         <button
           onClick={() => setMenuOpen((o) => !o)}
-          className="ml-2 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white lg:hidden"
+          className="ml-2 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-700 hover:text-gray-100 lg:hidden"
           aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
           aria-expanded={menuOpen}
         >
@@ -118,8 +118,8 @@ function NavBar() {
                 className={[
                   'block py-3.5 text-sm transition-colors',
                   isActive
-                    ? 'border-l-2 border-gray-400 pl-[19px] pr-5 bg-gray-800 text-white font-medium'
-                    : 'px-5 text-gray-300 hover:bg-gray-800 hover:text-white',
+                    ? 'border-l-2 border-blue-500 pl-[19px] pr-5 bg-gray-800 text-gray-100 font-medium'
+                    : 'px-5 text-gray-400 hover:bg-gray-800 hover:text-gray-100',
                 ].join(' ')}
               >
                 {l.label}
@@ -142,7 +142,7 @@ export default function App() {
   useUserSocket()
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gray-50 dark:bg-gray-800">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
       <NavBar />
       <main className="flex flex-1 flex-col overflow-y-auto">
         <Suspense fallback={

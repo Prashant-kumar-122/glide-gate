@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,6 +12,8 @@
 
   body {
     overflow-x: hidden;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* Remove tap highlight on mobile for cleaner touch UX */
@@ -127,25 +131,33 @@
   --emerald-600:   5 150 105;
 }
 
-/* ── Dark mode — Obsidian / Midnight / Onyx black-gray palette ───────────── */
+/* ── Dark mode — Reference-2 navy / blue-tinted dark palette ─────────────── */
 .dark {
-  /* Gray — pure neutrals, no blue tint
-     Backgrounds: 950→900→800 (body→nav→card)  · WCAG-checked pairs below
-     Text:        100→300→400 (heading→body→muted) on 800 bg: 14.7:1 / 7.4:1 / 5.2:1 ✓ */
-  --gray-50:  232 232 232;   /* #e8e8e8 */
-  --gray-100: 216 216 216;   /* #d8d8d8  platinum — primary headings */
-  --gray-200: 200 200 200;   /* #c8c8c8  silver */
-  --gray-300: 180 180 180;   /* #b4b4b4  body text */
-  --gray-400: 158 158 158;   /* #9e9e9e  muted labels (5.2:1 on #0e0e0e) */
-  --gray-500: 132 132 132;   /* #848484  secondary labels (4.8:1 on #0e0e0e) */
-  --gray-600:  74  74  74;   /* #4a4a4a  very muted — avoid as text on dark bg */
-  --gray-700:  36  36  36;   /* #242424  borders / hover bg */
-  --gray-800:  22  22  22;   /* #161616  main content / card surface */
-  --gray-900:   8   8   8;   /* #080808  nav chrome (always dark) */
-  --gray-950:   0   0   0;   /* #000000  app body */
+  /* Gray — navy-blue tinted neutrals matching reference-2 dark palette
+     Backgrounds: 950→900→800 (body→nav→card)
+     Text:        100→300→400 (heading→body→muted) */
+  --gray-50:  245 247 250;   /* #F5F7FA */
+  --gray-100: 240 242 245;   /* #F0F2F5  primary headings (text-primary) */
+  --gray-200: 215 220 230;   /* #D7DCE6  silver */
+  --gray-300: 192 198 212;   /* #C0C6D4  body text */
+  --gray-400: 160 170 185;   /* #A0AAB9  muted labels */
+  --gray-500: 138 148 166;   /* #8A94A6  secondary labels (text-secondary) */
+  --gray-600:  79  90 110;   /* #4F5A6E  very muted (text-muted) */
+  --gray-700:  42  49  64;   /* #2A3140  borders / hover bg (border-default) */
+  --gray-800:  30  37  51;   /* #1E2533  card surface (bg-elevated) */
+  --gray-900:  22  27  36;   /* #161B24  nav chrome (bg-surface) */
+  --gray-950:  13  15  20;   /* #0D0F14  app body (bg-base) */
 
-  /* Blue — kept at full Tailwind values in dark mode so buttons and
-     interactive elements remain recognisably blue on the dark shell. */
+  /* Blue — updated to match reference-2's primary (#3B7BF5) */
+  --blue-50:  232 241 255;   /* #E8F1FF */
+  --blue-100: 210 227 254;   /* #D2E3FE */
+  --blue-300: 150 190 253;   /* #96BEFD */
+  --blue-400:  96 150 251;   /* #6096FB */
+  --blue-500:  59 123 245;   /* #3B7BF5  primary */
+  --blue-600:  45 107 224;   /* #2D6BE0  primary-hover */
+  --blue-700:  29  91 199;   /* #1D5BC7 */
+  --blue-900:  26  42  74;   /* #1A2A4A  primary-subtle */
+  --blue-950:  15  25  50;   /* #0F1932 */
 
   /* Green — desaturated ~30% (status: approved / pass / success) */
   --green-50:  228 244 234;   /* #e4f4ea */
@@ -245,11 +257,11 @@
 
 /* Dark mode */
 .dark ::-webkit-scrollbar-thumb {
-  background-color: #242424;
+  background-color: #2A3140;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background-color: #363636;
+  background-color: #3B4455;
 }
 
 /* Firefox */
@@ -259,5 +271,5 @@
 }
 
 .dark * {
-  scrollbar-color: #242424 transparent;
+  scrollbar-color: #2A3140 transparent;
 }
