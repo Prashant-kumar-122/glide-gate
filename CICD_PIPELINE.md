@@ -239,9 +239,36 @@ cd /home/ubuntu/office_project/glidegate
 
 ---
 
+## Completed
+
+1. ✅ Move SSH key to GitLab CI/CD Variable (`EC2_SSH_KEY`, File type)
+2. ✅ Fix Alembic migration `0005` FK seed issue — re-enabled in `docker-compose.yml`
+3. ✅ Upgrade Node.js to `20.20.2` on EC2 and `frontend/Dockerfile`
+4. ✅ Pin Poetry to `2.4.1` in `Dockerfile`
+5. ✅ Fix ASGI entrypoint to use `socket_app`
+6. ✅ Remove `./backend:/app` volume mount shadowing image
+7. ✅ Enable `depends_on` with `service_healthy` for backend → postgres
+
+---
+
 ## Pending TODOs
 
-1. ✅ ~~**Move SSH key to GitLab CI/CD Variable**~~ — done, stored as `EC2_SSH_KEY` File type variable
-2. **Fix Alembic migration** — `0005_trusted_contact_questions.py` has FK seed issue; re-enable in `docker-compose.yml` after fix
-3. **Attach EBS volume** — for persistent PostgreSQL storage in production
-4. ✅ ~~**Upgrade Node.js to 20**~~ — `frontend/Dockerfile` updated to `node:20-alpine`; update Node.js on EC2 manually via NodeSource setup_20.x
+**High Priority**
+- Secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `SECRET_KEY`) in `.env.docker` — move to AWS Secrets Manager
+- `SECRET_KEY` still default — generate with `openssl rand -hex 32`
+- SSL/TLS — add HTTPS with domain + AWS Certificate Manager
+- PostgreSQL persistence — switch to RDS (current `db/data/` lost if EC2 terminated)
+
+**Medium Priority**
+- `APP_ENV=development` → change to `production`
+- DB password `Root` is weak
+- CORS origins — lock down to actual domain
+- Container resource limits — no memory/CPU limits in `docker-compose.yml`
+- Rate limiting — no API rate limiting
+
+**Lower Priority**
+- Centralized logging (CloudWatch)
+- Error monitoring (Sentry)
+- Frontend — Vite dev server not suitable for high traffic (nginx recommended)
+- DB backups — no automated backup strategy
+- Staging environment

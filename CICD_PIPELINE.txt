@@ -244,22 +244,43 @@ CICD_PIPELINE.md        | This documentation (Markdown version)
 
 
 ================================================================================
-PENDING TODOs
+COMPLETED
 ================================================================================
 
 [DONE] Move SSH key to GitLab CI/CD Variable (EC2_SSH_KEY, File type)
+[DONE] Fix Alembic migration 0005 FK seed issue - re-enabled in docker-compose
+[DONE] Upgrade Node.js to 20.20.2 on EC2 and frontend/Dockerfile
+[DONE] Pin Poetry to 2.4.1 in Dockerfile
+[DONE] Fix ASGI entrypoint to use socket_app
+[DONE] Remove ./backend:/app volume mount shadowing image
+[DONE] Enable depends_on with service_healthy for backend -> postgres
 
-[PENDING] Fix Alembic migration
-    - 0005_trusted_contact_questions.py has FK seed issue
-    - Re-enable alembic upgrade head in docker-compose.yml after fix
+================================================================================
+PENDING TODOs
+================================================================================
 
-[PENDING] Attach EBS volume
-    - For persistent PostgreSQL storage in production
-    - Currently db/data is local - lost if EC2 is terminated
+HIGH PRIORITY
+-------------
+[PENDING] Secrets - API keys in .env.docker (committed to git)
+          Move ANTHROPIC_API_KEY, OPENAI_API_KEY, SECRET_KEY to AWS Secrets Manager
+[PENDING] SECRET_KEY still default - generate with: openssl rand -hex 32
+[PENDING] SSL/TLS - services on HTTP only, add HTTPS + domain
+[PENDING] PostgreSQL persistence - switch to RDS (db/data lost if EC2 terminated)
 
-[DONE] Upgrade Node.js to 20
-    - frontend/Dockerfile updated to node:20-alpine
-    - Run on EC2: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
-                  sudo apt-get install -y nodejs
+MEDIUM PRIORITY
+---------------
+[PENDING] APP_ENV=development - change to production in .env.docker
+[PENDING] DB password Root is weak for production
+[PENDING] CORS - lock down to actual domain
+[PENDING] Container resource limits - no memory/CPU limits in docker-compose
+[PENDING] Rate limiting - no API rate limiting
+
+LOWER PRIORITY
+--------------
+[PENDING] Centralized logging (CloudWatch)
+[PENDING] Error monitoring (Sentry)
+[PENDING] Frontend - Vite dev server not suitable for high traffic (use nginx)
+[PENDING] DB backups - no automated backup strategy
+[PENDING] Staging environment
 
 ================================================================================
