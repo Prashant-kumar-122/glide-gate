@@ -34,7 +34,7 @@ class OnboardingQuestion(Base):
     __table_args__ = (
         UniqueConstraint("questionnaire_id", "question_key", name="oqn_key_uq"),
         CheckConstraint(
-            "question_type IN ('text','number','select','multi_select','date','boolean','currency')",
+            "question_type IN ('text','number','select','multi_select','date','boolean','currency','textarea','email')",
             name="oqn_type_chk",
         ),
     )

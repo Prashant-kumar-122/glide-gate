@@ -228,6 +228,8 @@ _DB_TYPE_MAP: dict[str, str] = {
     "multi_select": "multi_choice",
     "boolean": "choice",
     "currency": "number",
+    "textarea": "text",
+    "email": "email",
 }
 
 
