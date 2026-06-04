@@ -11,7 +11,6 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
     volumes:
       - ./db/data:/var/lib/postgresql/data
-      - ./db/schema:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:
