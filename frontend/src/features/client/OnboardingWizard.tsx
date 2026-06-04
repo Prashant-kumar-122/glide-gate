@@ -262,10 +262,10 @@ function DatePickerField({
           type="button"
           onClick={() => { setOpen((o) => !o); setMode('day') }}
           className={[
-            'w-full flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-2 dark:bg-gray-800 dark:text-gray-100',
+            'w-full flex items-center justify-between rounded-md border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-1 dark:bg-gray-950 dark:text-gray-100',
             hasError  ? 'border-red-400 focus:ring-red-400'
-            : open    ? 'border-blue-500 ring-2 ring-blue-500'
-            : 'border-gray-300 focus:ring-blue-500 dark:border-gray-600',
+            : open    ? 'border-primary ring-1 ring-primary'
+            : 'border-gray-200 focus:ring-primary dark:border-gray-700',
             displayValue ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500',
           ].join(' ')}
         >
@@ -274,7 +274,7 @@ function DatePickerField({
         </button>
 
         {open && (
-          <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-2xl border border-gray-200 bg-white shadow-2xl p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-md border border-gray-200 bg-white shadow-xl p-4 dark:border-gray-700 dark:bg-gray-900">
 
             {/* ── Header ── */}
             <div className="flex items-center justify-between mb-3">
@@ -282,7 +282,7 @@ function DatePickerField({
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0 dark:hover:bg-gray-700 dark:text-gray-400"
+                  className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 text-gray-500 transition-colors shrink-0 dark:hover:bg-gray-800 dark:text-gray-400"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -295,10 +295,10 @@ function DatePickerField({
                     type="button"
                     onClick={() => setMode((m) => m === 'month' ? 'day' : 'month')}
                     className={[
-                      'px-2 py-1 rounded-lg text-sm font-semibold transition-colors',
+                      'px-2 py-1 text-sm font-semibold transition-colors',
                       mode === 'month'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700',
+                        ? 'bg-primary text-white'
+                        : 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800',
                     ].join(' ')}
                   >
                     {MONTH_NAMES[viewMonth]}
@@ -309,10 +309,10 @@ function DatePickerField({
                   type="button"
                   onClick={() => setMode((m) => m === 'year' ? 'day' : 'year')}
                   className={[
-                    'px-2 py-1 rounded-lg text-sm font-semibold transition-colors',
+                    'px-2 py-1 text-sm font-semibold transition-colors',
                     mode === 'year'
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700',
+                      ? 'bg-primary text-white'
+                      : 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800',
                   ].join(' ')}
                 >
                   {viewYear}
@@ -323,7 +323,7 @@ function DatePickerField({
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition-colors shrink-0 dark:hover:bg-gray-700 dark:text-gray-400"
+                  className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 text-gray-500 transition-colors shrink-0 dark:hover:bg-gray-800 dark:text-gray-400"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -339,10 +339,10 @@ function DatePickerField({
                     type="button"
                     onClick={() => { setViewMonth(i); setMode('day') }}
                     className={[
-                      'py-2 rounded-xl text-sm font-medium transition-all',
+                      'py-2 text-sm font-medium transition-all',
                       viewMonth === i
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700',
+                        ? 'bg-primary text-white'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800',
                     ].join(' ')}
                   >
                     {m}
@@ -364,12 +364,12 @@ function DatePickerField({
                     data-selected={y === viewYear ? 'true' : 'false'}
                     onClick={() => { setViewYear(y); setMode('day') }}
                     className={[
-                      'py-1.5 rounded-xl text-xs font-medium transition-all',
+                      'py-1.5 text-xs font-medium transition-all',
                       y === viewYear
-                        ? 'bg-blue-600 text-white shadow-sm'
+                        ? 'bg-primary text-white'
                         : y === today.getFullYear()
-                        ? 'ring-1 ring-blue-400 text-blue-600 dark:text-blue-400'
-                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700',
+                        ? 'ring-1 ring-primary text-primary dark:text-primary'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800',
                     ].join(' ')}
                   >
                     {y}
@@ -396,14 +396,14 @@ function DatePickerField({
                         type="button"
                         onClick={() => selectDate(date)}
                         className={[
-                          'h-8 w-8 mx-auto flex items-center justify-center rounded-lg text-xs font-medium transition-all',
+                          'h-8 w-8 mx-auto flex items-center justify-center text-xs font-medium transition-all',
                           isSel
-                            ? 'bg-blue-600 text-white shadow-sm'
+                            ? 'bg-primary text-white'
                             : isToday && thisMonth
-                            ? 'ring-2 ring-blue-400 text-blue-600 font-semibold'
+                            ? 'ring-1 ring-primary text-primary font-semibold'
                             : thisMonth
-                            ? 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700'
-                            : 'text-gray-300 hover:bg-gray-50 dark:text-gray-600 dark:hover:bg-gray-700',
+                            ? 'text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800'
+                            : 'text-gray-300 hover:bg-gray-50 dark:text-gray-600 dark:hover:bg-gray-800',
                         ].join(' ')}
                       >
                         {date.getDate()}
@@ -427,7 +427,7 @@ function DatePickerField({
                 <button
                   type="button"
                   onClick={() => { selectDate(today); setViewYear(today.getFullYear()); setViewMonth(today.getMonth()) }}
-                  className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                  className="text-xs font-medium text-primary hover:text-primary-hover transition-colors"
                 >
                   Today
                 </button>
@@ -477,10 +477,10 @@ function CustomSelectField({
           type="button"
           onClick={() => setOpen((o) => !o)}
           className={[
-            'w-full flex items-center justify-between rounded-xl border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-2 dark:bg-gray-800',
+            'w-full flex items-center justify-between rounded-md border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-1 dark:bg-gray-950',
             hasError  ? 'border-red-400 focus:ring-red-400'
-            : open    ? 'border-blue-500 ring-2 ring-blue-500'
-            : 'border-gray-300 focus:ring-blue-500 dark:border-gray-600',
+            : open    ? 'border-primary ring-1 ring-primary'
+            : 'border-gray-200 focus:ring-primary dark:border-gray-700',
             strVal ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500',
           ].join(' ')}
         >
@@ -490,7 +490,7 @@ function CustomSelectField({
 
         {/* Dropdown list */}
         {open && (
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-full rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden dark:border-gray-700 dark:bg-gray-800">
+          <div className="absolute left-0 top-full mt-1.5 z-50 w-full rounded-md border border-gray-200 bg-white shadow-xl overflow-hidden dark:border-gray-700 dark:bg-gray-900">
             <div className="max-h-56 overflow-y-auto py-1">
               {options.map((o) => {
                 const isSelected = strVal === o
@@ -502,13 +502,13 @@ function CustomSelectField({
                     className={[
                       'w-full flex items-center justify-between px-4 py-2.5 text-sm text-left transition-colors',
                       isSelected
-                        ? 'bg-blue-50 text-blue-700 font-medium dark:bg-blue-950 dark:text-blue-300'
-                        : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700',
+                        ? 'bg-blue-50 text-primary font-medium dark:bg-primary-subtle dark:text-blue-300'
+                        : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800',
                     ].join(' ')}
                   >
                     <span>{o}</span>
                     {isSelected && (
-                      <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-4 h-4 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                       </svg>
                     )}
@@ -540,8 +540,8 @@ function SchemaField({
   const hasError = !!error
   const ringClass = hasError
     ? 'border-red-400 focus:ring-red-400'
-    : 'border-gray-300 focus:ring-blue-500'
-  const base = `w-full rounded-xl border px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 transition-colors dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 ${ringClass}`
+    : 'border-gray-200 focus:ring-primary'
+  const base = `w-full rounded-md border px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-1 transition-colors dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 ${ringClass}`
   const strVal = value !== undefined && value !== null ? String(value) : ''
 
   // ── Choice: radio buttons (≤3 opts) or styled dropdown (4+) ─────────────
@@ -561,15 +561,15 @@ function SchemaField({
                     className={[
                       'w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
                       selected
-                        ? 'border-blue-500'
+                        ? 'border-primary'
                         : hasError
                         ? 'border-red-400'
                         : 'border-gray-400',
                     ].join(' ')}
                   >
-                    {selected && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                    {selected && <div className="w-2 h-2 rounded-full bg-primary" />}
                   </div>
-                  <span className={`text-sm font-medium ${selected ? 'text-blue-600' : 'text-gray-700'}`}>{o}</span>
+                  <span className={`text-sm font-medium ${selected ? 'text-primary' : 'text-gray-700'}`}>{o}</span>
                   <input
                     type="radio"
                     name={field.question_key}
@@ -610,19 +610,19 @@ function SchemaField({
               <label
                 key={o}
                 className={[
-                  'flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all',
+                  'flex items-center gap-3 px-4 py-3 border-2 cursor-pointer transition-all',
                   checked
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                    ? 'border-primary bg-blue-50 dark:bg-primary-subtle'
                     : hasError
-                    ? 'border-red-200 hover:border-red-300 bg-white dark:bg-gray-800 dark:border-red-700 dark:hover:border-red-600'
-                    : 'border-gray-200 hover:border-blue-200 bg-white dark:bg-gray-800 dark:border-gray-600 dark:hover:border-blue-500',
+                    ? 'border-red-200 hover:border-red-300 bg-white dark:bg-gray-900 dark:border-red-700 dark:hover:border-red-600'
+                    : 'border-gray-200 hover:border-primary/50 bg-white dark:bg-gray-900 dark:border-gray-700 dark:hover:border-primary',
                 ].join(' ')}
               >
                 <div
                   className={[
-                    'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all',
+                    'w-4 h-4 border-2 flex items-center justify-center shrink-0 transition-all',
                     checked
-                      ? 'border-blue-500 bg-blue-500'
+                      ? 'border-primary bg-primary'
                       : hasError
                       ? 'border-red-300 dark:border-red-500'
                       : 'border-gray-300 dark:border-gray-500',
@@ -634,7 +634,7 @@ function SchemaField({
                     </svg>
                   )}
                 </div>
-                <span className={`text-sm font-medium ${checked ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>{o}</span>
+                <span className={`text-sm font-medium ${checked ? 'text-primary dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>{o}</span>
                 <input
                   type="checkbox"
                   checked={checked}
@@ -664,14 +664,13 @@ function SchemaField({
   if (field.question_key === 'full_name_signature') {
     return (
       <div className="space-y-1.5">
-        <div className={`relative w-full rounded-xl border bg-gray-50 px-4 py-3 dark:bg-gray-800 ${hasError ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`}>
+        <div className={`relative w-full rounded-md border bg-gray-50 px-4 py-3 dark:bg-gray-900 ${hasError ? 'border-red-400' : 'border-gray-200 dark:border-gray-700'}`}>
           <input
             type="text"
             value={strVal}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Sign your full name"
             className="w-full bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 text-2xl placeholder:text-gray-300 dark:placeholder:text-gray-500 placeholder:text-lg"
-            style={{ fontFamily: "'Dancing Script', cursive" }}
           />
           <div className="absolute bottom-0 left-4 right-4 border-b border-gray-300 dark:border-gray-600" />
         </div>
@@ -719,10 +718,10 @@ function ProductCard({
     <button
       onClick={onToggle}
       className={[
-        'w-full text-left rounded-xl border-2 p-4 transition-all',
+        'w-full text-left rounded-md border-2 p-4 transition-all',
         selected
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-          : 'border-gray-200 bg-white hover:border-blue-300 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-blue-500',
+          ? 'border-primary bg-blue-50 dark:bg-primary-subtle'
+          : 'border-gray-200 bg-white hover:border-primary/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary',
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-3">
@@ -735,7 +734,7 @@ function ProductCard({
         <div
           className={[
             'w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all',
-            selected ? 'border-blue-500 bg-blue-500' : 'border-gray-300',
+            selected ? 'border-primary bg-primary' : 'border-gray-300',
           ].join(' ')}
         >
           {selected && (
@@ -781,7 +780,7 @@ function ReviewStep({
         const fields = schemaFields.filter((f) => f.section === section && localData[f.question_key])
         if (fields.length === 0) return null
         return (
-          <div key={section} className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <div key={section} className="border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
             <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
               {formatSectionTitle(section)}
             </h4>
@@ -801,7 +800,7 @@ function ReviewStep({
         )
       })}
 
-      <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 dark:bg-gray-800 dark:border-gray-700">
+      <div className="bg-gray-50 border border-gray-200 p-4 dark:bg-gray-900 dark:border-gray-700">
         <p className="text-xs text-gray-500 leading-relaxed dark:text-gray-400">
           By submitting this application, I confirm that all information provided is accurate and
           complete to the best of my knowledge. I understand that providing false information may
@@ -812,7 +811,7 @@ function ReviewStep({
       <button
         onClick={onSubmit}
         disabled={isSubmitting}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isSubmitting ? (
           <><Loader className="w-4 h-4 animate-spin" />Submitting…</>
@@ -1099,14 +1098,14 @@ export default function OnboardingWizard({
           </div>
 
           {createError && (
-            <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:border-red-800 dark:text-red-300">
+            <div className="bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:border-red-800 dark:text-red-300">
               {createError}
             </div>
           )}
 
           {productsLoading ? (
             <div className="flex justify-center py-12">
-              <div className="h-7 w-7 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin" />
+              <div className="h-7 w-7 rounded-full border-2 border-gray-200 border-t-primary animate-spin" />
             </div>
           ) : products.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">No products available.</p>
@@ -1136,12 +1135,12 @@ export default function OnboardingWizard({
                 return (
                   <span
                     key={code}
-                    className="inline-flex items-center gap-1.5 text-xs font-medium bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium bg-blue-50 text-primary px-2.5 py-1"
                   >
                     {p?.name ?? code}
                     <button
                       onClick={() => setSelectedProducts((prev) => prev.filter((x) => x !== code))}
-                      className="hover:text-blue-900"
+                      className="hover:text-primary-hover"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -1183,7 +1182,7 @@ export default function OnboardingWizard({
       if (schemaLoading) {
         return (
           <div className="flex justify-center py-12">
-            <div className="h-7 w-7 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin" />
+            <div className="h-7 w-7 rounded-full border-2 border-gray-200 border-t-primary animate-spin" />
           </div>
         )
       }
@@ -1194,7 +1193,7 @@ export default function OnboardingWizard({
         <div className="space-y-5">
           {/* Pre-fill banner */}
           {showPrefillBanner && prefillCount > 0 && (
-            <div className="flex items-start gap-3 rounded-xl bg-violet-50 border border-violet-200 px-4 py-3">
+            <div className="flex items-start gap-3 bg-violet-50 border border-violet-200 px-4 py-3">
               <Sparkles className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <span className="text-xs text-violet-800">
@@ -1213,7 +1212,7 @@ export default function OnboardingWizard({
 
           {/* Validation error banner */}
           {hasErrors && (
-            <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+            <div className="flex items-center gap-3 bg-red-50 border border-red-200 px-4 py-3">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
               <span className="text-xs font-medium text-red-700">
                 Please fill in all required fields before continuing.
@@ -1265,7 +1264,7 @@ export default function OnboardingWizard({
       {/* Top progress bar */}
       <div className="h-1 bg-gray-200 shrink-0 dark:bg-gray-700">
         <div
-          className="h-full bg-blue-600 transition-all duration-500"
+          className="h-full bg-primary transition-all duration-500"
           style={{ width: `${progressPct}%` }}
         />
       </div>
@@ -1273,7 +1272,7 @@ export default function OnboardingWizard({
       {/* Header */}
       <header className="shrink-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-primary flex items-center justify-center">
             <Building2 className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -1283,7 +1282,7 @@ export default function OnboardingWizard({
         </div>
         <button
           onClick={onCancel}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 border border-gray-600 hover:border-gray-500 px-3 py-1.5 rounded-lg transition-colors"
+          className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 border border-gray-600 hover:border-gray-500 px-3 py-1.5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Cancel
@@ -1307,7 +1306,7 @@ export default function OnboardingWizard({
                     onClick={() => isCompleted && setStep(idx)}
                     disabled={isPending}
                     className={[
-                      'w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all',
+                      'w-full flex items-center gap-3 px-3 py-3 text-left transition-all',
                       isActive && 'bg-white/10',
                       isCompleted && 'hover:bg-white/5 cursor-pointer',
                       isPending && 'cursor-default opacity-40',
@@ -1315,9 +1314,9 @@ export default function OnboardingWizard({
                   >
                     <div
                       className={[
-                        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold transition-all',
-                        isCompleted ? 'bg-emerald-500 text-white' :
-                        isActive ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/40' :
+                        'w-8 h-8 flex items-center justify-center shrink-0 text-xs font-bold transition-all',
+                        isCompleted ? 'bg-success text-white' :
+                        isActive ? 'bg-primary text-white' :
                         'bg-white/10 text-gray-400',
                       ].join(' ')}
                     >
@@ -1345,9 +1344,9 @@ export default function OnboardingWizard({
               <span className="text-xs text-gray-400">Overall progress</span>
               <span className="text-xs font-bold text-white">{progressPct}%</span>
             </div>
-            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-white/10 overflow-hidden">
               <div
-                className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                className="h-full bg-primary transition-all duration-500"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
@@ -1362,14 +1361,14 @@ export default function OnboardingWizard({
           {/* Step header */}
           <div className="shrink-0 bg-white border-b border-gray-100 px-8 py-5 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center dark:bg-gray-700">
+              <div className="w-9 h-9 bg-gray-100 flex items-center justify-center dark:bg-gray-700">
                 {currentStep && <currentStep.icon className="w-5 h-5 text-gray-600 dark:text-gray-300" />}
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{currentStep?.title}</h1>
               </div>
               <div className="ml-auto flex items-center gap-2 text-xs text-gray-400">
-                <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                <span className="w-6 h-6 bg-gray-100 flex items-center justify-center font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                   {step + 1}
                 </span>
                 <span>of {totalSteps}</span>
@@ -1386,7 +1385,7 @@ export default function OnboardingWizard({
           <div className="shrink-0 bg-white border-t border-gray-100 px-8 py-5 flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
             >
               <ArrowLeft className="w-4 h-4" />
               {step === 0 ? 'Cancel' : 'Back'}
@@ -1402,7 +1401,7 @@ export default function OnboardingWizard({
                   <button
                     onClick={handleProductsContinue}
                     disabled={!ready || creatingCase}
-                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {creatingCase ? (
                       <><Loader className="w-4 h-4 animate-spin" />Creating…</>
@@ -1418,10 +1417,10 @@ export default function OnboardingWizard({
                         : handleSectionContinue
                     }
                     className={[
-                      'flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors',
+                      'flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold transition-colors',
                       ready
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 opacity-60',
+                        ? 'bg-primary text-white hover:bg-primary-hover'
+                        : 'bg-primary text-white hover:bg-primary-hover opacity-60',
                     ].join(' ')}
                   >
                     Continue <ArrowRight className="w-4 h-4" />

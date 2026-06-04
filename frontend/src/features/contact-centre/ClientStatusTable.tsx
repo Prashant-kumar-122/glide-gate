@@ -20,13 +20,13 @@ const STAGE_LABELS: Record<string, string> = {
 }
 
 const STAGE_STYLES: Record<string, { badge: string; dot: string; optionDot: string }> = {
-  INTAKE:            { badge: 'border border-gray-500/60 text-gray-400',     dot: 'bg-gray-400',   optionDot: 'bg-gray-400' },
-  REVIEW:            { badge: 'border border-yellow-500/60 text-yellow-400', dot: 'bg-yellow-400', optionDot: 'bg-yellow-400' },
-  SALES_REVIEW:      { badge: 'border border-yellow-500/60 text-yellow-400', dot: 'bg-yellow-400', optionDot: 'bg-yellow-400' },
-  KYC:               { badge: 'border border-blue-500/60 text-blue-400',     dot: 'bg-blue-400',   optionDot: 'bg-blue-400' },
-  PARALLEL_PRODUCTS: { badge: 'border border-purple-500/60 text-purple-400', dot: 'bg-purple-400', optionDot: 'bg-purple-400' },
-  COMPLETE:          { badge: 'border border-teal-500/60 text-teal-400',     dot: 'bg-teal-400',   optionDot: 'bg-teal-400' },
-  ESCALATED:         { badge: 'border border-red-500/60 text-red-400',       dot: 'bg-red-400',    optionDot: 'bg-red-400' },
+  INTAKE:            { badge: 'border border-gray-600/50 text-gray-400',    dot: 'bg-gray-500',   optionDot: 'bg-gray-400' },
+  REVIEW:            { badge: 'border border-amber-600/50 text-amber-400',  dot: 'bg-amber-500',  optionDot: 'bg-amber-400' },
+  SALES_REVIEW:      { badge: 'border border-amber-600/50 text-amber-400',  dot: 'bg-amber-500',  optionDot: 'bg-amber-400' },
+  KYC:               { badge: 'border border-blue-600/50 text-blue-400',    dot: 'bg-blue-500',   optionDot: 'bg-blue-400' },
+  PARALLEL_PRODUCTS: { badge: 'border border-violet-600/50 text-violet-400',dot: 'bg-violet-500', optionDot: 'bg-violet-400' },
+  COMPLETE:          { badge: 'border border-green-600/50 text-green-400',  dot: 'bg-green-500',  optionDot: 'bg-green-400' },
+  ESCALATED:         { badge: 'border border-red-600/50 text-red-400',      dot: 'bg-red-500',    optionDot: 'bg-red-400' },
 }
 
 const ALL_STAGES = ['INTAKE', 'REVIEW', 'SALES_REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE', 'ESCALATED']
@@ -44,9 +44,9 @@ function caseName(c: CaseOut): string {
 
 function relativeTime(dateStr: string): string {
   const diffMs = Date.now() - new Date(dateStr).getTime()
-  const days = Math.floor(diffMs / 86_400_000)
-  if (days > 0) return `${days}d ago`
-  const hours = Math.floor(diffMs / 3_600_000)
+  const days   = Math.floor(diffMs / 86_400_000)
+  if (days > 0)  return `${days}d ago`
+  const hours  = Math.floor(diffMs / 3_600_000)
   if (hours > 0) return `${hours}h ago`
   return `${Math.floor(diffMs / 60_000)}m ago`
 }
@@ -57,7 +57,7 @@ function ProductsCell({ value }: ICellRendererParams<CaseOut, string[]>) {
   const label = value?.length ? value.map((p) => p.replace(/_/g, ' ').toUpperCase()).join(', ') : ''
   if (!label) return <span style={{ color: 'rgb(var(--gray-500))' }}>—</span>
   return (
-    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgb(var(--blue-500))' }}>
+    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgb(var(--blue-400))' }}>
       {label}
     </span>
   )
@@ -65,9 +65,9 @@ function ProductsCell({ value }: ICellRendererParams<CaseOut, string[]>) {
 
 function StageCell({ value }: ICellRendererParams<CaseOut, string>) {
   if (!value) return null
-  const style = STAGE_STYLES[value] ?? { badge: 'border border-gray-600 text-gray-400', dot: 'bg-gray-400', optionDot: 'bg-gray-400' }
+  const style = STAGE_STYLES[value] ?? { badge: 'border border-gray-600/50 text-gray-400', dot: 'bg-gray-500', optionDot: 'bg-gray-400' }
   return (
-    <span className={['inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium', style.badge].join(' ')}>
+    <span className={['inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide', style.badge].join(' ')}>
       <span className={['h-1.5 w-1.5 rounded-full', style.dot].join(' ')} />
       {STAGE_LABELS[value] ?? value}
     </span>
@@ -79,16 +79,16 @@ function ViewCell({ data, context }: ICellRendererParams<CaseOut>) {
   return (
     <button
       onClick={() => context.openClientTab(data.id, caseName(data))}
-      className="flex items-center gap-1.5 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors hover:border-blue-500 hover:bg-blue-500/10 hover:text-blue-300"
+      className="flex items-center gap-1.5 border border-gray-600/50 px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-gray-400 transition-colors hover:border-primary/60 hover:bg-primary-subtle hover:text-primary"
     >
-      <Eye className="h-3.5 w-3.5" />
+      <Eye className="h-3 w-3" />
       View
     </button>
   )
 }
 
 function NoCasesOverlay() {
-  return <span className="text-sm text-gray-500">No cases found</span>
+  return <span className="text-xs text-gray-500">No cases found</span>
 }
 
 // ── Stage dropdown ────────────────────────────────────────────────────────────
@@ -111,51 +111,59 @@ function StageDropdown({ value, onChange }: StageDropdownProps) {
   }, [])
 
   const selectedLabel = value ? STAGE_LABELS[value] : 'All Stages'
-  const selectedDot = value ? STAGE_STYLES[value]?.dot : null
+  const selectedDot   = value ? STAGE_STYLES[value]?.dot : null
 
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
         className={[
-          'flex min-w-[140px] items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors',
-          open ? 'border-blue-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500',
+          'flex min-w-[130px] items-center justify-between gap-2 border px-3 py-1.5 text-xs transition-colors',
+          open
+            ? 'border-primary bg-blue-50 text-primary dark:bg-primary-subtle dark:text-white'
+            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300',
         ].join(' ')}
       >
         <span className="flex items-center gap-2">
-          {selectedDot && <span className={['h-2 w-2 rounded-full', selectedDot].join(' ')} />}
+          {selectedDot && <span className={['h-1.5 w-1.5 rounded-full', selectedDot].join(' ')} />}
           {selectedLabel}
         </span>
-        <ChevronDown className={['h-3.5 w-3.5 text-gray-500 dark:text-gray-400 transition-transform', open ? 'rotate-180' : ''].join(' ')} />
+        <ChevronDown className={['h-3 w-3 text-gray-400 transition-transform', open ? 'rotate-180' : ''].join(' ')} />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl">
+        <div className="absolute left-0 top-full z-50 mt-0.5 min-w-[150px] border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
           <button
             onClick={() => { onChange(''); setOpen(false) }}
-            className={['flex w-full items-center justify-between px-3 py-2 text-sm transition-colors', !value ? 'bg-blue-600/30 text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'].join(' ')}
+            className={[
+              'flex w-full items-center justify-between px-3 py-2 text-xs transition-colors',
+              !value ? 'bg-blue-50 text-primary dark:bg-primary-subtle dark:text-white' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800',
+            ].join(' ')}
           >
-            <span className="flex items-center gap-2.5">
-              <span className="h-2 w-2 rounded-full opacity-0" />
+            <span className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full opacity-0" />
               All Stages
             </span>
-            {!value && <Check className="h-3.5 w-3.5 text-blue-400" />}
+            {!value && <Check className="h-3 w-3 text-primary" />}
           </button>
-          <div className="mx-2 border-t border-gray-200/60 dark:border-gray-700/60" />
+          <div className="mx-2 border-t border-gray-100 dark:border-gray-800" />
           {ALL_STAGES.map((s) => {
-            const style = STAGE_STYLES[s]
+            const style  = STAGE_STYLES[s]
             const active = value === s
             return (
               <button
                 key={s}
                 onClick={() => { onChange(s); setOpen(false) }}
-                className={['flex w-full items-center justify-between px-3 py-2 text-sm transition-colors', active ? 'bg-blue-600/30 text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'].join(' ')}
+                className={[
+                  'flex w-full items-center justify-between px-3 py-2 text-xs transition-colors',
+                  active ? 'bg-blue-50 text-primary dark:bg-primary-subtle dark:text-white' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800',
+                ].join(' ')}
               >
-                <span className="flex items-center gap-2.5">
-                  <span className={['h-2 w-2 rounded-full', style.optionDot].join(' ')} />
+                <span className="flex items-center gap-2">
+                  <span className={['h-1.5 w-1.5 rounded-full', style.optionDot].join(' ')} />
                   {STAGE_LABELS[s]}
                 </span>
-                {active && <Check className="h-3.5 w-3.5 text-blue-400" />}
+                {active && <Check className="h-3 w-3 text-primary" />}
               </button>
             )
           })}
@@ -171,8 +179,8 @@ export default function ClientStatusTable() {
   const { data: cases, isLoading, isError } = useAllCases()
   const { openClientTab } = useCCStore()
 
-  const [search, setSearch] = useState('')
-  const [stageFilter, setStageFilter] = useState('')
+  const [search,        setSearch]        = useState('')
+  const [stageFilter,   setStageFilter]   = useState('')
   const [filteredCount, setFilteredCount] = useState<number | null>(null)
   const gridRef = useRef<AgGridReact<CaseOut>>(null)
 
@@ -193,8 +201,7 @@ export default function ClientStatusTable() {
       headerName: 'Case Name',
       valueGetter: (p) => caseName(p.data!),
       tooltipValueGetter: (p) => caseName(p.data!),
-      flex: 1.5,
-      minWidth: 160,
+      flex: 1.5, minWidth: 160,
       filter: 'agTextColumnFilter',
       cellRenderer: TruncatedCell,
     },
@@ -202,8 +209,7 @@ export default function ClientStatusTable() {
       headerName: 'Client',
       field: 'client_name',
       tooltipField: 'client_name',
-      flex: 1.2,
-      minWidth: 130,
+      flex: 1.2, minWidth: 130,
       filter: 'agTextColumnFilter',
       cellRenderer: TruncatedCell,
       cellRendererParams: { style: { fontWeight: '600' } },
@@ -213,17 +219,14 @@ export default function ClientStatusTable() {
       field: 'selected_products',
       tooltipValueGetter: (p) =>
         p.data?.selected_products?.map((pr) => pr.replace(/_/g, ' ').toUpperCase()).join(', ') ?? '',
-      flex: 1.5,
-      minWidth: 160,
+      flex: 1.5, minWidth: 160,
       cellRenderer: ProductsCell,
-      sortable: false,
-      filter: false,
+      sortable: false, filter: false,
     },
     {
       headerName: 'Stage',
       field: 'current_stage',
-      flex: 1,
-      minWidth: 140,
+      flex: 1, minWidth: 140,
       cellRenderer: StageCell,
       filter: 'agTextColumnFilter',
       filterValueGetter: (p) => STAGE_LABELS[p.data?.current_stage ?? ''] ?? p.data?.current_stage,
@@ -232,8 +235,7 @@ export default function ClientStatusTable() {
       headerName: 'Assigned To',
       field: 'assigned_advisor_name',
       tooltipField: 'assigned_advisor_name',
-      flex: 1,
-      minWidth: 130,
+      flex: 1, minWidth: 130,
       filter: 'agTextColumnFilter',
       cellRenderer: TruncatedCell,
       cellRendererParams: { style: { color: 'rgb(var(--gray-500))' } },
@@ -242,58 +244,47 @@ export default function ClientStatusTable() {
     {
       headerName: 'Updated',
       field: 'updated_at',
-      flex: 0.8,
-      minWidth: 110,
+      flex: 0.8, minWidth: 110,
       filter: false,
       cellRenderer: TruncatedCell,
-      cellRendererParams: { style: { color: 'rgb(var(--gray-400))', fontVariantNumeric: 'tabular-nums' } },
+      cellRendererParams: { style: { color: 'rgb(var(--gray-400))', fontVariantNumeric: 'tabular-nums', fontFamily: 'IBM Plex Mono, monospace' } },
       valueFormatter: (p) => relativeTime(p.value),
     },
     {
       headerName: '',
       field: 'id',
-      width: 110,
-      sortable: false,
-      filter: false,
-      resizable: false,
+      width: 100,
+      sortable: false, filter: false, resizable: false,
       cellRenderer: ViewCell,
       cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end' } as CellStyle,
     },
   ], [])
 
-  const context = useMemo(() => ({ openClientTab }), [openClientTab])
+  const context    = useMemo(() => ({ openClientTab }), [openClientTab])
   const totalCount = cases?.length ?? 0
 
-  const onGridReady = useCallback((e: GridReadyEvent) => {
-    setFilteredCount(e.api.getDisplayedRowCount())
-  }, [])
-
-  const onModelUpdated = useCallback((e: ModelUpdatedEvent) => {
-    setFilteredCount(e.api.getDisplayedRowCount())
-  }, [])
-
-  const onQuickFilter = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value)
-  }, [])
+  const onGridReady    = useCallback((e: GridReadyEvent) => { setFilteredCount(e.api.getDisplayedRowCount()) }, [])
+  const onModelUpdated = useCallback((e: ModelUpdatedEvent) => { setFilteredCount(e.api.getDisplayedRowCount()) }, [])
+  const onQuickFilter  = useCallback((e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value) }, [])
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900 p-3 sm:p-6">
-      {/* Filters + count */}
+    <div className="flex flex-1 flex-col overflow-hidden bg-white p-4 dark:bg-gray-950 sm:p-6">
+      {/* Toolbar */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative w-full sm:w-auto">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search cases..."
+              placeholder="Search cases…"
               value={search}
               onChange={onQuickFilter}
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-1.5 pl-9 pr-8 text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:w-52"
+              className="w-full border border-gray-200 bg-white py-1.5 pl-8 pr-8 text-xs text-gray-800 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:placeholder-gray-600 sm:w-48"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -303,18 +294,18 @@ export default function ClientStatusTable() {
         </div>
 
         {!isLoading && totalCount > 0 && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="font-mono text-xs text-gray-500 dark:text-gray-400">
             {filteredCount !== null && filteredCount !== totalCount ? (
               <>
-                <span className="font-semibold text-gray-900 dark:text-white">{filteredCount}</span>
-                <span className="text-gray-400 dark:text-gray-500"> of </span>
-                <span className="font-semibold text-gray-900 dark:text-white">{totalCount}</span>
-                <span className="text-gray-400 dark:text-gray-500"> cases</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-100">{filteredCount}</span>
+                <span> / </span>
+                <span className="font-semibold text-gray-800 dark:text-gray-100">{totalCount}</span>
+                <span> cases</span>
               </>
             ) : (
               <>
-                <span className="font-semibold text-gray-900 dark:text-white">{totalCount}</span>
-                <span className="text-gray-400 dark:text-gray-500"> cases</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-100">{totalCount}</span>
+                <span> cases</span>
               </>
             )}
           </p>
@@ -322,10 +313,10 @@ export default function ClientStatusTable() {
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-hidden rounded-lg border border-gray-200/60 dark:border-gray-700/60">
+      <div className="flex-1 overflow-hidden border border-gray-200 dark:border-gray-800">
         {isError ? (
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-red-400">Failed to load cases. Is the backend running?</p>
+            <p className="text-xs text-red-400">Failed to load cases. Is the backend running?</p>
           </div>
         ) : (
           <BaseGrid<CaseOut>

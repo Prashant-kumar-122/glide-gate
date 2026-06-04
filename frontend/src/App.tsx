@@ -1,18 +1,16 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
-import { Menu, X, Sun, Moon, Building2 } from 'lucide-react'
+import { Menu, X, Sun, Moon } from 'lucide-react'
 
-// Login/Signup are always the first pages loaded — keep them eager
 import Login from '@/routes/Login'
 import Signup from '@/routes/Signup'
 
-// All other routes are lazy-loaded so each role only pays for its own bundle
 const AdvisorWorkspace = lazy(() => import('@/routes/AdvisorWorkspace'))
-const ClientPortal = lazy(() => import('@/routes/ClientPortal'))
-const ContactCentre = lazy(() => import('@/routes/ContactCentre'))
-const AgentTrace = lazy(() => import('@/routes/AgentTrace'))
-const AdminConfig = lazy(() => import('@/routes/AdminConfig'))
-const Profile = lazy(() => import('@/routes/Profile'))
+const ClientPortal     = lazy(() => import('@/routes/ClientPortal'))
+const ContactCentre    = lazy(() => import('@/routes/ContactCentre'))
+const AgentTrace       = lazy(() => import('@/routes/AgentTrace'))
+const AdminConfig      = lazy(() => import('@/routes/AdminConfig'))
+const Profile          = lazy(() => import('@/routes/Profile'))
 
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -24,10 +22,10 @@ import { useAuthStore } from '@/store/authStore'
 import { useThemeStore } from '@/store/themeStore'
 
 const NAV_LINKS: { to: string; label: string; roles: string[] }[] = [
-  { to: '/', label: 'Workspace', roles: ['advisor', 'sales_manager'] },
+  { to: '/',               label: 'Workspace',      roles: ['advisor', 'sales_manager'] },
   { to: '/contact-centre', label: 'Contact Centre', roles: ['advisor', 'sales_manager'] },
-  { to: '/agent-trace', label: 'Agent Trace', roles: ['advisor', 'sales_manager', 'admin'] },
-  { to: '/admin', label: 'Admin Config', roles: ['admin'] },
+  { to: '/agent-trace',    label: 'Agent Trace',    roles: ['advisor', 'sales_manager', 'admin'] },
+  { to: '/admin',          label: 'Admin',          roles: ['admin'] },
 ]
 
 function NavBar() {
@@ -37,10 +35,10 @@ function NavBar() {
   const location = useLocation()
 
   const ROLE_HOME: Record<string, string> = {
-    client: '/client',
-    advisor: '/',
+    client:        '/client',
+    advisor:       '/',
     sales_manager: '/',
-    admin: '/admin',
+    admin:         '/admin',
   }
   const homeRoute = user ? (ROLE_HOME[user.role] ?? '/login') : '/login'
 
@@ -49,65 +47,87 @@ function NavBar() {
     : []
 
   return (
-    <nav className="sticky top-0 z-50 flex items-center bg-gray-900 border-b border-gray-700 px-4 py-3 text-sm text-gray-300 lg:px-6">
-      <Link to={homeRoute} className="flex items-center gap-3 mr-4 hover:opacity-80 transition-opacity">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-          <Building2 className="w-4 h-4 text-white" />
-        </div>
-        <span className="font-semibold text-gray-100">GlideGate</span>
-      </Link>
-
-      {/* Desktop nav links — hidden on mobile */}
-      {visibleLinks.map((l) => {
-        const isActive = location.pathname === l.to
-        return (
-          <Link
-            key={l.to}
-            to={l.to}
-            className={[
-              'hidden lg:block px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              isActive
-                ? 'bg-gray-700 text-gray-100'
-                : 'text-gray-500 hover:bg-gray-700 hover:text-gray-100',
-            ].join(' ')}
-          >
-            {l.label}
-          </Link>
-        )
-      })}
-
-      {/* Spacer pushes right-side items to the end */}
-      <div className="flex-1" />
-
-      {isAuthenticated && <NotificationBell />}
-
-      {/* Theme toggle */}
-      <button
-        onClick={toggleTheme}
-        className="mr-2 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-700 hover:text-gray-100"
-        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      >
-        {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </button>
-
-      {/* User menu — always visible */}
-      {isAuthenticated && <UserMenu />}
-
-      {/* Hamburger toggle — only on mobile when nav links exist */}
-      {visibleLinks.length > 0 && (
-        <button
-          onClick={() => setMenuOpen((o) => !o)}
-          className="ml-2 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-700 hover:text-gray-100 lg:hidden"
-          aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={menuOpen}
+    <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
+      {/* Main nav row */}
+      <div className="flex h-11 items-center px-4 lg:px-6">
+        {/* Brand mark */}
+        <Link
+          to={homeRoute}
+          className="mr-6 flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0"
         >
-          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      )}
+          <div className="flex h-6 w-6 items-center justify-center bg-primary shrink-0">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <rect x="1" y="1" width="4" height="4" fill="white" opacity="0.9" />
+              <rect x="7" y="1" width="4" height="4" fill="white" opacity="0.6" />
+              <rect x="1" y="7" width="4" height="4" fill="white" opacity="0.6" />
+              <rect x="7" y="7" width="4" height="4" fill="white" opacity="0.3" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold tracking-tight text-gray-900 dark:text-white">GlideGate</span>
+        </Link>
 
-      {/* Mobile dropdown — slides down from navbar */}
+        {/* Vertical rule */}
+        {visibleLinks.length > 0 && (
+          <div className="mr-4 h-4 w-px bg-gray-200 dark:bg-gray-800 hidden lg:block" aria-hidden="true" />
+        )}
+
+        {/* Desktop nav links — underline-tab style */}
+        <div className="hidden h-full items-center lg:flex">
+          {visibleLinks.map((l) => {
+            const isActive = location.pathname === l.to
+            return (
+              <Link
+                key={l.to}
+                to={l.to}
+                className={[
+                  'relative flex h-full items-center px-3.5 text-xs font-medium transition-colors',
+                  'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:transition-colors',
+                  isActive
+                    ? 'text-primary after:bg-primary'
+                    : 'text-gray-500 hover:text-gray-800 after:bg-transparent hover:after:bg-gray-200 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:after:bg-gray-700',
+                ].join(' ')}
+              >
+                {l.label}
+              </Link>
+            )
+          })}
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Right controls */}
+        <div className="flex items-center gap-0.5">
+          {isAuthenticated && <NotificationBell />}
+
+          <button
+            onClick={toggleTheme}
+            className="rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark'
+              ? <Sun className="h-3.5 w-3.5" />
+              : <Moon className="h-3.5 w-3.5" />
+            }
+          </button>
+
+          {isAuthenticated && <UserMenu />}
+
+          {visibleLinks.length > 0 && (
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="ml-1 rounded p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300 lg:hidden"
+              aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile dropdown */}
       {menuOpen && (
-        <div className="absolute left-0 right-0 top-full z-50 border-t border-gray-700 bg-gray-900 py-1 shadow-xl lg:hidden">
+        <div className="border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 lg:hidden">
           {visibleLinks.map((l) => {
             const isActive = location.pathname === l.to
             return (
@@ -116,10 +136,10 @@ function NavBar() {
                 to={l.to}
                 onClick={() => setMenuOpen(false)}
                 className={[
-                  'block py-3.5 text-sm transition-colors',
+                  'flex items-center py-3 text-xs font-medium transition-colors',
                   isActive
-                    ? 'border-l-2 border-blue-500 pl-[19px] pr-5 bg-gray-800 text-gray-100 font-medium'
-                    : 'px-5 text-gray-400 hover:bg-gray-800 hover:text-gray-100',
+                    ? 'border-l-2 border-primary pl-[19px] pr-5 text-primary bg-blue-50 dark:text-white dark:bg-gray-900'
+                    : 'border-l-2 border-transparent px-5 text-gray-500 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-200',
                 ].join(' ')}
               >
                 {l.label}
@@ -147,34 +167,26 @@ export default function App() {
       <main className="flex flex-1 flex-col overflow-y-auto">
         <Suspense fallback={
           <div className="flex min-h-screen items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-primary dark:border-gray-700" />
           </div>
         }>
           <Routes>
-            {/* Public routes — eager, no ErrorBoundary needed */}
-            <Route path="/login" element={<Login />} />
+            <Route path="/login"  element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            {/* Protected: all authenticated roles */}
             <Route
               path="/profile"
               element={
                 <ProtectedRoute allowedRoles={['client', 'advisor', 'admin', 'sales_manager']}>
-                  <ErrorBoundary>
-                    <Profile />
-                  </ErrorBoundary>
+                  <ErrorBoundary><Profile /></ErrorBoundary>
                 </ProtectedRoute>
               }
             />
-
-            {/* Advisor + Sales Manager */}
             <Route
               path="/"
               element={
                 <ProtectedRoute allowedRoles={['advisor', 'sales_manager']}>
-                  <ErrorBoundary>
-                    <AdvisorWorkspace />
-                  </ErrorBoundary>
+                  <ErrorBoundary><AdvisorWorkspace /></ErrorBoundary>
                 </ProtectedRoute>
               }
             />
@@ -182,49 +194,34 @@ export default function App() {
               path="/contact-centre"
               element={
                 <ProtectedRoute allowedRoles={['advisor', 'sales_manager']}>
-                  <ErrorBoundary>
-                    <ContactCentre />
-                  </ErrorBoundary>
+                  <ErrorBoundary><ContactCentre /></ErrorBoundary>
                 </ProtectedRoute>
               }
             />
-
-            {/* Advisor + Admin + Sales Manager */}
             <Route
               path="/agent-trace"
               element={
                 <ProtectedRoute allowedRoles={['advisor', 'admin', 'sales_manager']}>
-                  <ErrorBoundary>
-                    <AgentTrace />
-                  </ErrorBoundary>
+                  <ErrorBoundary><AgentTrace /></ErrorBoundary>
                 </ProtectedRoute>
               }
             />
-
-            {/* Admin-only */}
             <Route
               path="/admin"
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
-                  <ErrorBoundary>
-                    <AdminConfig />
-                  </ErrorBoundary>
+                  <ErrorBoundary><AdminConfig /></ErrorBoundary>
                 </ProtectedRoute>
               }
             />
-
-            {/* Client-only */}
             <Route
               path="/client"
               element={
                 <ProtectedRoute allowedRoles={['client']}>
-                  <ErrorBoundary>
-                    <ClientPortal />
-                  </ErrorBoundary>
+                  <ErrorBoundary><ClientPortal /></ErrorBoundary>
                 </ProtectedRoute>
               }
             />
-
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Suspense>

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Upload, X } from 'lucide-react'
+import { Upload } from 'lucide-react'
 
 const ALLOWED_MIME = [
   'image/jpeg',
@@ -31,9 +31,7 @@ export default function UploadButton({
 
   function processFiles(fileList: FileList | null) {
     if (!fileList) return
-    const files = Array.from(fileList).filter((f) =>
-      ALLOWED_MIME.includes(f.type)
-    )
+    const files = Array.from(fileList).filter((f) => ALLOWED_MIME.includes(f.type))
     if (files.length) onUpload(files)
   }
 
@@ -42,9 +40,7 @@ export default function UploadButton({
     if (!disabled) setDragging(true)
   }
 
-  function onDragLeave() {
-    setDragging(false)
-  }
+  function onDragLeave() { setDragging(false) }
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault()
@@ -58,10 +54,10 @@ export default function UploadButton({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={[
-        'relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 transition-colors',
+        'relative flex flex-col items-center justify-center gap-2 border-2 border-dashed px-6 py-6 transition-colors',
         dragging
-          ? 'border-blue-400 bg-blue-50 dark:border-blue-500 dark:bg-blue-950'
-          : 'border-gray-300 bg-gray-50 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500',
+          ? 'border-primary bg-primary-subtle'
+          : 'border-gray-300 bg-gray-50 hover:border-gray-400 dark:border-gray-700 dark:bg-gray-800/40 dark:hover:border-gray-600',
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
       ].join(' ')}
       onClick={() => !disabled && inputRef.current?.click()}
@@ -79,15 +75,11 @@ export default function UploadButton({
         disabled={disabled}
       />
 
-      {dragging ? (
-        <X className="h-8 w-8 text-blue-400" />
-      ) : (
-        <Upload className="h-8 w-8 text-gray-400" />
-      )}
+      <Upload className={['h-6 w-6', dragging ? 'text-primary' : 'text-gray-400'].join(' ')} />
 
       <div className="text-center">
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{label}</p>
-        <p className="text-xs text-gray-400">PDF, Word, or image &middot; drag &amp; drop or click</p>
+        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{label}</p>
+        <p className="mt-0.5 text-[10px] text-gray-400">PDF, Word, or image · drag & drop or click</p>
       </div>
     </div>
   )

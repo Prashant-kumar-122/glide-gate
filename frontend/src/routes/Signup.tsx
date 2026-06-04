@@ -14,7 +14,6 @@ export default function Signup() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">GlideGate</h1>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-500">Wealth Management Onboarding Platform</p>
         </div>
         <div className="rounded-2xl bg-white p-8 shadow-sm dark:bg-gray-900 dark:border dark:border-gray-700">
           <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-gray-100">Create account</h2>

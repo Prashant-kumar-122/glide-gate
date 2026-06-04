@@ -25,12 +25,12 @@ import type { DocumentOut } from '@/lib/api'
 type WorkspaceTab = 'documents' | 'application'
 
 const CATEGORIES: { key: string; label: string; icon: ReactNode }[] = [
-  { key: 'identity', label: 'Identity', icon: <Fingerprint className="h-4 w-4" /> },
-  { key: 'financial', label: 'Financial', icon: <DollarSign className="h-4 w-4" /> },
-  { key: 'legal', label: 'Legal', icon: <Scale className="h-4 w-4" /> },
-  { key: 'insurance', label: 'Insurance', icon: <Shield className="h-4 w-4" /> },
-  { key: 'compliance', label: 'Compliance', icon: <FileText className="h-4 w-4" /> },
-  { key: 'entity', label: 'Entity', icon: <Building className="h-4 w-4" /> },
+  { key: 'identity',   label: 'Identity',   icon: <Fingerprint className="h-3.5 w-3.5" /> },
+  { key: 'financial',  label: 'Financial',  icon: <DollarSign className="h-3.5 w-3.5" /> },
+  { key: 'legal',      label: 'Legal',      icon: <Scale className="h-3.5 w-3.5" /> },
+  { key: 'insurance',  label: 'Insurance',  icon: <Shield className="h-3.5 w-3.5" /> },
+  { key: 'compliance', label: 'Compliance', icon: <FileText className="h-3.5 w-3.5" /> },
+  { key: 'entity',     label: 'Entity',     icon: <Building className="h-3.5 w-3.5" /> },
 ]
 
 function groupByCategory(docs: DocumentOut[]) {
@@ -81,54 +81,54 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
   ]
 
   return (
-    <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
+    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
       {/* Case progress header */}
       {(summaryLoading || summary) && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex items-center justify-between">
+        <div className="border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 {summary?.case_name ?? summary?.client_name ?? '…'}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="mt-1 text-[10px] text-gray-600 dark:text-gray-500">
                 Stage:{' '}
-                <span className="font-medium text-gray-700 dark:text-gray-200">
+                <span className="font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
                   {summary?.current_stage ?? '…'}
                 </span>
                 {summary?.escalated && (
-                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                  <span className="ml-2 border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-600/30 dark:bg-amber-950/50 dark:text-amber-400">
                     ESCALATED
                   </span>
                 )}
               </p>
               {account && account.map((acc) => (
-                <p key={acc.account_number} className="mt-1 flex items-center gap-1 text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                <p key={acc.account_number} className="mt-1 flex items-center gap-1 font-mono text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
                   <BadgeCheck className="w-3 h-3 shrink-0" />
                   {acc.product.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}: {acc.account_number}
                 </p>
               ))}
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-gray-900 tabular-nums dark:text-gray-100">
+            <div className="text-right shrink-0">
+              <p className="font-mono text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
                 {summary?.overall_progress ?? 0}%
               </p>
-              <p className="text-xs text-gray-400">overall</p>
+              <p className="text-[10px] text-gray-400">completion</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Sales Manager Review banner — shown when SALES_REVIEW stage */}
+      {/* Sales Manager Review banner */}
       {isSalesReview && (
         <SalesReviewPanel caseId={caseId} userRole={userRole} />
       )}
 
-      {/* Parallel product tracks — always visible */}
+      {/* Product tracks */}
       <section>
-        <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          <FolderOpen className="h-4 w-4" />
+        <p className="mb-2.5 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+          <FolderOpen className="h-3.5 w-3.5" />
           Product Tracks
-        </h3>
+        </p>
         <ParallelProductTracks
           tracks={summary?.products ?? []}
           isLoading={summaryLoading}
@@ -136,21 +136,21 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
       </section>
 
       {/* Tabbed workspace */}
-      <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
         {/* Tab bar */}
-        <div className="flex overflow-hidden rounded-t-xl border-b border-gray-200 dark:border-gray-700">
+        <div className="flex border-b border-gray-200 dark:border-gray-800">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
               className={[
-                'flex flex-1 items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors',
+                'flex flex-1 items-center justify-center gap-2 py-2.5 text-xs font-medium border-b-2 transition-colors',
                 activeTab === id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200',
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
               ].join(' ')}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5" />
               {label}
             </button>
           ))}
@@ -158,20 +158,20 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
 
         {/* Documents tab */}
         {activeTab === 'documents' && (
-          <div className="p-5">
-            <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              <FileText className="h-4 w-4" />
+          <div className="p-4">
+            <p className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+              <FileText className="h-3.5 w-3.5" />
               Document Categories
-            </h3>
+            </p>
 
             {docsLoading ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+                  <div key={i} className="h-14 animate-pulse bg-gray-100 dark:bg-gray-800" />
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
                 {CATEGORIES.map((cat) => {
                   const catDocs = byCategory[cat.key] ?? []
                   const approved = catDocs.filter((d) => d.status === 'APPROVED').length
@@ -186,13 +186,13 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
                       defaultOpen={catDocs.length > 0}
                       badge={
                         catDocs.some((d) => d.status === 'NEEDS_REVISION') ? (
-                          <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900 dark:text-red-300">
-                            Action needed
+                          <span className="border border-red-300 bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-red-700 dark:border-red-600/30 dark:bg-red-950/50 dark:text-red-400">
+                            Action Required
                           </span>
                         ) : undefined
                       }
                     >
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex flex-col gap-0">
                         {catDocs.map((doc) => (
                           <DocumentRow
                             key={doc.id}
@@ -212,7 +212,7 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
 
                         <div className="mt-2 px-1">
                           {catDocs[catDocs.length - 1]?.status === 'APPROVED' ? (
-                            <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
+                            <div className="flex items-center justify-center gap-2 border border-green-300 bg-green-50 px-4 py-2.5 text-[10px] font-semibold text-green-700 dark:border-green-700/30 dark:bg-green-950/30 dark:text-green-400">
                               <span>✓</span>
                               <span>Document approved — no further uploads needed</span>
                             </div>
@@ -233,7 +233,7 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
           </div>
         )}
 
-        {/* Application tab — read-only form view */}
+        {/* Application tab */}
         {activeTab === 'application' && (
           <OnboardingFormView
             caseId={caseId}
@@ -244,7 +244,6 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
             hideReadOnlyLabel
           />
         )}
-
       </div>
     </div>
   )

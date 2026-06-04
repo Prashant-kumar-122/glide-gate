@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,20 +8,22 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
   }
 
   body {
     overflow-x: hidden;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
   }
 
-  /* Remove tap highlight on mobile for cleaner touch UX */
+  /* Remove tap highlight on mobile */
   * {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Consistent box sizing */
   *,
   *::before,
   *::after {
@@ -31,32 +33,38 @@
   .dark {
     color-scheme: dark;
   }
+
+  /* Tabular numbers on all numeric data */
+  .tabular-nums,
+  [data-numeric],
+  td {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 /* ── Color system tokens ────────────────────────────────────────────────────
    All values are space-separated RGB channels so Tailwind opacity modifiers
    (e.g. bg-gray-800/50) continue to work in every mode.
-   :root  — light mode (matches standard Tailwind defaults exactly)
-   .dark  — Obsidian/Midnight/Onyx black-gray family; semantic colors
-            desaturated ~30% to match the monochrome shell.
+   :root  — light mode (crisp blue-tinted whites for an IB feel)
+   .dark  — deep navy / midnight palette (primary mode)
    ────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Gray */
-  --gray-50:  249 250 251;
-  --gray-100: 243 244 246;
-  --gray-200: 229 231 235;
-  --gray-300: 209 213 219;
-  --gray-400: 156 163 175;
-  --gray-500: 107 114 128;
-  --gray-600:  75  85  99;
-  --gray-700:  55  65  81;
-  --gray-800:  31  41  55;
-  --gray-900:  17  24  39;
-  --gray-950:   3   7  18;
+  /* Gray — cool blue-tinted for IB light mode */
+  --gray-50:  248 249 252;   /* #F8F9FC — app background */
+  --gray-100: 241 243 248;   /* #F1F3F8 — card surface */
+  --gray-200: 221 226 236;   /* #DDE2EC — borders */
+  --gray-300: 196 204 218;   /* #C4CCDA — dividers */
+  --gray-400: 152 162 180;   /* #98A2B4 — muted text */
+  --gray-500: 107 117 134;   /* #6B7586 — secondary text */
+  --gray-600:  75  85 101;   /* #4B5565 — body text */
+  --gray-700:  50  61  78;   /* #323D4E — dark text */
+  --gray-800:  31  41  57;   /* #1F2939 — headings */
+  --gray-900:  17  26  42;   /* #111A2A — deep headings */
+  --gray-950:   8  14  28;   /* #080E1C — near black */
 
   /* Blue */
-  --blue-50:  239 246 255;
+  --blue-50:  237 244 255;
   --blue-100: 219 234 254;
   --blue-300: 147 197 253;
   --blue-400:  96 165 250;
@@ -131,115 +139,116 @@
   --emerald-600:   5 150 105;
 }
 
-/* ── Dark mode — Reference-2 navy / blue-tinted dark palette ─────────────── */
+/* ── Dark mode — deep navy / midnight (investment banking terminal palette) ── */
 .dark {
-  /* Gray — navy-blue tinted neutrals matching reference-2 dark palette
-     Backgrounds: 950→900→800 (body→nav→card)
-     Text:        100→300→400 (heading→body→muted) */
-  --gray-50:  245 247 250;   /* #F5F7FA */
-  --gray-100: 240 242 245;   /* #F0F2F5  primary headings (text-primary) */
-  --gray-200: 215 220 230;   /* #D7DCE6  silver */
-  --gray-300: 192 198 212;   /* #C0C6D4  body text */
-  --gray-400: 160 170 185;   /* #A0AAB9  muted labels */
-  --gray-500: 138 148 166;   /* #8A94A6  secondary labels (text-secondary) */
-  --gray-600:  79  90 110;   /* #4F5A6E  very muted (text-muted) */
-  --gray-700:  42  49  64;   /* #2A3140  borders / hover bg (border-default) */
-  --gray-800:  30  37  51;   /* #1E2533  card surface (bg-elevated) */
-  --gray-900:  22  27  36;   /* #161B24  nav chrome (bg-surface) */
-  --gray-950:  13  15  20;   /* #0D0F14  app body (bg-base) */
+  /* Gray — blue-black navy family */
+  --gray-50:  240 243 249;   /* #F0F3F9  headings */
+  --gray-100: 220 226 238;   /* #DCE2EE  primary text */
+  --gray-200: 188 198 216;   /* #BCC6D8  body text */
+  --gray-300: 156 168 190;   /* #9CA8BE  secondary text */
+  --gray-400: 118 132 155;   /* #76849B  muted labels */
+  --gray-500:  90 104 126;   /* #5A687E  very muted */
+  --gray-600:  56  69  90;   /* #38455A  borders / hover */
+  --gray-700:  34  44  62;   /* #222C3E  border-default */
+  --gray-800:  20  28  44;   /* #141C2C  card surface / bg-elevated */
+  --gray-900:  12  18  32;   /* #0C1220  nav chrome / bg-surface */
+  --gray-950:   6  10  20;   /* #060A14  app body / bg-base */
 
-  /* Blue — updated to match reference-2's primary (#3B7BF5) */
-  --blue-50:  232 241 255;   /* #E8F1FF */
-  --blue-100: 210 227 254;   /* #D2E3FE */
-  --blue-300: 150 190 253;   /* #96BEFD */
-  --blue-400:  96 150 251;   /* #6096FB */
+  /* Blue — brand primary family */
+  --blue-50:  229 239 255;   /* #E5EFFF */
+  --blue-100: 207 224 254;   /* #CFE0FE */
+  --blue-300: 147 194 253;   /* #93C2FD */
+  --blue-400:  96 151 251;   /* #6097FB */
   --blue-500:  59 123 245;   /* #3B7BF5  primary */
   --blue-600:  45 107 224;   /* #2D6BE0  primary-hover */
-  --blue-700:  29  91 199;   /* #1D5BC7 */
-  --blue-900:  26  42  74;   /* #1A2A4A  primary-subtle */
-  --blue-950:  15  25  50;   /* #0F1932 */
+  --blue-700:  29  90 198;   /* #1D5AC6 */
+  --blue-900:  18  36  82;   /* #122452  primary-subtle */
+  --blue-950:  10  20  50;   /* #0A1432 */
 
-  /* Green — desaturated ~30% (status: approved / pass / success) */
-  --green-50:  228 244 234;   /* #e4f4ea */
-  --green-100: 200 232 212;   /* #c8e8d4 */
-  --green-200: 160 210 178;   /* #a0d2b2 */
-  --green-300: 148 210 174;   /* #94d2ae */
-  --green-400:  90 188 128;   /* #5abc80 */
-  --green-700:  30  88  52;   /* #1e5834 */
-  --green-800:  20  56  34;   /* #143822 */
-  --green-900:  16  42  26;   /* #102a1a */
-  --green-950:  10  26  16;   /* #0a1a10 */
+  /* Green — desaturated ~25% (approved / success) */
+  --green-50:  222 242 230;   /* #DEF2E6 */
+  --green-100: 196 230 208;   /* #C4E6D0 */
+  --green-200: 158 210 176;   /* #9ED2B0 */
+  --green-300: 140 204 164;   /* #8CCCA4 */
+  --green-400:  82 182 120;   /* #52B678 */
+  --green-700:  28  84  50;   /* #1C5432 */
+  --green-800:  18  54  32;   /* #123620 */
+  --green-900:  14  40  24;   /* #0E2818 */
+  --green-950:   8  24  14;   /* #08180E */
 
-  /* Amber — desaturated ~30% (status: under-review / warning) */
-  --amber-50:  245 236 204;   /* #f5eccc */
-  --amber-100: 238 218 168;   /* #eedaa8 */
-  --amber-200: 226 194 130;   /* #e2c282 */
-  --amber-300: 212 172  86;   /* #d4ac56 */
-  --amber-400: 196 148  66;   /* #c49442 */
-  --amber-500: 174 118  40;   /* #ae7628 */
-  --amber-700: 100  62  18;   /* #643e12 */
-  --amber-800:  78  46  12;   /* #4e2e0c */
-  --amber-900:  60  36   8;   /* #3c2408 */
-  --amber-950:  38  22   4;   /* #261604 */
+  /* Amber — desaturated ~25% (under-review / warning) */
+  --amber-50:  244 232 200;   /* #F4E8C8 */
+  --amber-100: 236 214 164;   /* #ECD6A4 */
+  --amber-200: 224 190 126;   /* #E0BE7E */
+  --amber-300: 210 168  82;   /* #D2A852 */
+  --amber-400: 194 144  62;   /* #C2903E */
+  --amber-500: 172 114  38;   /* #AC7226 */
+  --amber-700:  96  58  16;   /* #603A10 */
+  --amber-800:  74  42  10;   /* #4A2A0A */
+  --amber-900:  58  32   6;   /* #3A2006 */
+  --amber-950:  36  18   2;   /* #241202 */
 
-  /* Red — desaturated ~30% (status: error / fail / needs-revision) */
-  --red-50:  250 238 238;   /* #faeee  */
-  --red-100: 244 216 216;   /* #f4d8d8 */
-  --red-300: 202 138 138;   /* #ca8a8a */
-  --red-400: 186 110 110;   /* #ba6e6e */
-  --red-500: 168  88  88;   /* #a85858 */
-  --red-600: 148  68  68;   /* #944444 */
-  --red-700:  90  40  40;   /* #5a2828 */
-  --red-800:  72  28  28;   /* #481c1c */
-  --red-900:  56  20  20;   /* #381414 */
-  --red-950:  38  12  12;   /* #260c0c */
+  /* Red — desaturated ~25% (needs-revision / danger) */
+  --red-50:  248 234 234;   /* #F8EAEA */
+  --red-100: 240 210 210;   /* #F0D2D2 */
+  --red-300: 198 132 132;   /* #C68484 */
+  --red-400: 182 104 104;   /* #B66868 */
+  --red-500: 164  82  82;   /* #A45252 */
+  --red-600: 144  62  62;   /* #903E3E */
+  --red-700:  86  36  36;   /* #562424 */
+  --red-800:  66  24  24;   /* #421818 */
+  --red-900:  52  16  16;   /* #341010 */
+  --red-950:  34   8   8;   /* #220808 */
 
-  /* Violet — desaturated ~30% (status: received / processing) */
-  --violet-50:  236 228 246;   /* #ece4f6 */
-  --violet-100: 220 210 238;   /* #dcd2ee */
-  --violet-200: 196 182 222;   /* #c4b6de */
-  --violet-300: 172 152 204;   /* #ac98cc */
-  --violet-400: 156 132 190;   /* #9c84be */
-  --violet-500: 130 104 170;   /* #8268aa */
-  --violet-800:  62  32  96;   /* #3e2060 */
-  --violet-950:  30  14  48;   /* #1e0e30 */
+  /* Violet — desaturated ~25% (received / processing) */
+  --violet-50:  232 224 244;   /* #E8E0F4 */
+  --violet-100: 216 206 236;   /* #D8CEEC */
+  --violet-200: 192 178 220;   /* #C0B2DC */
+  --violet-300: 168 148 202;   /* #A894CA */
+  --violet-400: 150 128 186;   /* #9680BA */
+  --violet-500: 124  98 164;   /* #7C62A4 */
+  --violet-800:  58  28  90;   /* #3A1C5A */
+  --violet-950:  28  12  46;   /* #1C0C2E */
 
-  /* Indigo — desaturated ~30% (status: parallel products) */
-  --indigo-100: 212 216 238;   /* #d4d8ee */
-  --indigo-300: 148 152 200;   /* #9498c8 */
-  --indigo-400: 128 132 184;   /* #8084b8 */
-  --indigo-600:  80  80 160;   /* #5050a0 */
-  --indigo-700:  68  68 148;   /* #444494 */
-  --indigo-900:  38  36 100;   /* #262464 */
+  /* Indigo */
+  --indigo-100: 208 212 234;   /* #D0D4EA */
+  --indigo-300: 144 148 196;   /* #9094C4 */
+  --indigo-400: 122 128 180;   /* #7A80B4 */
+  --indigo-600:  74  74 154;   /* #4A4A9A */
+  --indigo-700:  62  62 142;   /* #3E3E8E */
+  --indigo-900:  34  32  96;   /* #222060 */
 
-  /* Purple — desaturated ~30% (status: risk level) */
-  --purple-50:  230 218 240;   /* #e6daf0 */
-  --purple-400: 176 112 200;   /* #b070c8 */
-  --purple-600: 128  64 168;   /* #8040a8 */
-  --purple-950:  48   8  72;   /* #300848 */
+  /* Purple */
+  --purple-50:  226 214 238;   /* #E2D6EE */
+  --purple-400: 170 108 194;   /* #AA6CC2 */
+  --purple-600: 122  58 162;   /* #7A3AA2 */
+  --purple-950:  44   6  68;   /* #2C0644 */
 
-  /* Emerald — desaturated ~30% (account numbers) */
-  --emerald-300: 110 200 162;   /* #6ec8a2 */
-  --emerald-400:  66 192 138;   /* #42c08a */
-  --emerald-600:  20 148  96;   /* #149460 */
+  /* Emerald */
+  --emerald-300: 104 194 158;   /* #68C29E */
+  --emerald-400:  60 186 132;   /* #3CBA84 */
+  --emerald-600:  16 142  92;   /* #108E5C */
 }
 
 @layer utilities {
-  /* Safe area insets for notched devices */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
   }
+
+  /* Investment banking section label utility */
+  .ib-label {
+    @apply text-[10px] font-semibold uppercase tracking-widest text-gray-500;
+  }
 }
 
-/* ── Custom scrollbars ─────────────────────────────────────────────────────── */
+/* ── Custom scrollbars — minimal, professional ────────────────────────────── */
 
-/* Webkit (Chrome, Edge, Safari) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -247,29 +256,27 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  border-radius: 9999px;
-  background-color: #cbd5e1; /* slate-300 */
+  border-radius: 2px;
+  background-color: rgb(var(--gray-300));
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8; /* slate-400 */
+  background-color: rgb(var(--gray-400));
 }
 
-/* Dark mode */
 .dark ::-webkit-scrollbar-thumb {
-  background-color: #2A3140;
+  background-color: rgb(var(--gray-700));
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background-color: #3B4455;
+  background-color: rgb(var(--gray-600));
 }
 
-/* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: rgb(var(--gray-300)) transparent;
 }
 
 .dark * {
-  scrollbar-color: #2A3140 transparent;
+  scrollbar-color: rgb(var(--gray-700)) transparent;
 }

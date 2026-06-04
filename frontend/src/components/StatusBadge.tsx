@@ -8,13 +8,16 @@ interface StatusBadgeProps {
 
 export default function StatusBadge({ status, size = 'md', showDot = true }: StatusBadgeProps) {
   const colors = DOC_STATUS_COLORS[status]
-  const label = DOC_STATUS_LABEL[status]
-  const sizeClass = size === 'sm' ? 'px-1.5 py-0.5 text-xs' : 'px-2.5 py-1 text-xs font-medium'
+  const label  = DOC_STATUS_LABEL[status]
+  // IB badges: squared, tight, no pill
+  const sizeClass = size === 'sm'
+    ? 'px-1.5 py-0.5 text-[10px] font-medium'
+    : 'px-2 py-0.5 text-[10px] font-semibold'
 
   return (
     <span
       className={[
-        'inline-flex items-center gap-1.5 rounded-full ring-1 ring-inset',
+        'inline-flex items-center gap-1 ring-1 ring-inset uppercase tracking-wide',
         colors.bg,
         colors.text,
         colors.ring,
@@ -25,7 +28,7 @@ export default function StatusBadge({ status, size = 'md', showDot = true }: Sta
       ].join(' ')}
     >
       {showDot && (
-        <span className={['h-1.5 w-1.5 rounded-full', colors.dot, colors.dark.dot].join(' ')} />
+        <span className={['h-1.5 w-1.5 rounded-full shrink-0', colors.dot, colors.dark.dot].join(' ')} />
       )}
       {label}
     </span>

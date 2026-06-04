@@ -23,13 +23,12 @@ function padCount(n: number) {
 
 export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase }: Props) {
   const { data: cases = [], isLoading } = useCases()
-  const [activeTab, setActiveTab] = useState<Tab>('pending')
+  const [activeTab,   setActiveTab]   = useState<Tab>('pending')
   const [selectedDoc, setSelectedDoc] = useState<PendingDoc | null>(null)
 
   const inProgress = cases.filter((c) => c.current_stage !== 'COMPLETE')
-  const completed   = cases.filter((c) => c.current_stage === 'COMPLETE')
+  const completed  = cases.filter((c) => c.current_stage === 'COMPLETE')
 
-  // Fetch documents for all cases to build the pending-documents tab
   const docQueries = useQueries({
     queries: cases.map((c) => ({
       queryKey: qk.documents(c.id),
@@ -43,7 +42,7 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
   const pendingDocs: PendingDoc[] = docQueries.flatMap((q, i) => {
     if (!q.data) return []
     const c = cases[i]
-    const caseName = c?.case_name ?? c?.id ?? ''
+    const caseName   = c?.case_name ?? c?.id ?? ''
     const clientName = c?.client_name ?? '—'
     return q.data
       .filter((d) => d.status !== 'APPROVED' && d.status !== 'NOT_REQUESTED')
@@ -60,30 +59,33 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
 
   return (
     <div>
-      {/* ── Sticky header ── */}
-      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 pb-0 pt-5 dark:border-gray-700 dark:bg-gray-900">
-
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 pb-0 pt-5 dark:border-gray-800 dark:bg-gray-950 sm:px-6">
         {/* Title row */}
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+              Client Portal
+            </p>
+            <h1 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">
               Welcome, {firstName}
             </h1>
-            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-              Overview of your accounts and applications
+            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              Account overview and pending applications
             </p>
           </div>
+          {/* Full-width on mobile, auto on sm+ */}
           <button
             onClick={onOpenNewAccount}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            className="flex w-full items-center justify-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-hover sm:w-auto"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             Open New Account
           </button>
         </div>
 
-        {/* Tab bar */}
-        <div className="flex gap-1">
+        {/* Tab bar — scrollable on mobile */}
+        <div className="flex gap-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id
             return (
@@ -91,33 +93,39 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={[
-                  'border-b-2 px-4 pb-3 pt-1 text-sm whitespace-nowrap transition-colors',
+                  'flex shrink-0 items-center gap-1.5 border-b-2 px-4 pb-3 pt-1 text-xs font-medium whitespace-nowrap transition-colors',
                   isActive
-                    ? 'border-blue-500 font-bold text-gray-900 dark:text-white'
-                    : 'border-transparent font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-200',
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300',
                 ].join(' ')}
               >
-                {tab.label} ({padCount(tab.count)})
+                {tab.label}
+                <span className={[
+                  'font-mono text-[10px]',
+                  isActive ? 'text-primary' : 'text-gray-400 dark:text-gray-500',
+                ].join(' ')}>
+                  ({padCount(tab.count)})
+                </span>
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* ── Content area ── */}
-      <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-6 dark:bg-gray-950">
+      {/* Content area */}
+      <div className="min-h-[calc(100vh-200px)] bg-gray-50 p-4 dark:bg-gray-950 sm:p-6">
 
-        {/* ── Pending Applications / Live Accounts tabs ── */}
+        {/* Pending / Live tabs */}
         {activeTab !== 'documents' && (
           <>
             {isLoading && (
               <div className="flex justify-center py-16">
-                <div className="h-7 w-7 animate-spin rounded-full border-2 border-gray-200 border-t-blue-500 dark:border-gray-700" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-primary dark:border-gray-700" />
               </div>
             )}
 
             {!isLoading && visibleCases.length > 0 && (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {visibleCases.map((c) => (
                   <CaseCard key={c.id} caseData={c} onClick={() => onOpenCase(c)} />
                 ))}
@@ -126,16 +134,16 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
 
             {!isLoading && visibleCases.length === 0 && cases.length > 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <Building2 className="mb-4 h-10 w-10 text-gray-200 dark:text-gray-700" />
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                <Building2 className="mb-4 h-8 w-8 text-gray-300 dark:text-gray-700" />
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
                   {activeTab === 'pending' ? 'No pending applications' : 'No live accounts yet'}
                 </p>
                 {activeTab === 'pending' && (
                   <button
                     onClick={onOpenNewAccount}
-                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                    className="mt-4 flex items-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-hover"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3.5 w-3.5" />
                     Open New Account
                   </button>
                 )}
@@ -143,15 +151,15 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
             )}
 
             {!isLoading && cases.length === 0 && (
-              <div className="rounded-2xl border border-gray-200 bg-white p-16 text-center dark:border-gray-700 dark:bg-gray-800">
-                <Building2 className="mx-auto mb-4 h-12 w-12 text-gray-200 dark:text-gray-700" />
-                <h3 className="mb-2 font-semibold text-gray-600 dark:text-gray-300">No accounts yet</h3>
-                <p className="mb-6 text-sm text-gray-400">Open your first investment account to get started</p>
+              <div className="border border-gray-200 bg-white p-12 text-center dark:border-gray-800 dark:bg-gray-900">
+                <Building2 className="mx-auto mb-4 h-10 w-10 text-gray-300 dark:text-gray-700" />
+                <h3 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">No accounts yet</h3>
+                <p className="mb-6 text-xs text-gray-500 dark:text-gray-400">Open your first investment account to get started</p>
                 <button
                   onClick={onOpenNewAccount}
-                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                  className="inline-flex items-center gap-2 bg-primary px-5 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-primary-hover"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                   Open New Account
                 </button>
               </div>
@@ -159,9 +167,9 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
           </>
         )}
 
-        {/* ── Pending Documents tab ── */}
+        {/* Pending Documents tab */}
         {activeTab === 'documents' && (
-          <div className="h-[calc(100vh-260px)] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="h-[calc(100dvh-260px)] min-h-[300px] overflow-hidden border border-gray-200 dark:border-gray-800">
             <PendingDocumentsGrid
               docs={pendingDocs}
               isLoading={docsLoading}
@@ -171,7 +179,6 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
         )}
       </div>
 
-      {/* ── Document modal ── */}
       {selectedDoc && (
         <ClientDocumentModal
           doc={selectedDoc}

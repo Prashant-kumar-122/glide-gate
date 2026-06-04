@@ -22,10 +22,12 @@ export default function SignupForm() {
     signup.mutate(form)
   }
 
+  const inputClass = "rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {signup.error && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-700/40 dark:bg-red-950/60 dark:text-red-300">
           {(signup.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Signup failed. Please try again.'}
         </div>
       )}
@@ -40,7 +42,7 @@ export default function SignupForm() {
             required
             value={form.first_name}
             onChange={set('first_name')}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            className={inputClass}
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -52,7 +54,7 @@ export default function SignupForm() {
             required
             value={form.last_name}
             onChange={set('last_name')}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            className={inputClass}
           />
         </div>
       </div>
@@ -66,7 +68,7 @@ export default function SignupForm() {
           required
           value={form.email}
           onChange={set('email')}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          className={inputClass}
         />
       </div>
 
@@ -80,7 +82,7 @@ export default function SignupForm() {
           minLength={8}
           value={form.password}
           onChange={set('password')}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          className={inputClass}
         />
         <p className="text-xs text-gray-400">Min 8 characters with at least 1 digit</p>
       </div>
@@ -94,21 +96,21 @@ export default function SignupForm() {
           required
           value={form.confirm_password}
           onChange={set('confirm_password')}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          className={inputClass}
         />
       </div>
 
       <button
         type="submit"
         disabled={signup.isPending}
-        className="mt-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="mt-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
       >
         {signup.isPending ? 'Creating account…' : 'Create account'}
       </button>
 
       <p className="text-center text-sm text-gray-500 dark:text-gray-400">
         Already have an account?{' '}
-        <Link to="/login" className="font-medium text-blue-600 hover:underline dark:text-blue-400">Sign in</Link>
+        <Link to="/login" className="font-medium text-primary hover:underline">Sign in</Link>
       </p>
     </form>
   )
