@@ -27,16 +27,16 @@ export const AGENT_LABELS: Record<AgentId, string> = {
 }
 
 export const AGENT_POSITIONS: Record<AgentId, { x: number; y: number }> = {
-  orchestrator:                  { x: 320, y: 20  },
-  customer_service:              { x: 20,  y: 180 },
-  sales_manager:                 { x: 600, y: 20  },
-  kyc_compliance:                { x: 200, y: 180 },
-  document_intelligence:         { x: 390, y: 180 },
-  collaboration:                 { x: 580, y: 180 },
-  product_onboarding_cash:       { x: 60,  y: 370 },
-  product_onboarding_retirement: { x: 260, y: 370 },
-  contact_centre:                { x: 460, y: 370 },
-  notification:                  { x: 640, y: 370 },
+  orchestrator:                  { x: 360, y: 20  },
+  customer_service:              { x: 0,   y: 180 },
+  sales_manager:                 { x: 180, y: 180 },
+  kyc_compliance:                { x: 360, y: 180 },
+  document_intelligence:         { x: 540, y: 180 },
+  collaboration:                 { x: 720, y: 180 },
+  product_onboarding_cash:       { x: 80,  y: 370 },
+  product_onboarding_retirement: { x: 280, y: 370 },
+  contact_centre:                { x: 480, y: 370 },
+  notification:                  { x: 680, y: 370 },
 }
 
 // Back-compat map: A2A agent_id → node IDs it controls
