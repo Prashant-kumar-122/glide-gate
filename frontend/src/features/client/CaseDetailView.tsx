@@ -4,15 +4,19 @@ import { useCaseProgress, useQuestionnaireSchema, useCollectedFields, useAccount
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
 import OnboardingFormView from '@/features/client/OnboardingFormView'
 
-const STAGES = ['INTAKE', 'REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE'] as const
+// Retail:        Application → Documents → KYC Review → Products → Complete
+// Institutional: Application → Documents → Sales Review → KYC Review → Products → Complete
+const STAGES_RETAIL        = ['INTAKE', 'REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE'] as const
+const STAGES_INSTITUTIONAL = ['INTAKE', 'REVIEW', 'SALES_REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE'] as const
 
 const STAGE_LABELS: Record<string, string> = {
-  INTAKE: 'Application',
-  REVIEW: 'Documents',
-  KYC: 'KYC Review',
+  INTAKE:            'Application',
+  REVIEW:            'Documents',
+  SALES_REVIEW:      'Sales Review',
+  KYC:               'KYC Review',
   PARALLEL_PRODUCTS: 'Products',
-  COMPLETE: 'Complete',
-  ESCALATED: 'Escalated',
+  COMPLETE:          'Complete',
+  ESCALATED:         'Escalated',
 }
 
 function formatProductNames(products: string[]): string {
@@ -36,9 +40,10 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
   const { data: collectedData, isLoading: collectedLoading } = useCollectedFields(caseId)
   const { data: account } = useAccount(caseId, summary?.current_stage === 'COMPLETE')
 
-  const activeStageIndex = STAGES.indexOf(
-    (summary?.current_stage ?? 'INTAKE') as (typeof STAGES)[number],
-  )
+  const isInstitutional = summary?.is_institutional ?? false
+  const STAGES: readonly string[] = isInstitutional ? STAGES_INSTITUTIONAL : STAGES_RETAIL
+
+  const activeStageIndex = STAGES.indexOf(summary?.current_stage ?? 'INTAKE')
 
   const tabs: { id: Tab; label: string; icon: typeof ClipboardList }[] = [
     { id: 'application', label: 'Application', icon: ClipboardList },

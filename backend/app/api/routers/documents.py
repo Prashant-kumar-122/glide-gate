@@ -239,8 +239,14 @@ async def _notify_document_status(doc_id: UUID, new_status: str) -> None:
         )
 
 
-async def _trigger_kyc_if_all_docs_approved(case_id: UUID) -> None:
-    """Dispatch ADVANCE_STAGE → KYC when all uploaded documents for the case are APPROVED."""
+async def _trigger_next_stage_if_all_docs_approved(case_id: UUID) -> None:
+    """When all uploaded documents are APPROVED and the case is in REVIEW (Advisor Review),
+    automatically advance:
+      - Institutional product → SALES_REVIEW (Sales Manager review)
+      - Retail only           → KYC
+    """
+    from loguru import logger
+    from app.models.cases import Product
     try:
         async with AsyncSessionLocal() as db:
             case_result = await db.execute(
@@ -264,25 +270,57 @@ async def _trigger_kyc_if_all_docs_approved(case_id: UUID) -> None:
             if not all(d.status == "APPROVED" for d in uploaded_docs):
                 return
 
+            # All docs approved — determine next stage
+            selected = case.selected_products or []
+            has_institutional = False
+            if selected:
+                inst_result = await db.execute(
+                    select(Product).where(
+                        Product.product_code.in_(selected),
+                        Product.product_type == "institutional",
+                    )
+                )
+                has_institutional = inst_result.scalar_one_or_none() is not None
+
+            to_stage = OnboardingStage.SALES_REVIEW if has_institutional else OnboardingStage.KYC
+
+            # Resolve names for notifications / SM review snapshot
+            client_result = await db.execute(
+                select(Client).where(Client.id == case.client_id)
+            )
+            client = client_result.scalar_one_or_none()
+            client_name = (
+                f"{client.first_name} {client.last_name}".strip() if client else ""
+            )
+            case_name = (case.extra_metadata or {}).get("case_name") or f"Case {str(case_id)[:8]}"
+
             shared_ctx = dict(case.shared_context or {})
+
+            logger.info(
+                f"[DocApproval] All docs approved for case={case_id} "
+                f"→ advancing to {to_stage} "
+                f"(institutional={has_institutional})"
+            )
+
             await orchestration_service.publish_task(
                 TaskPacket(
-                    from_agent=AgentID.CUSTOMER_SERVICE,
+                    from_agent=AgentID.ORCHESTRATOR,
                     to_agent=AgentID.ORCHESTRATOR,
                     task_type=TaskType.ADVANCE_STAGE,
                     case_id=case_id,
                     client_id=case.client_id,
                     priority="HIGH",
                     payload={
-                        "to_stage": OnboardingStage.KYC,
+                        "to_stage": to_stage,
                         "client_data": shared_ctx.get("client_data", {}),
-                        "selected_products": case.selected_products or [],
+                        "selected_products": selected,
+                        "case_name": case_name,
+                        "client_name": client_name,
                     },
                 )
             )
     except Exception as exc:
-        from loguru import logger
-        logger.warning(f"documents: KYC trigger check failed for case {case_id}: {exc}")
+        logger.warning(f"[DocApproval] next-stage trigger failed for case={case_id}: {exc}")
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -426,9 +464,9 @@ async def update_document_status(
     if body.status in ("APPROVED", "REJECTED", "RECEIVED", "UNDER_REVIEW"):
         asyncio.create_task(_update_case_percentage_for_docs(doc.case_id))
 
-    # Trigger KYC once all uploaded documents are approved and case is in REVIEW
+    # Auto-advance (SALES_REVIEW or KYC) once all uploaded documents are approved
     if body.status == "APPROVED":
-        asyncio.create_task(_trigger_kyc_if_all_docs_approved(doc.case_id))
+        asyncio.create_task(_trigger_next_stage_if_all_docs_approved(doc.case_id))
 
     # Send notification for status changes the client needs to know about
     if body.status in ("APPROVED", "NEEDS_REVISION", "REQUESTED"):

@@ -106,6 +106,18 @@ AGENTS = [
         "llm_model": None,
         "extra_metadata": {"brd_ref": "Section 8.1 stage 8"},
     },
+    {
+        "id": "b0000000-0009-0009-0009-000000000009",
+        "agent_id": "sales_manager",
+        "name": "Sales Manager Review Agent",
+        "description": "Human-in-the-loop agent for institutional product onboarding. Presents AI risk summary to Sales Manager and captures approve/reject/request-info decisions.",
+        "agent_type": "human_in_loop",
+        "is_active": True,
+        "capabilities": ["sales_review", "risk_scoring", "ai_risk_summary", "human_decision_capture"],
+        "llm_provider": "anthropic",
+        "llm_model": "claude-sonnet-4-6",
+        "extra_metadata": {"stage": "SALES_REVIEW", "triggers_on": "institutional_product"},
+    },
 ]
 
 

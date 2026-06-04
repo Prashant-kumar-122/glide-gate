@@ -57,7 +57,7 @@ class CustomerServiceAgent(BaseAgent):
     - CONTINUE_CONVERSATION — process a user turn, extract data, return next question
 
     When all required questionnaire fields are collected, signals the
-    OrchestratorAgent to advance the workflow to KYC stage.
+    OrchestratorAgent to advance the workflow to REVIEW (Advisor Review) stage.
     """
 
     agent_id = AgentID.CUSTOMER_SERVICE
@@ -191,6 +191,9 @@ class CustomerServiceAgent(BaseAgent):
                 f"No event bus; cannot advance stage for case={task.case_id}"
             )
             return
+        # After questionnaire is complete, move to Advisor Review (REVIEW).
+        # The advisor will then advance to SALES_REVIEW (institutional) or KYC (retail)
+        # once all documents are approved.
         await self.send_task(
             TaskPacket(
                 from_agent=self.agent_id,
@@ -200,7 +203,7 @@ class CustomerServiceAgent(BaseAgent):
                 client_id=task.client_id,
                 priority="HIGH",
                 payload={
-                    "to_stage": OnboardingStage.KYC,
+                    "to_stage": OnboardingStage.REVIEW,
                     "client_data": status.collected_fields,
                     "selected_products": status.collected_fields.get("selected_products", []),
                 },

@@ -1,6 +1,7 @@
 export const AGENT_IDS = [
   'orchestrator',
   'customer_service',
+  'sales_manager',
   'kyc_compliance',
   'document_intelligence',
   'product_onboarding_cash',
@@ -15,6 +16,7 @@ export type AgentId = (typeof AGENT_IDS)[number]
 export const AGENT_LABELS: Record<AgentId, string> = {
   orchestrator: 'Orchestrator',
   customer_service: 'Customer Service',
+  sales_manager: 'Sales Manager',
   kyc_compliance: 'KYC Compliance',
   document_intelligence: 'Doc Intelligence',
   product_onboarding_cash: 'Cash Account Track',
@@ -27,6 +29,7 @@ export const AGENT_LABELS: Record<AgentId, string> = {
 export const AGENT_POSITIONS: Record<AgentId, { x: number; y: number }> = {
   orchestrator:                  { x: 320, y: 20  },
   customer_service:              { x: 20,  y: 180 },
+  sales_manager:                 { x: 600, y: 20  },
   kyc_compliance:                { x: 200, y: 180 },
   document_intelligence:         { x: 390, y: 180 },
   collaboration:                 { x: 580, y: 180 },
@@ -49,6 +52,7 @@ export const PRODUCT_NODE_MAP: Record<string, AgentId> = {
 
 export const STATIC_EDGES = [
   { id: 'e-orch-cs',    source: 'orchestrator', target: 'customer_service' },
+  { id: 'e-orch-sm',    source: 'orchestrator', target: 'sales_manager' },
   { id: 'e-orch-kyc',   source: 'orchestrator', target: 'kyc_compliance' },
   { id: 'e-orch-di',    source: 'orchestrator', target: 'document_intelligence' },
   { id: 'e-orch-col',   source: 'orchestrator', target: 'collaboration' },
@@ -57,6 +61,7 @@ export const STATIC_EDGES = [
   { id: 'e-orch-cc',    source: 'orchestrator', target: 'contact_centre' },
   { id: 'e-orch-notif', source: 'orchestrator', target: 'notification' },
   { id: 'e-cs-kyc',     source: 'customer_service', target: 'kyc_compliance' },
+  { id: 'e-sm-kyc',     source: 'sales_manager', target: 'kyc_compliance' },
   { id: 'e-kyc-poc',    source: 'kyc_compliance', target: 'product_onboarding_cash' },
   { id: 'e-kyc-por',    source: 'kyc_compliance', target: 'product_onboarding_retirement' },
 ]

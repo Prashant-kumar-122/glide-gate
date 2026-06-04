@@ -14,6 +14,7 @@ from app.agents.document_intelligence.document_intelligence_agent import Documen
 from app.agents.kyc_compliance.kyc_compliance_agent import KYCComplianceAgent
 from app.agents.notification.notification_agent import NotificationAgent
 from app.agents.orchestrator.orchestrator_agent import OrchestratorAgent
+from app.agents.sales_manager.sales_manager_agent import SalesManagerAgent
 from app.services.context_store.context_store_service import context_store
 from app.services.orchestration.agent_registry import AgentRegistry
 from app.services.orchestration.parallel_product_launcher import ParallelProductLauncher
@@ -267,6 +268,7 @@ class AgentOrchestrationService:
             CollaborationAgent(),
             ContactCentreAgent(),
             NotificationAgent(),
+            SalesManagerAgent(),
         ]
 
         for agent in agents_to_register:

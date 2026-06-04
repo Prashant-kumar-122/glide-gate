@@ -43,12 +43,13 @@ class InitiateCaseRequest(BaseModel):
 
 
 _STAGE_PROGRESS: dict[str, int] = {
-    "INTAKE": 15,
-    "KYC": 35,
-    "PARALLEL_PRODUCTS": 60,
-    "REVIEW": 80,
+    "INTAKE": 10,
+    "REVIEW": 25,           # Advisor Review (early gate after intake)
+    "SALES_REVIEW": 40,
+    "KYC": 55,
+    "PARALLEL_PRODUCTS": 75,
     "COMPLETE": 100,
-    "ESCALATED": 75,
+    "ESCALATED": 65,
 }
 
 _PRODUCT_STATUS_PROGRESS: dict[str, int] = {
@@ -121,6 +122,7 @@ class CaseProgressOut(BaseModel):
     products: list[ProductTrackOut]
     kyc_status: str | None
     escalated: bool
+    is_institutional: bool = False
 
 
 class CaseListOut(BaseModel):
@@ -489,6 +491,17 @@ async def get_case_summary(
     client_name = f"{client.first_name} {client.last_name}" if client else "Unknown"
     escalated = stage == "ESCALATED" or bool(ctx.get("escalated", False))
 
+    # Determine if the case involves at least one institutional product
+    is_institutional = False
+    if case.selected_products:
+        inst_check = await db.execute(
+            select(Product).where(
+                Product.product_code.in_(case.selected_products),
+                Product.product_type == "institutional",
+            )
+        )
+        is_institutional = inst_check.scalar_one_or_none() is not None
+
     return CaseProgressOut(
         case_id=case.id,
         client_id=case.client_id,
@@ -504,6 +517,7 @@ async def get_case_summary(
         products=[_build_product_track(cp) for cp in case.case_products],
         kyc_status=ctx.get("kyc_status"),
         escalated=escalated,
+        is_institutional=is_institutional,
     )
 
 
@@ -689,25 +703,6 @@ async def update_collected_field(
     )
     await db.commit()
 
-    if current_stage == OnboardingStage.REVIEW:
-        asyncio.create_task(
-            orchestration_service.publish_task(
-                TaskPacket(
-                    from_agent=AgentID.CUSTOMER_SERVICE,
-                    to_agent=AgentID.ORCHESTRATOR,
-                    task_type=TaskType.RESUME_ONBOARDING,
-                    case_id=case_id,
-                    client_id=client_id,
-                    priority="HIGH",
-                    payload={
-                        "stage": OnboardingStage.KYC,
-                        "client_data": client_data,
-                        "selected_products": selected_products or [],
-                    },
-                )
-            )
-        )
-
     return CollectedFieldsOut(client_data=client_data)
 
 
@@ -837,65 +832,62 @@ async def submit_intake(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
 ) -> SubmitIntakeResponse:
-    """Signal that the wizard form has been completed.
+    """Client submits their completed application (forms + documents).
 
-    Updates the case to KYC stage and notifies the orchestrator agent so that
-    the KYC compliance check and downstream workflow steps are triggered.
+    All cases advance to REVIEW (Advisor Review) so the advisor can verify
+    documents before the workflow continues:
+    - Institutional: REVIEW → SALES_REVIEW (once all docs approved)
+    - Retail: REVIEW → KYC (once all docs approved)
     """
     case = await _get_case_or_404(case_id, db)
     _assert_case_access(case, current_user)
 
+    selected = case.selected_products or []
+    _sub_case_name = (case.extra_metadata or {}).get("case_name") or f"Case {str(case_id)[:8]}"
+    _sub_products = ", ".join(p.replace("_", " ").title() for p in selected)
+
+    # Resolve client info for notifications
+    client_row = await db.execute(select(Client).where(Client.id == case.client_id))
+    _sub_client = client_row.scalar_one_or_none()
+    _sub_client_name = f"{_sub_client.first_name} {_sub_client.last_name}".strip() if _sub_client else "Client"
+
+    # All cases go to Advisor Review first
+    next_stage = "REVIEW"
     await db.execute(
         sa_update(OnboardingCase)
         .where(OnboardingCase.id == case_id)
-        .values(status="REVIEW", current_stage="REVIEW", percentage=60)
+        .values(status="REVIEW", current_stage="REVIEW", percentage=25)
     )
     await db.commit()
 
-    # Send submission notifications
-    _sub_case_name = (case.extra_metadata or {}).get("case_name") or f"Case {str(case_id)[:8]}"
-    _sub_products = ", ".join(p.replace("_", " ").title() for p in (case.selected_products or []))
+    # Emit WebSocket stage change
+    await socket_emitter.case_stage_changed(case_id, {
+        "case_id": str(case_id),
+        "stage": next_stage,
+        "triggered_by": "client_submitted_intake",
+    })
 
-    # Client: email + in-app
-    client_row = await db.execute(select(Client).where(Client.id == case.client_id))
-    _sub_client = client_row.scalar_one_or_none()
+    # ── Submission notifications (both paths) ─────────────────────────────────
     if _sub_client:
-        _sub_client_name = f"{_sub_client.first_name} {_sub_client.last_name}".strip()
-        asyncio.create_task(orchestration_service.publish_task(
-            TaskPacket(
-                from_agent=AgentID.NOTIFICATION,
-                to_agent=AgentID.NOTIFICATION,
-                task_type=TaskType.SEND_NOTIFICATION,
-                case_id=case_id,
-                client_id=case.client_id,
-                priority="NORMAL",
-                payload={
-                    "template": "case_submitted",
-                    "case_name": _sub_case_name,
-                    "client_name": _sub_client_name,
-                    "selected_products": case.selected_products or [],
-                    "recipient_email": _sub_client.email,
-                },
-            )
-        ))
-        asyncio.create_task(orchestration_service.publish_task(
-            TaskPacket(
-                from_agent=AgentID.NOTIFICATION,
-                to_agent=AgentID.NOTIFICATION,
-                task_type=TaskType.SEND_NOTIFICATION,
-                case_id=case_id,
-                client_id=case.client_id,
-                priority="NORMAL",
-                payload={
-                    "template": "case_submitted_inapp",
-                    "case_name": _sub_case_name,
-                    "client_name": _sub_client_name,
-                    "selected_products": case.selected_products or [],
-                },
-            )
-        ))
+        for tmpl in ("case_submitted", "case_submitted_inapp"):
+            asyncio.create_task(orchestration_service.publish_task(
+                TaskPacket(
+                    from_agent=AgentID.NOTIFICATION,
+                    to_agent=AgentID.NOTIFICATION,
+                    task_type=TaskType.SEND_NOTIFICATION,
+                    case_id=case_id,
+                    client_id=case.client_id,
+                    priority="NORMAL",
+                    payload={
+                        "template": tmpl,
+                        "case_name": _sub_case_name,
+                        "client_name": _sub_client_name,
+                        "selected_products": selected,
+                        "recipient_email": _sub_client.email,
+                    },
+                )
+            ))
 
-    # Advisor: in-app only
     if case.assigned_advisor_id:
         await socket_emitter.notify_user(case.assigned_advisor_id, {
             "notification_id": "",
@@ -903,13 +895,165 @@ async def submit_intake(
             "channel": "in_app",
             "subject": f"Case submitted — {_sub_case_name}",
             "body_preview": (
-                f"{_sub_client_name if _sub_client else 'Client'} has submitted their "
-                f"application for **{_sub_case_name}**. Products: {_sub_products}."
+                f"{_sub_client_name} has submitted their application for "
+                f"**{_sub_case_name}**. Products: {_sub_products}. "
+                f"Next stage: {next_stage.replace('_', ' ').title()}."
             ),
             "priority": "NORMAL",
         })
 
-    return SubmitIntakeResponse(case_id=case_id, status="REVIEW", current_stage="REVIEW")
+    return SubmitIntakeResponse(case_id=case_id, status=next_stage, current_stage=next_stage)
+
+
+async def _create_sales_review_background(
+    case_id: UUID,
+    client_id: UUID,
+    case_name: str,
+    client_name: str,
+    selected_products: list[str],
+) -> None:
+    """Create the SalesManagerReview record in a background task (owns its own DB session)."""
+    from app.database import AsyncSessionLocal
+    from app.services.sales_review.sales_review_service import sales_review_service
+
+    async with AsyncSessionLocal() as db:
+        try:
+            await sales_review_service.create_review(
+                case_id=case_id,
+                client_id=client_id,
+                payload={
+                    "case_name": case_name,
+                    "client_name": client_name,
+                    "selected_products": selected_products,
+                },
+                db=db,
+            )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error(
+                f"Failed to create SalesManagerReview for case {case_id}: {exc}"
+            )
+
+
+class AdvisorApproveResponse(BaseModel):
+    case_id: UUID
+    next_stage: str
+    message: str
+
+
+@router.post("/{case_id}/advisor-approve", status_code=status.HTTP_200_OK, response_model=AdvisorApproveResponse)
+async def advisor_approve_case(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(require_role("advisor", "admin")),
+) -> AdvisorApproveResponse:
+    """Advisor advances the case out of the Advisor Review (REVIEW) stage.
+
+    Requirements:
+    - Case must be in REVIEW stage.
+    - ALL documents must have status 'APPROVED'.
+
+    Routing:
+    - Institutional product → SALES_REVIEW (creates SalesManagerReview record).
+    - Retail only → KYC (triggers KYC agent).
+    """
+    case = await _get_case_or_404(case_id, db)
+
+    if case.current_stage != "REVIEW":
+        raise ConflictError(
+            f"Case is not in Advisor Review stage (current: {case.current_stage})"
+        )
+
+    # Verify every document is approved
+    doc_result = await db.execute(
+        select(Document.status).where(Document.case_id == case_id)
+    )
+    doc_statuses = doc_result.scalars().all()
+
+    if not doc_statuses:
+        raise ConflictError("No documents found. All documents must be uploaded and approved before advancing.")
+
+    non_approved = [s for s in doc_statuses if (s or "").upper() != "APPROVED"]
+    if non_approved:
+        raise ConflictError(
+            f"All documents must be approved before advancing. "
+            f"{len(non_approved)} document(s) are not yet approved."
+        )
+
+    selected = case.selected_products or []
+    _case_name = (case.extra_metadata or {}).get("case_name") or f"Case {str(case_id)[:8]}"
+
+    client_row = await db.execute(select(Client).where(Client.id == case.client_id))
+    _client = client_row.scalar_one_or_none()
+    _client_name = f"{_client.first_name} {_client.last_name}".strip() if _client else "Client"
+
+    # Determine institutional vs retail
+    has_institutional = False
+    if selected:
+        inst_result = await db.execute(
+            select(Product).where(
+                Product.product_code.in_(selected),
+                Product.product_type == "institutional",
+            )
+        )
+        has_institutional = inst_result.scalar_one_or_none() is not None
+
+    if has_institutional:
+        # Institutional: REVIEW → SALES_REVIEW
+        next_stage = "SALES_REVIEW"
+        await db.execute(
+            sa_update(OnboardingCase)
+            .where(OnboardingCase.id == case_id)
+            .values(status="SALES_REVIEW", current_stage="SALES_REVIEW", percentage=40)
+        )
+        await db.commit()
+
+        asyncio.create_task(
+            _create_sales_review_background(
+                case_id=case_id,
+                client_id=case.client_id,
+                case_name=_case_name,
+                client_name=_client_name,
+                selected_products=selected,
+            )
+        )
+        message = "All documents approved — case advanced to Sales Review."
+    else:
+        # Retail: REVIEW → KYC
+        next_stage = "KYC"
+        await db.execute(
+            sa_update(OnboardingCase)
+            .where(OnboardingCase.id == case_id)
+            .values(status="KYC", current_stage="KYC", percentage=55)
+        )
+        await db.commit()
+
+        asyncio.create_task(
+            orchestration_service.publish_task(
+                TaskPacket(
+                    from_agent=AgentID.ORCHESTRATOR,
+                    to_agent=AgentID.KYC_COMPLIANCE,
+                    task_type=TaskType.RUN_KYC_CHECK,
+                    case_id=case_id,
+                    client_id=case.client_id,
+                    priority="HIGH",
+                    payload={
+                        "selected_products": selected,
+                        "case_name": _case_name,
+                        "client_name": _client_name,
+                    },
+                )
+            )
+        )
+        message = "All documents approved — case advanced to KYC."
+
+    await socket_emitter.case_stage_changed(case_id, {
+        "case_id": str(case_id),
+        "stage": next_stage,
+        "triggered_by": "advisor_approved",
+    })
+
+    return AdvisorApproveResponse(case_id=case_id, next_stage=next_stage, message=message)
 
 
 @router.post("/{case_id}/resume", status_code=status.HTTP_202_ACCEPTED, response_model=ResumeResponse)

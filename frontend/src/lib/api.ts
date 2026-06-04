@@ -84,6 +84,7 @@ export interface CaseSummary {
   products: ProductTrack[]
   kyc_status?: string
   escalated?: boolean
+  is_institutional?: boolean
 }
 
 export interface ProductTrack {
@@ -269,6 +270,51 @@ export interface EvidencePacket {
 }
 
 export interface DecisionOut {
+  review_id: string
+  decision: string
+  decided_at: string
+  message: string
+}
+
+// ── Sales Manager Review types ────────────────────────────────────────────────
+
+export interface SalesReviewDocument {
+  id: string
+  filename: string
+  document_type: string
+  status: string
+  uploaded_at: string | null
+}
+
+export interface SalesReviewCaseSnapshot {
+  case_id: string
+  selected_products: string[]
+  client_name: string
+  case_name: string
+  client_data: Record<string, unknown>
+  product_tracks: { product_code: string; status: string }[]
+  documents: SalesReviewDocument[]
+  total_documents: number
+  approved_documents: number
+}
+
+export interface SalesManagerReviewOut {
+  id: string
+  case_id: string
+  reviewer_id: string | null
+  reviewer_role: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'MORE_INFO_REQUESTED'
+  decision: string | null
+  decision_notes: string | null
+  ai_risk_summary: string | null
+  risk_score: number | null
+  case_snapshot: SalesReviewCaseSnapshot
+  assigned_at: string
+  decided_at: string | null
+  created_at: string
+}
+
+export interface SalesDecisionOut {
   review_id: string
   decision: string
   decided_at: string

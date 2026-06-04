@@ -8,6 +8,7 @@ from app.models.clients import Client, ClientAddress, ClientProfile
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
 from app.models.documents import Document
 from app.models.kyc_reviews import HumanReview, KYCCheck
+from app.models.sales_reviews import SalesManagerReview
 from app.models.agents import Agent, AgentTask, EventLog, MCPToolCall
 from app.models.communications import (
     CaseSummary,
@@ -47,6 +48,7 @@ __all__ = [
     # kyc / reviews
     "KYCCheck",
     "HumanReview",
+    "SalesManagerReview",
     # agents
     "Agent",
     "AgentTask",

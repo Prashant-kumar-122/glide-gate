@@ -17,6 +17,7 @@ class AgentID(StrEnum):
     COLLABORATION = "collaboration"
     CONTACT_CENTRE = "contact_centre"
     NOTIFICATION = "notification"
+    SALES_MANAGER = "sales_manager"
 
 
 class TaskType(StrEnum):
@@ -48,6 +49,9 @@ class TaskType(StrEnum):
     # Notification
     SEND_NOTIFICATION = "send_notification"
     SEND_ESCALATION_ALERT = "send_escalation_alert"
+    # Sales Manager
+    SALES_MANAGER_REVIEW = "sales_manager_review"
+    SALES_MANAGER_DECIDE = "sales_manager_decide"
     # Generic
     ESCALATE = "escalate"
     HEALTH_CHECK = "health_check"
@@ -55,6 +59,7 @@ class TaskType(StrEnum):
 
 class OnboardingStage(StrEnum):
     INTAKE = "INTAKE"
+    SALES_REVIEW = "SALES_REVIEW"
     KYC = "KYC"
     PARALLEL_PRODUCTS = "PARALLEL_PRODUCTS"
     REVIEW = "REVIEW"
@@ -112,6 +117,10 @@ class OnboardingState(BaseModel):
     # KYC outcome
     kyc_status: Literal["PENDING", "PASSED", "FAILED", "ESCALATED"] = "PENDING"
     kyc_risk_score: float | None = None
+
+    # Sales Manager review (institutional products only)
+    sales_review_id: UUID | None = None
+    sales_review_decision: Literal["PENDING", "APPROVED", "REJECTED", "MORE_INFO_REQUESTED"] = "PENDING"
 
     # Escalation / human review
     escalation_reason: str | None = None

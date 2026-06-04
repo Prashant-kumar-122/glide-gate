@@ -14,8 +14,25 @@ class InvalidTransitionError(Exception):
 
 
 # Valid forward and backward transitions per stage
+#
+# Institutional: INTAKE → REVIEW → SALES_REVIEW → KYC → PARALLEL_PRODUCTS → COMPLETE
+# Retail:        INTAKE → REVIEW → KYC → PARALLEL_PRODUCTS → COMPLETE
+# SM reject/info: SALES_REVIEW → REVIEW
+# All docs must be approved before advancing from REVIEW.
 _TRANSITIONS: dict[OnboardingStage, set[OnboardingStage]] = {
-    OnboardingStage.INTAKE: {OnboardingStage.KYC},
+    OnboardingStage.INTAKE: {
+        OnboardingStage.REVIEW,  # all cases enter Advisor Review after intake
+    },
+    OnboardingStage.REVIEW: {
+        OnboardingStage.SALES_REVIEW,  # institutional, all docs approved → SM review
+        OnboardingStage.KYC,           # retail, all docs approved → KYC
+        OnboardingStage.COMPLETE,
+        OnboardingStage.ESCALATED,
+    },
+    OnboardingStage.SALES_REVIEW: {
+        OnboardingStage.KYC,     # SM approved → proceed to KYC
+        OnboardingStage.REVIEW,  # SM rejected / requested info → back to Advisor Review
+    },
     OnboardingStage.KYC: {
         OnboardingStage.PARALLEL_PRODUCTS,
         OnboardingStage.ESCALATED,
@@ -25,15 +42,10 @@ _TRANSITIONS: dict[OnboardingStage, set[OnboardingStage]] = {
         OnboardingStage.COMPLETE,
         OnboardingStage.ESCALATED,
     },
-    OnboardingStage.REVIEW: {
-        OnboardingStage.COMPLETE,
-        OnboardingStage.ESCALATED,
-        OnboardingStage.KYC,  # re-KYC after human approves more info
-    },
     OnboardingStage.COMPLETE: set(),
     OnboardingStage.ESCALATED: {
         OnboardingStage.REVIEW,
-        OnboardingStage.KYC,  # resume after human approval
+        OnboardingStage.KYC,
         OnboardingStage.COMPLETE,
     },
 }
@@ -85,3 +97,6 @@ class WorkflowStateMachine:
 
     def is_terminal(self) -> bool:
         return self._stage in (OnboardingStage.COMPLETE, OnboardingStage.ESCALATED)
+
+    def is_human_pending(self) -> bool:
+        return self._stage in (OnboardingStage.SALES_REVIEW, OnboardingStage.REVIEW)
