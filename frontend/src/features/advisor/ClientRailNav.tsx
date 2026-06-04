@@ -6,12 +6,12 @@ import { useCases, useAccount } from '@/hooks/useDocuments'
 import type { CaseOut } from '@/lib/api'
 
 const STAGE_LABELS: Record<string, string> = {
-  INTAKE: 'Intake',
-  KYC: 'KYC',
+  INTAKE:            'Intake',
+  KYC:               'KYC',
   PARALLEL_PRODUCTS: 'Products',
-  REVIEW: 'Review',
-  COMPLETE: 'Complete',
-  ESCALATED: 'Escalated',
+  REVIEW:            'Review',
+  COMPLETE:          'Complete',
+  ESCALATED:         'Escalated',
 }
 
 interface CaseItemProps {
@@ -31,7 +31,7 @@ function caseDisplayName(c: CaseOut): string {
 }
 
 function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
-  const progress = Math.round(c.percentage ?? 0)
+  const progress   = Math.round(c.percentage ?? 0)
   const stageLabel = STAGE_LABELS[c.current_stage] ?? c.current_stage
   const { data: account } = useAccount(c.id, c.current_stage === 'COMPLETE')
 
@@ -39,22 +39,32 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
     <button
       onClick={onSelect}
       className={[
-        'w-full rounded-xl px-3 py-3 text-left transition-all',
+        'w-full px-3 py-2.5 text-left transition-colors border-l-2',
         isSelected
-          ? 'bg-blue-600 text-white shadow-md'
-          : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 dark:border-gray-600',
+          ? 'border-primary bg-blue-50 dark:bg-primary-subtle'
+          : 'border-transparent bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/60',
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className={['truncate text-sm font-semibold', isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'].join(' ')}>
+          <p className={[
+            'truncate text-xs font-semibold',
+            isSelected
+              ? 'text-primary dark:text-white'
+              : 'text-gray-800 dark:text-gray-100',
+          ].join(' ')}>
             {caseDisplayName(c)}
           </p>
-          <p className={['mt-0.5 text-xs', isSelected ? 'text-blue-200' : 'text-gray-400'].join(' ')}>
+          <p className={[
+            'mt-0.5 text-[10px] font-medium uppercase tracking-wide',
+            isSelected
+              ? 'text-primary/70 dark:text-blue-200'
+              : 'text-gray-500 dark:text-gray-400',
+          ].join(' ')}>
             {stageLabel}
           </p>
           {account && account.map((acc) => (
-            <p key={acc.account_number} className={['mt-0.5 flex items-center gap-1 text-[10px] font-mono font-medium truncate', isSelected ? 'text-emerald-300' : 'text-emerald-600 dark:text-emerald-400'].join(' ')}>
+            <p key={acc.account_number} className="mt-0.5 flex items-center gap-1 font-mono text-[10px] font-medium truncate text-emerald-600 dark:text-emerald-400">
               <BadgeCheck className="w-2.5 h-2.5 shrink-0" />
               {acc.account_number}
             </p>
@@ -62,7 +72,7 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
         </div>
 
         {badgeCount > 0 && (
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          <span className="flex h-4 min-w-4 items-center justify-center bg-red-500 px-1 text-[9px] font-bold text-white shrink-0">
             {badgeCount}
           </span>
         )}
@@ -73,16 +83,16 @@ function CaseItem({ c, isSelected, badgeCount, onSelect }: CaseItemProps) {
           value={progress}
           size="sm"
           color={
-            c.current_stage === 'COMPLETE'
-              ? 'success'
-              : c.current_stage === 'ESCALATED'
-              ? 'warning'
-              : 'default'
+            c.current_stage === 'COMPLETE'  ? 'success' :
+            c.current_stage === 'ESCALATED' ? 'warning' : 'default'
           }
         />
       </div>
 
-      <p className={['mt-1 text-right text-[10px] tabular-nums', isSelected ? 'text-blue-200' : 'text-gray-400'].join(' ')}>
+      <p className={[
+        'mt-1 text-right font-mono text-[9px] tabular-nums',
+        isSelected ? 'text-primary/70 dark:text-blue-200' : 'text-gray-400 dark:text-gray-500',
+      ].join(' ')}>
         {progress}%
       </p>
     </button>
@@ -95,8 +105,7 @@ interface ClientRailNavProps {
 }
 
 export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: ClientRailNavProps) {
-  const { selectedCaseId, socketConnected, setSelectedClient, uploadBadgeCounts } =
-    useWorkspaceStore()
+  const { selectedCaseId, socketConnected, setSelectedClient, uploadBadgeCounts } = useWorkspaceStore()
   const { data: cases, isLoading, isError } = useCases()
   const [search, setSearch] = useState('')
 
@@ -119,54 +128,55 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
   return (
     <aside
       className={[
-        'fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-gray-200 bg-gray-50 shadow-xl dark:border-gray-700 dark:bg-gray-900',
-        'transition-transform duration-300 ease-in-out',
+        // max-w prevents overflow on very small screens (320px)
+        'fixed inset-y-0 left-0 z-40 flex w-[260px] max-w-[calc(100vw-3rem)] shrink-0 flex-col',
+        'border-r border-gray-200 bg-gray-50 shadow-lg dark:border-gray-800 dark:bg-gray-950',
+        'transition-transform duration-200 ease-in-out',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full',
-        'lg:relative lg:inset-auto lg:z-auto lg:w-64 lg:translate-x-0 lg:shadow-none lg:transition-none',
+        'lg:relative lg:inset-auto lg:z-auto lg:w-56 lg:max-w-none lg:translate-x-0 lg:shadow-none lg:transition-none',
       ].join(' ')}
       aria-label="Cases sidebar"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+      <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2.5 dark:border-gray-800">
         <div className="flex items-center gap-2">
-          <Briefcase className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Cases</span>
+          <Briefcase className="h-3.5 w-3.5 text-gray-500 dark:text-gray-500" />
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-500">Cases</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span title={socketConnected ? 'Live' : 'Disconnected'}>
-            {socketConnected ? (
-              <Wifi className="h-4 w-4 text-green-500" />
-            ) : (
-              <WifiOff className="h-4 w-4 text-gray-400" />
-            )}
+        <div className="flex items-center gap-1.5">
+          <span title={socketConnected ? 'Live data' : 'Disconnected'}>
+            {socketConnected
+              ? <Wifi className="h-3.5 w-3.5 text-green-500" />
+              : <WifiOff className="h-3.5 w-3.5 text-gray-400" />
+            }
           </span>
           {onMobileClose && (
             <button
               onClick={onMobileClose}
-              className="rounded p-1 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300 lg:hidden"
+              className="p-0.5 text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 lg:hidden"
               aria-label="Close cases panel"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
       </div>
 
       {/* Search */}
-      <div className="border-b border-gray-200 px-3 py-2.5 dark:border-gray-700">
+      <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-800">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search clients, stage…"
+            placeholder="Search cases…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-8 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
+            className="w-full border border-gray-200 bg-white py-1.5 pl-7 pr-3 text-xs text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder-gray-600"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               aria-label="Clear search"
             >
               <X className="h-3 w-3" />
@@ -174,32 +184,32 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
           )}
         </div>
         {search && (
-          <p className="mt-1 text-[11px] text-gray-400">
+          <p className="mt-1 text-[10px] text-gray-500 dark:text-gray-400">
             {filtered.length} of {cases?.length ?? 0} cases
           </p>
         )}
       </div>
 
-      {/* Client list */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      {/* Case list */}
+      <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800/50">
         {isLoading && (
-          <div className="space-y-2">
+          <div className="p-3 space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700" />
+              <div key={i} className="h-16 animate-pulse bg-gray-200 dark:bg-gray-800" />
             ))}
           </div>
         )}
 
         {isError && (
-          <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600 dark:bg-red-950 dark:text-red-400">
+          <p className="m-3 border border-red-200 bg-red-50 p-2.5 text-[10px] text-red-700 dark:border-red-700/30 dark:bg-red-950/40 dark:text-red-400">
             Failed to load cases. Is the backend running?
           </p>
         )}
 
         {!isLoading && !isError && filtered.length === 0 && (
-          <div className="flex flex-col items-center py-12 text-center">
-            <Search className="h-7 w-7 text-gray-200 dark:text-gray-700" />
-            <p className="mt-2 text-xs text-gray-400">
+          <div className="flex flex-col items-center py-12 text-center px-4">
+            <Search className="h-6 w-6 text-gray-300 dark:text-gray-700" />
+            <p className="mt-2 text-[10px] text-gray-500 dark:text-gray-400">
               {search ? 'No cases match your search' : 'No active cases'}
             </p>
           </div>
@@ -216,10 +226,10 @@ export default function ClientRailNav({ isMobileOpen = false, onMobileClose }: C
         ))}
       </div>
 
-      {/* Footer stats */}
+      {/* Footer */}
       {cases && cases.length > 0 && (
-        <div className="border-t border-gray-200 px-4 py-2 dark:border-gray-700">
-          <p className="text-xs text-gray-400">
+        <div className="border-t border-gray-200 px-3 py-2 dark:border-gray-800">
+          <p className="font-mono text-[10px] text-gray-500 dark:text-gray-400">
             {cases.length} active case{cases.length !== 1 ? 's' : ''}
           </p>
         </div>

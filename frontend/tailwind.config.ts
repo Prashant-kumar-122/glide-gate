@@ -10,32 +10,43 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
+      },
+      fontSize: {
+        // Tighter, more data-dense type scale
+        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],  // 10px
+      },
+      letterSpacing: {
+        tightest: '-0.02em',
+        widest2: '0.15em',
       },
       colors: {
-        // ── Reference-2 semantic tokens (static dark palette for direct use) ──
-        'bg-base':        '#0D0F14',
-        'bg-surface':     '#161B24',
-        'bg-elevated':    '#1E2533',
-        'bg-hover':       '#242D3D',
-        primary:          '#3B7BF5',
+        // ── Investment banking semantic tokens (static dark palette) ──────────
+        'bg-base':        '#060A14',   // deep navy-black — app body
+        'bg-surface':     '#0C1220',   // nav chrome / side panels
+        'bg-elevated':    '#141C2C',   // card surface
+        'bg-hover':       '#1C2640',   // hover state
+        primary:          '#3B7BF5',   // brand blue
         'primary-hover':  '#2D6BE0',
-        'primary-subtle': '#1A2A4A',
-        'text-primary':   '#F0F2F5',
-        'text-secondary': '#8A94A6',
-        'text-muted':     '#4F5A6E',
-        success:          '#22C55E',
-        'success-subtle': '#0F2A1A',
-        warning:          '#F59E0B',
-        'warning-subtle': '#2A1F0A',
-        danger:           '#EF4444',
-        'danger-subtle':  '#2A0F0F',
-        info:             '#38BDF8',
-        'info-subtle':    '#0A1F2A',
-        'border-default': '#2A3140',
-        'border-subtle':  '#1E2533',
-        // ── Semantic color families — driven by CSS vars so dark mode can
-        //    override them in .dark without touching any component files. ──────
+        'primary-subtle': '#122452',   // subtle tinted bg for selected rows etc.
+        'text-primary':   '#DCE2EE',   // primary text
+        'text-secondary': '#9CA8BE',   // secondary / labels
+        'text-muted':     '#5A687E',   // very muted
+        success:          '#52B678',   // muted green
+        'success-subtle': '#08180E',
+        warning:          '#AC7226',   // muted amber
+        'warning-subtle': '#241202',
+        danger:           '#A45252',   // muted red
+        'danger-subtle':  '#220808',
+        info:             '#3B7BF5',
+        'info-subtle':    '#0A1432',
+        'border-default': '#222C3E',   // standard border
+        'border-subtle':  '#141C2C',   // hairline border
+        // ── Gold accent — premium indicators (account numbers, completed) ─────
+        gold:             '#B8960C',
+        'gold-subtle':    '#1A1500',
+        // ── CSS var-backed color families (adaptive light ↔ dark) ─────────────
         gray: {
           50:  cv('gray-50'),
           100: cv('gray-100'),
@@ -126,25 +137,45 @@ export default {
         },
         // Brand — pinned values that must not shift between light and dark
         brand: {
-          blue: '#2563eb',
+          blue: '#2563EB',
         },
-        // Document status tokens
+        // Document status tokens — used in CaseListTable/ClientStatusTable cells
         status: {
-          'not-requested': '#94a3b8',
-          requested: '#60a5fa',
-          received: '#a78bfa',
-          'under-review': '#fbbf24',
-          'needs-revision': '#f87171',
-          approved: '#34d399',
+          'not-requested': '#76849B',
+          requested:       '#6097FB',
+          received:        '#9680BA',
+          'under-review':  '#C2903E',
+          'needs-revision':'#A45252',
+          approved:        '#52B678',
         },
         // Role tokens
         role: {
-          advisor: '#3b82f6',
-          client: '#8b5cf6',
-          compliance: '#f59e0b',
-          'cc-rep': '#10b981',
-          admin: '#6b7280',
+          advisor:    '#3B7BF5',
+          client:     '#7C62A4',
+          compliance: '#AC7226',
+          'cc-rep':   '#52B678',
+          admin:      '#5A687E',
         },
+      },
+      borderRadius: {
+        // IB-standard geometry — much tighter than consumer apps
+        DEFAULT: '3px',
+        sm:  '2px',
+        md:  '4px',
+        lg:  '6px',
+        xl:  '8px',
+        '2xl': '10px',
+        full: '9999px',
+      },
+      boxShadow: {
+        // Investment banking: structure via borders, not shadows
+        // Only use shadows for floating overlays (dropdowns, modals, tooltips)
+        DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.25)',
+        sm:      '0 1px 2px 0 rgb(0 0 0 / 0.2)',
+        md:      '0 2px 6px 0 rgb(0 0 0 / 0.3), 0 1px 3px -1px rgb(0 0 0 / 0.3)',
+        lg:      '0 4px 12px 0 rgb(0 0 0 / 0.4), 0 2px 6px -2px rgb(0 0 0 / 0.4)',
+        xl:      '0 8px 24px 0 rgb(0 0 0 / 0.5), 0 4px 12px -4px rgb(0 0 0 / 0.5)',
+        none:    'none',
       },
     },
   },

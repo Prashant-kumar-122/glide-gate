@@ -76,7 +76,7 @@ function NotificationDropdown() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(p => !p)}
-        className="relative flex items-center justify-center w-9 h-9 rounded-lg text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
+        className="relative flex items-center justify-center w-9 h-9 text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
         aria-label="Notifications"
       >
         <IconBell size={20} />
@@ -88,7 +88,7 @@ function NotificationDropdown() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-80 bg-bg-elevated border border-border-default rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-11 w-80 bg-bg-elevated border border-border-default shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border-default">
             <span className="text-sm font-semibold text-text-primary">Notifications</span>
             {unreadCount > 0 && (
@@ -137,7 +137,7 @@ function UserMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(p => !p)} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-bg-hover transition-colors">
+      <button onClick={() => setOpen(p => !p)} className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-bg-hover transition-colors">
         <div className="w-7 h-7 rounded-full bg-primary-subtle border border-primary/20 flex items-center justify-center flex-shrink-0">
           <span className="text-xs font-bold text-primary">{user ? initials(user.fullName) : '?'}</span>
         </div>
@@ -149,7 +149,7 @@ function UserMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-48 bg-bg-elevated border border-border-default rounded-xl shadow-xl z-50 py-1">
+        <div className="absolute right-0 top-11 w-48 bg-bg-elevated border border-border-default shadow-xl z-50 py-1">
           <button onClick={() => { signOut(); setOpen(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-text-secondary hover:bg-bg-hover hover:text-danger transition-colors">
             <IconLogout size={15} /> Sign out
           </button>
@@ -186,7 +186,7 @@ export default function ClientPortalLayout() {
                 key={label}
                 to={to}
                 className={({ isActive }) =>
-                  ['flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                  ['flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
                     isActive ? 'bg-primary-subtle text-primary' : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
                   ].join(' ')
                 }

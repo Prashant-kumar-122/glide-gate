@@ -7,16 +7,16 @@ interface ProgressBarProps {
 }
 
 const COLOR_MAP = {
-  default: 'bg-blue-500',
+  default: 'bg-primary',
   success: 'bg-green-500',
   warning: 'bg-amber-500',
-  danger: 'bg-red-500',
+  danger:  'bg-red-500',
 }
 
 const SIZE_MAP = {
   sm: 'h-1',
-  md: 'h-2',
-  lg: 'h-3',
+  md: 'h-1.5',
+  lg: 'h-2',
 }
 
 export default function ProgressBar({
@@ -26,20 +26,21 @@ export default function ProgressBar({
   color = 'default',
   size = 'md',
 }: ProgressBarProps) {
-  const clamped = Math.min(100, Math.max(0, value))
+  const clamped  = Math.min(100, Math.max(0, value))
   const barColor = clamped === 100 ? 'bg-green-500' : COLOR_MAP[color]
 
   return (
     <div className="w-full">
       {(label || showPercent) && (
-        <div className="mb-1 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+        <div className="mb-1 flex items-center justify-between text-[10px] text-gray-500">
           {label && <span>{label}</span>}
-          {showPercent && <span className="tabular-nums">{clamped}%</span>}
+          {showPercent && <span className="font-mono tabular-nums">{clamped}%</span>}
         </div>
       )}
-      <div className={['w-full rounded-full bg-gray-200 dark:bg-gray-700', SIZE_MAP[size]].join(' ')}>
+      {/* Square-capped track — no rounded-full */}
+      <div className={['w-full bg-gray-200 dark:bg-gray-800', SIZE_MAP[size]].join(' ')}>
         <div
-          className={['rounded-full transition-all duration-500', barColor, SIZE_MAP[size]].join(' ')}
+          className={['transition-all duration-500', barColor, SIZE_MAP[size]].join(' ')}
           style={{ width: `${clamped}%` }}
           role="progressbar"
           aria-valuenow={clamped}

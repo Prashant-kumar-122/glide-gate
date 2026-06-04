@@ -15,13 +15,15 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       {login.error && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          {(login.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Login failed. Please check your credentials.'}
+        <div className="border border-red-300 bg-red-50 px-3 py-2.5 text-xs text-red-700 dark:border-red-700/40 dark:bg-red-950/60 dark:text-red-300">
+          {(login.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Authentication failed. Check your credentials.'}
         </div>
       )}
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="email" className="text-[10px] font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-500">
+          Email Address
+        </label>
         <input
           id="email"
           type="email"
@@ -29,12 +31,15 @@ export default function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
+          className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-600"
+          placeholder="you@institution.com"
         />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="password" className="text-[10px] font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-500">
+          Password
+        </label>
         <input
           id="password"
           type="password"
@@ -42,21 +47,24 @@ export default function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
+          className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-600"
+          placeholder="••••••••"
         />
       </div>
 
       <button
         type="submit"
         disabled={login.isPending}
-        className="mt-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="mt-1 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {login.isPending ? 'Signing in…' : 'Sign in'}
+        {login.isPending ? 'Authenticating…' : 'Sign In'}
       </button>
 
-      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-        Don't have an account?{' '}
-        <Link to="/signup" className="font-medium text-blue-600 hover:underline dark:text-blue-400">Sign up</Link>
+      <p className="text-center text-xs text-gray-500 dark:text-gray-600">
+        No account?{' '}
+        <Link to="/signup" className="font-medium text-primary hover:underline">
+          Request access
+        </Link>
       </p>
     </form>
   )
