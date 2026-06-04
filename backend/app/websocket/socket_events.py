@@ -18,6 +18,10 @@ class SocketEvent(StrEnum):
     ESCALATION_TRIGGERED = "escalation_triggered"
     REVIEW_DECIDED = "review_decided"
 
+    # Sales Manager review
+    SALES_REVIEW_TRIGGERED = "sales_review_triggered"
+    SALES_REVIEW_DECIDED = "sales_review_decided"
+
     # Product tracks
     PRODUCT_TRACK_UPDATE = "product_track_update"
 

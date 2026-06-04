@@ -201,6 +201,7 @@ class OrchestratorAgent(BaseAgent):
 
         _resume_routing: dict[OnboardingStage, tuple[AgentID, TaskType]] = {
             OnboardingStage.INTAKE: (AgentID.CUSTOMER_SERVICE, TaskType.COLLECT_CLIENT_DATA),
+            OnboardingStage.SALES_REVIEW: (AgentID.SALES_MANAGER, TaskType.SALES_MANAGER_REVIEW),
             OnboardingStage.KYC: (AgentID.KYC_COMPLIANCE, TaskType.RUN_KYC_CHECK),
             OnboardingStage.PARALLEL_PRODUCTS: (AgentID.PRODUCT_ONBOARDING, TaskType.ONBOARD_PRODUCT),
         }
@@ -239,6 +240,20 @@ class OrchestratorAgent(BaseAgent):
             )
 
         fsm = self._get_or_create_fsm(case_id)
+
+        # The in-memory FSM can drift out of sync when the DB stage was updated
+        # directly (e.g. submit-intake sets DB to REVIEW without going through the
+        # FSM).  If the transition is not reachable from the current FSM state,
+        # reload from the DB and retry once before giving up.
+        if not fsm.can_transition(to_stage):
+            db_stage = await self._load_stage_from_db(case_id)
+            if db_stage and db_stage != fsm.stage:
+                self.logger.info(
+                    f"[FSM] case={case_id} syncing from DB: "
+                    f"{fsm.stage} → {db_stage} (then will attempt → {to_stage})"
+                )
+                fsm.restore(db_stage)
+
         try:
             fsm.transition(to_stage)
         except InvalidTransitionError as exc:
@@ -248,6 +263,10 @@ class OrchestratorAgent(BaseAgent):
                 status="FAILED",
                 errors=[str(exc)],
             )
+
+        # Persist to DB so any downstream stage checks (e.g. doc-approval trigger)
+        # see the correct current_stage immediately.
+        asyncio.create_task(_persist_case_stage(case_id, to_stage.value))
 
         await self._route_to_stage(task, to_stage)
         return TaskResponse(
@@ -451,12 +470,94 @@ class OrchestratorAgent(BaseAgent):
             result={"status": "healthy", "active_cases": len(self._fsms)},
         )
 
+    # ── DB helpers ────────────────────────────────────────────────────────────
+
+    async def _load_stage_from_db(self, case_id: UUID) -> OnboardingStage | None:
+        """Return the persisted current_stage for a case, or None on error."""
+        try:
+            from sqlalchemy import select as _select
+            from app.database import AsyncSessionLocal
+            from app.models.cases import OnboardingCase
+            async with AsyncSessionLocal() as db:
+                row = await db.execute(
+                    _select(OnboardingCase.current_stage).where(OnboardingCase.id == case_id)
+                )
+                raw = row.scalar_one_or_none()
+                return OnboardingStage(raw) if raw else None
+        except Exception as exc:
+            self.logger.warning(f"[FSM] Could not load DB stage for case={case_id}: {exc}")
+            return None
+
+    # ── Institutional check ───────────────────────────────────────────────────
+
+    async def _has_institutional_product(
+        self, case_id: UUID, payload: dict
+    ) -> bool:
+        """Return True if any selected product in the case is institutional type."""
+        selected: list[str] = payload.get("selected_products", [])
+        if not selected:
+            # Fall back to DB if payload doesn't carry products
+            try:
+                from app.database import AsyncSessionLocal
+                from app.models.cases import OnboardingCase
+                from sqlalchemy import select as _select
+                async with AsyncSessionLocal() as db:
+                    result = await db.execute(
+                        _select(OnboardingCase).where(OnboardingCase.id == case_id)
+                    )
+                    case = result.scalar_one_or_none()
+                    if case:
+                        selected = case.selected_products or []
+            except Exception as exc:
+                self.logger.warning(
+                    f"Could not load products for institutional check: {exc}"
+                )
+                return False
+
+        if not selected:
+            return False
+
+        try:
+            from app.database import AsyncSessionLocal
+            from app.models.cases import Product
+            from sqlalchemy import select as _select
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    _select(Product).where(
+                        Product.product_code.in_(selected),
+                        Product.product_type == "institutional",
+                    )
+                )
+                return result.scalar_one_or_none() is not None
+        except Exception as exc:
+            self.logger.warning(f"Institutional product check failed: {exc}")
+            return False
+
     # ── Stage routing ─────────────────────────────────────────────────────────
 
     async def _route_to_stage(self, task: TaskPacket, stage: OnboardingStage) -> None:
         selected_products: list[str] = task.payload.get("selected_products", [])
 
-        if stage == OnboardingStage.KYC:
+        if stage == OnboardingStage.SALES_REVIEW:
+            await self.send_task(
+                TaskPacket(
+                    from_agent=self.agent_id,
+                    to_agent=AgentID.SALES_MANAGER,
+                    task_type=TaskType.SALES_MANAGER_REVIEW,
+                    case_id=task.case_id,
+                    client_id=task.client_id,
+                    priority="HIGH",
+                    payload=task.payload,
+                )
+            )
+            from app.websocket.socket_emitter import socket_emitter as _se
+            await _se.case_stage_changed(task.case_id, {
+                "case_id": str(task.case_id),
+                "stage": OnboardingStage.SALES_REVIEW.value,
+                "triggered_by": "institutional_product_detected",
+            })
+
+        elif stage == OnboardingStage.KYC:
             await self.send_task(
                 TaskPacket(
                     from_agent=self.agent_id,

@@ -12,6 +12,7 @@ from app.api.routers import clients, cases, documents, conversations, reviews, a
 from app.api.routers.admin import llm_config, validation_prompts, checkpoint_rules
 from app.api.routers import demo
 from app.api.routers import collaboration
+from app.api.routers import sales_reviews
 from app.websocket.socket_server import sio  # noqa: F401 — imported for side-effect (event registration)
 from app.services.orchestration.agent_orchestration_service import orchestration_service
 
@@ -65,6 +66,7 @@ app.include_router(validation_prompts.router, prefix=_prefix)
 app.include_router(checkpoint_rules.router, prefix=_prefix)
 app.include_router(demo.router, prefix=_prefix)
 app.include_router(collaboration.router, prefix=_prefix)
+app.include_router(sales_reviews.router, prefix=_prefix)
 
 # ── Socket.IO ASGI mount ──────────────────────────────────────────────────────
 # Mount socket.io at /ws so the FastAPI routes remain at /api/*

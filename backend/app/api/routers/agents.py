@@ -82,19 +82,8 @@ async def list_agents(
     return [AgentOut.model_validate(a) for a in agents]
 
 
-@router.get("/{agent_id}", response_model=AgentOut)
-async def get_agent(
-    agent_id: str,
-    db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(get_current_user),
-) -> AgentOut:
-    result = await db.execute(select(Agent).where(Agent.agent_id == agent_id))
-    agent = result.scalar_one_or_none()
-    if agent is None:
-        raise NotFoundError("Agent", agent_id)
-    return AgentOut.model_validate(agent)
-
-
+# NOTE: /trace/{case_id} must be declared BEFORE /{agent_id} so FastAPI
+# doesn't absorb "trace" as a literal agent_id value.
 @router.get("/trace/{case_id}", response_model=AgentTraceOut)
 async def get_agent_trace(
     case_id: UUID,
@@ -129,3 +118,16 @@ async def get_agent_trace(
         ],
         total=len(tasks),
     )
+
+
+@router.get("/{agent_id}", response_model=AgentOut)
+async def get_agent(
+    agent_id: str,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(get_current_user),
+) -> AgentOut:
+    result = await db.execute(select(Agent).where(Agent.agent_id == agent_id))
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise NotFoundError("Agent", agent_id)
+    return AgentOut.model_validate(agent)

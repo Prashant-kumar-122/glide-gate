@@ -15,9 +15,11 @@ import CategoryCard from '@/components/CategoryCard'
 import DocumentRow from '@/components/DocumentRow'
 import UploadButton from '@/components/UploadButton'
 import ParallelProductTracks from './ParallelProductTracks'
+import SalesReviewPanel from './SalesReviewPanel'
 import OnboardingFormView from '@/features/client/OnboardingFormView'
 import { useDocuments, useCaseProgress, useUploadDocument, useAccount, useQuestionnaireSchema, useCollectedFields } from '@/hooks/useDocuments'
 import { useComments } from '@/hooks/useComments'
+import { useAuthStore } from '@/store/authStore'
 import type { DocumentOut } from '@/lib/api'
 
 type WorkspaceTab = 'documents' | 'application'
@@ -46,8 +48,6 @@ interface DocumentWorkspacePanelProps {
 }
 
 export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePanelProps) {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('documents')
-
   const { data: docs, isLoading: docsLoading } = useDocuments(caseId)
   const { data: summary, isLoading: summaryLoading } = useCaseProgress(caseId)
   const { data: account } = useAccount(caseId, summary?.current_stage === 'COMPLETE')
@@ -55,6 +55,10 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
   const { data: comments = [] } = useComments(caseId)
   const { data: schemaData, isLoading: schemaLoading } = useQuestionnaireSchema(caseId)
   const { data: collectedData, isLoading: collectedLoading } = useCollectedFields(caseId)
+  const userRole = useAuthStore(s => s.user?.role)
+
+  const isSalesReview = summary?.current_stage === 'SALES_REVIEW'
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('documents')
 
   const commentCountByDoc = comments.reduce<Record<string, number>>((acc, c) => {
     if (c.documentId) acc[c.documentId] = (acc[c.documentId] ?? 0) + 1
@@ -112,6 +116,11 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
             </div>
           </div>
         </div>
+      )}
+
+      {/* Sales Manager Review banner — shown when SALES_REVIEW stage */}
+      {isSalesReview && (
+        <SalesReviewPanel caseId={caseId} userRole={userRole} />
       )}
 
       {/* Parallel product tracks — always visible */}
@@ -235,6 +244,7 @@ export default function DocumentWorkspacePanel({ caseId }: DocumentWorkspacePane
             hideReadOnlyLabel
           />
         )}
+
       </div>
     </div>
   )

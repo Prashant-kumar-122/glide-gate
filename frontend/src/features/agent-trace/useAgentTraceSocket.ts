@@ -119,6 +119,10 @@ export function useAgentTraceSocket(caseId: string | null) {
     function onStageChanged(data: { stage?: string }) {
       if (data.stage === 'COMPLETE') setNodeState('orchestrator', 'complete')
       else if (data.stage === 'ESCALATED') setNodeState('orchestrator', 'escalated')
+      else if (data.stage === 'SALES_REVIEW') {
+        setNodeState('orchestrator', 'active')
+        setNodeState('sales_manager', 'active')
+      }
       else if (data.stage) setNodeState('orchestrator', 'active')
     }
 

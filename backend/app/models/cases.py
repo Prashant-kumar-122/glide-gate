@@ -23,8 +23,8 @@ from app.database import Base
 class OnboardingCase(Base):
     __tablename__ = "onboarding_cases"
     __table_args__ = (
-        CheckConstraint("status IN ('INTAKE','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')", name="oc_status_chk"),
-        CheckConstraint("current_stage IN ('INTAKE','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')", name="oc_stage_chk"),
+        CheckConstraint("status IN ('INTAKE','SALES_REVIEW','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')", name="oc_status_chk"),
+        CheckConstraint("current_stage IN ('INTAKE','SALES_REVIEW','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')", name="oc_stage_chk"),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
@@ -42,6 +42,7 @@ class OnboardingCase(Base):
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     client: Mapped[Any] = relationship("Client", back_populates="onboarding_cases")
+    sales_manager_reviews: Mapped[list[Any]] = relationship("SalesManagerReview", back_populates="case")
     case_products: Mapped[list[CaseProduct]] = relationship("CaseProduct", back_populates="case", cascade="all, delete-orphan")
     documents: Mapped[list[Any]] = relationship("Document", back_populates="case")
     kyc_checks: Mapped[list[Any]] = relationship("KYCCheck", back_populates="case")

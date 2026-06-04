@@ -298,6 +298,46 @@ _REGISTRY: dict[str, NotificationTemplate] = {
             "Products: $products."
         ),
     ),
+
+    # ── Sales Manager Review ──────────────────────────────────────────────────
+    "sales_review_assigned": NotificationTemplate(
+        template_id="sales_review_assigned",
+        channel="in_app",
+        subject_tmpl="Sales Review Required — $case_name",
+        body_tmpl=(
+            "An institutional onboarding case **$case_name** for $client_name requires "
+            "your review before KYC can proceed. Products: $selected_products. "
+            "Risk Score: $risk_score. Please review and approve, reject, or request more information."
+        ),
+    ),
+    "sales_review_approved": NotificationTemplate(
+        template_id="sales_review_approved",
+        channel="in_app",
+        subject_tmpl="Sales Review Approved — $case_name",
+        body_tmpl=(
+            "Your application **$case_name** has been approved by the Sales Manager. "
+            "KYC verification will now commence."
+        ),
+    ),
+    "sales_review_rejected": NotificationTemplate(
+        template_id="sales_review_rejected",
+        channel="in_app",
+        subject_tmpl="Sales Review — Action Required ($case_name)",
+        body_tmpl=(
+            "Your application **$case_name** requires additional attention. "
+            "The Sales Manager has requested changes or further information. "
+            "Notes: $decision_notes. Please contact your advisor."
+        ),
+    ),
+    "sales_review_more_info": NotificationTemplate(
+        template_id="sales_review_more_info",
+        channel="in_app",
+        subject_tmpl="Additional Information Requested — $case_name",
+        body_tmpl=(
+            "The Sales Manager has requested additional information for **$case_name**. "
+            "Notes: $decision_notes. Please review and update your application."
+        ),
+    ),
 }
 
 

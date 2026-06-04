@@ -2,15 +2,35 @@ import { Check, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { useCaseProgress, useCaseDetail } from '@/hooks/useDocuments'
 
-const WORKFLOW_STEPS = [
-  { label: 'Intake',    stage: 'INTAKE' },
-  { label: 'Review',   stage: 'REVIEW' },
-  { label: 'KYC',      stage: 'KYC' },
-  { label: 'Products', stage: 'PARALLEL_PRODUCTS' },
-  { label: 'Complete', stage: 'COMPLETE' },
+// Institutional: Intake → Advisor Review → Sales Review → KYC → Products → Complete
+const WORKFLOW_STEPS_INSTITUTIONAL = [
+  { label: 'Intake',         stage: 'INTAKE' },
+  { label: 'Advisor Review', stage: 'REVIEW' },
+  { label: 'Sales Review',   stage: 'SALES_REVIEW' },
+  { label: 'KYC',            stage: 'KYC' },
+  { label: 'Products',       stage: 'PARALLEL_PRODUCTS' },
+  { label: 'Complete',       stage: 'COMPLETE' },
 ]
 
-const STAGE_INDEX: Record<string, number> = {
+// Retail: Intake → Advisor Review → KYC → Products → Complete
+const WORKFLOW_STEPS_RETAIL = [
+  { label: 'Intake',         stage: 'INTAKE' },
+  { label: 'Advisor Review', stage: 'REVIEW' },
+  { label: 'KYC',            stage: 'KYC' },
+  { label: 'Products',       stage: 'PARALLEL_PRODUCTS' },
+  { label: 'Complete',       stage: 'COMPLETE' },
+]
+
+const STAGE_INDEX_INSTITUTIONAL: Record<string, number> = {
+  INTAKE: 0,
+  REVIEW: 1,
+  SALES_REVIEW: 2,
+  KYC: 3,
+  PARALLEL_PRODUCTS: 4,
+  COMPLETE: 5,
+}
+
+const STAGE_INDEX_RETAIL: Record<string, number> = {
   INTAKE: 0,
   REVIEW: 1,
   KYC: 2,
@@ -20,8 +40,8 @@ const STAGE_INDEX: Record<string, number> = {
 
 type StepStatus = 'completed' | 'current' | 'upcoming'
 
-function stepStatus(stepIndex: number, currentStage: string): StepStatus {
-  const idx = STAGE_INDEX[currentStage] ?? 0
+function stepStatus(stepIndex: number, currentStage: string, stageIndex: Record<string, number>): StepStatus {
+  const idx = stageIndex[currentStage] ?? 0
   if (stepIndex < idx) return 'completed'
   if (stepIndex === idx) return 'current'
   return 'upcoming'
@@ -51,6 +71,10 @@ export default function WorkflowTracker({ caseId }: Props) {
 
   const currentStage = summary?.current_stage ?? 'INTAKE'
   const isEscalated = summary?.escalated ?? false
+  const isInstitutional = summary?.is_institutional ?? false
+
+  const WORKFLOW_STEPS = isInstitutional ? WORKFLOW_STEPS_INSTITUTIONAL : WORKFLOW_STEPS_RETAIL
+  const STAGE_INDEX = isInstitutional ? STAGE_INDEX_INSTITUTIONAL : STAGE_INDEX_RETAIL
 
   const currentStepIndex = STAGE_INDEX[currentStage] ?? 0
   const currentStepLabel = WORKFLOW_STEPS[currentStepIndex]?.label ?? currentStage
@@ -130,7 +154,7 @@ export default function WorkflowTracker({ caseId }: Props) {
             {WORKFLOW_STEPS.map((step, index) => {
               const status = isEscalated && step.stage === currentStage
                 ? 'current'
-                : stepStatus(index, currentStage)
+                : stepStatus(index, currentStage, STAGE_INDEX)
               const isLast = index === WORKFLOW_STEPS.length - 1
 
               return (

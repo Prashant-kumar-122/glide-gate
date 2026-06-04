@@ -63,6 +63,12 @@ class SocketEmitter:
     async def review_decided(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
         await self.emit(case_id, SocketEvent.REVIEW_DECIDED, payload)
 
+    async def sales_review_triggered(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
+        await self.emit(case_id, SocketEvent.SALES_REVIEW_TRIGGERED, payload)
+
+    async def sales_review_decided(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
+        await self.emit(case_id, SocketEvent.SALES_REVIEW_DECIDED, payload)
+
     async def product_track_update(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
         await self.emit(case_id, SocketEvent.PRODUCT_TRACK_UPDATE, payload)
 

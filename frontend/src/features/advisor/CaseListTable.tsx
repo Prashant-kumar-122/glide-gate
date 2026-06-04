@@ -15,7 +15,8 @@ const STAGE_LABELS: Record<string, string> = {
   INTAKE: 'Intake',
   KYC: 'KYC',
   PARALLEL_PRODUCTS: 'Products',
-  REVIEW: 'Sales Review',
+  REVIEW: 'Advisor Review',
+  SALES_REVIEW: 'Sales Review',
   COMPLETE: 'Live',
   ESCALATED: 'Escalated',
 }
@@ -24,12 +25,13 @@ const STAGE_STYLES: Record<string, { badge: string; dot: string; optionDot: stri
   INTAKE:            { badge: 'border border-gray-500/60 text-gray-400',     dot: 'bg-gray-400',    optionDot: 'bg-gray-400' },
   KYC:               { badge: 'border border-blue-500/60 text-blue-400',     dot: 'bg-blue-400',    optionDot: 'bg-blue-400' },
   PARALLEL_PRODUCTS: { badge: 'border border-purple-500/60 text-purple-400', dot: 'bg-purple-400',  optionDot: 'bg-purple-400' },
-  REVIEW:            { badge: 'border border-cyan-500/60 text-cyan-400',     dot: 'bg-cyan-400',    optionDot: 'bg-cyan-400' },
+  REVIEW:            { badge: 'border border-yellow-500/60 text-yellow-400', dot: 'bg-yellow-400',  optionDot: 'bg-yellow-400' },
+  SALES_REVIEW:      { badge: 'border border-yellow-500/60 text-yellow-400', dot: 'bg-yellow-400',  optionDot: 'bg-yellow-400' },
   COMPLETE:          { badge: 'border border-teal-500/60 text-teal-400',     dot: 'bg-teal-400',    optionDot: 'bg-teal-400' },
   ESCALATED:         { badge: 'border border-red-500/60 text-red-400',       dot: 'bg-red-400',     optionDot: 'bg-red-400' },
 }
 
-const ALL_STAGES = ['INTAKE', 'KYC', 'PARALLEL_PRODUCTS', 'REVIEW', 'COMPLETE', 'ESCALATED']
+const ALL_STAGES = ['INTAKE', 'REVIEW', 'SALES_REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE', 'ESCALATED']
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

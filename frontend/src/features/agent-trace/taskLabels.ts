@@ -21,6 +21,8 @@ export const TASK_LABELS: Record<string, string> = {
   send_escalation_alert: 'Sending escalation alert',
   escalate: 'Escalating case for review',
   health_check: 'Agent health check',
+  sales_manager_review: 'Sales Manager reviewing institutional case',
+  sales_manager_decide: 'Sales Manager recording decision',
 }
 
 export function formatTaskLabel(taskType: string): string {
