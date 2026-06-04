@@ -1,7 +1,7 @@
 """Add sales_manager_reviews table and SALES_REVIEW stage to onboarding_cases
 
 Revision ID: 0005_sales_review
-Revises: 0004_admin_config
+Revises: 0011_institutional_products_seed
 Create Date: 2026-06-04
 
 Changes:
@@ -15,15 +15,22 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0005_sales_review"
-down_revision = "0004_admin_config"
+down_revision = "0011_institutional_products_seed"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
+
     # ── 1. Widen onboarding_cases CHECK constraints ───────────────────────────
-    op.drop_constraint("oc_status_chk", "onboarding_cases", type_="check")
-    op.drop_constraint("oc_stage_chk", "onboarding_cases", type_="check")
+    # Drop only if constraint exists (DB may already have these values applied)
+    bind.execute(sa.text(
+        "ALTER TABLE onboarding_cases DROP CONSTRAINT IF EXISTS oc_status_chk"
+    ))
+    bind.execute(sa.text(
+        "ALTER TABLE onboarding_cases DROP CONSTRAINT IF EXISTS oc_stage_chk"
+    ))
 
     op.create_check_constraint(
         "oc_status_chk",
@@ -36,7 +43,10 @@ def upgrade() -> None:
         "current_stage IN ('INTAKE','SALES_REVIEW','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')",
     )
 
-    # ── 2. Create sales_manager_reviews table ─────────────────────────────────
+    # ── 2. Create sales_manager_reviews table (idempotent) ────────────────────
+    from sqlalchemy import inspect as sa_inspect
+    if "sales_manager_reviews" in sa_inspect(bind).get_table_names():
+        return
     op.create_table(
         "sales_manager_reviews",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
