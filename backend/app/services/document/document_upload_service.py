@@ -9,6 +9,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.base.a2a_types import AgentID, TaskPacket, TaskType
+from app.database import AsyncSessionLocal
 from app.models.documents import Document
 from app.services.document.document_status_service import document_status_service
 from app.services.document.document_storage_adapter import storage_adapter
@@ -235,6 +236,16 @@ class DocumentUploadService:
                 name=f"diff-{doc.id}",
             )
 
+        # Step 5c — create advisor task for document review
+        asyncio.create_task(
+            _create_document_task(
+                case_id=case_id,
+                document_id=doc.id,
+                filename=filename,
+            ),
+            name=f"task-doc-{doc.id}",
+        )
+
         # Step 6 — emit DOCUMENT_UPLOADED with badge count for UI badge update
         badge_count = await document_status_service.get_upload_badge_count(case_id, db)
         await socket_emitter.document_uploaded(
@@ -255,6 +266,25 @@ class DocumentUploadService:
         )
 
         return doc
+
+
+async def _create_document_task(
+    case_id: UUID, document_id: UUID, filename: str
+) -> None:
+    try:
+        from app.services.task.task_service import task_service
+        async with AsyncSessionLocal() as db:
+            await task_service.create_task(
+                case_id=case_id,
+                assignee_id=None,
+                assignee_role="advisor",
+                task_type="DOCUMENT_REVIEW",
+                title=f"Review uploaded document: {filename}",
+                document_id=document_id,
+                db=db,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"[UploadService] create_document_task failed (non-fatal): {exc}")
 
 
 document_upload_service = DocumentUploadService()

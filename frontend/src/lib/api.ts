@@ -374,6 +374,68 @@ export async function analyseDocuments(caseId: string): Promise<AnalyseDocuments
   return data
 }
 
+// ── Workspace Tasks ───────────────────────────────────────────────────────────
+
+export interface TaskDocumentSnapshot {
+  id: string
+  filename: string
+  status: string
+  category: string
+  storage_path: string | null
+  mime_type: string | null
+}
+
+export interface TaskReviewSnapshot {
+  id: string
+  ai_risk_summary: string | null
+  risk_score: number | null
+  case_snapshot: Record<string, unknown>
+  status: string
+}
+
+export interface TaskOut {
+  id: string
+  case_id: string
+  assignee_id: string | null
+  assignee_role: 'advisor' | 'sales_manager'
+  task_type: 'DOCUMENT_REVIEW' | 'SALES_REVIEW'
+  title: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'MORE_INFO_REQUESTED'
+  document_id: string | null
+  review_id: string | null
+  decision_notes: string | null
+  decided_by: string | null
+  decided_at: string | null
+  case_name: string | null
+  client_name: string | null
+  created_at: string
+  updated_at: string
+  document_snapshot: TaskDocumentSnapshot | null
+  review_snapshot: TaskReviewSnapshot | null
+}
+
+export interface TaskDecideRequest {
+  decision: 'APPROVED' | 'REJECTED' | 'MORE_INFO_REQUESTED'
+  decision_notes?: string
+}
+
+export async function getTasks(role: string, caseId?: string): Promise<TaskOut[]> {
+  const params: Record<string, string> = { role }
+  if (caseId) params.case_id = caseId
+  const { data } = await api.get<TaskOut[]>('/tasks', { params })
+  return data
+}
+
+export async function getTask(taskId: string): Promise<TaskOut> {
+  const { data } = await api.get<TaskOut>(`/tasks/${taskId}`)
+  return data
+}
+
+export async function decideTask(taskId: string, body: TaskDecideRequest): Promise<TaskOut> {
+  const { data } = await api.patch<TaskOut>(`/tasks/${taskId}/decide`, body)
+  return data
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface NotificationItem {

@@ -42,10 +42,10 @@ export default function CaseCard({ caseData, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 hover:bg-gray-50 group dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 dark:hover:bg-gray-800/50"
+      className="w-full text-left border border-gray-200 bg-white p-3 transition-colors hover:border-gray-300 hover:bg-gray-50 group dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 dark:hover:bg-gray-800/50"
     >
       {/* Top row */}
-      <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="flex items-start justify-between gap-3 mb-2.5">
         <div className="min-w-0">
           <div className="flex flex-wrap gap-1 mb-1">
             {caseData.selected_products.map((p) => (
@@ -79,8 +79,8 @@ export default function CaseCard({ caseData, onClick }: Props) {
       </div>
 
       {/* Progress bar */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-1.5">
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">Progress</span>
           <span className="font-mono text-[10px] font-semibold tabular-nums text-gray-600 dark:text-gray-400">{pct}%</span>
         </div>

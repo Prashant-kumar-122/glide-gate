@@ -210,6 +210,10 @@ def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
     steps = cp.steps or []
     completed = sum(1 for s in steps if s.status in ("COMPLETE", "SKIPPED"))
     product_name = cp.product.name if cp.product else cp.product_code
+    # Fall back to the product's defined step sequence when runtime steps
+    # haven't been created yet, so we show e.g. "0/4" instead of "0/0".
+    step_sequence = (cp.product.step_sequence or []) if cp.product else []
+    steps_total = len(steps) if steps else len(step_sequence)
     if steps:
         progress = round(completed / len(steps) * 100)
     else:
@@ -220,7 +224,7 @@ def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
         product_name=product_name,
         status=cp.status,
         progress=progress,
-        steps_total=len(steps),
+        steps_total=steps_total,
         steps_completed=completed,
         started_at=cp.started_at,
         completed_at=cp.completed_at,

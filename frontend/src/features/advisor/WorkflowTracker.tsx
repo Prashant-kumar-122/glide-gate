@@ -1,13 +1,13 @@
 import { Check, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
-import { useCaseProgress, useCaseDetail } from '@/hooks/useDocuments'
+import { useCaseProgress } from '@/hooks/useDocuments'
 
 const WORKFLOW_STEPS_INSTITUTIONAL = [
   { label: 'Intake',         stage: 'INTAKE' },
   { label: 'Advisor Review', stage: 'REVIEW' },
   { label: 'Sales Review',   stage: 'SALES_REVIEW' },
   { label: 'KYC',            stage: 'KYC' },
-  { label: 'Products',       stage: 'PARALLEL_PRODUCTS' },
+  { label: 'Product Setup',  stage: 'PARALLEL_PRODUCTS' },
   { label: 'Complete',       stage: 'COMPLETE' },
 ]
 
@@ -15,7 +15,7 @@ const WORKFLOW_STEPS_RETAIL = [
   { label: 'Intake',         stage: 'INTAKE' },
   { label: 'Advisor Review', stage: 'REVIEW' },
   { label: 'KYC',            stage: 'KYC' },
-  { label: 'Products',       stage: 'PARALLEL_PRODUCTS' },
+  { label: 'Product Setup',  stage: 'PARALLEL_PRODUCTS' },
   { label: 'Complete',       stage: 'COMPLETE' },
 ]
 
@@ -36,24 +36,10 @@ function stepStatus(stepIndex: number, currentStage: string, stageIndex: Record<
   return 'upcoming'
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function relativeTime(iso: string) {
-  const diffMs = Date.now() - new Date(iso).getTime()
-  const days   = Math.floor(diffMs / 86_400_000)
-  if (days > 0)  return `${days}d ago`
-  const hours  = Math.floor(diffMs / 3_600_000)
-  if (hours > 0) return `${hours}h ago`
-  return `${Math.floor(diffMs / 60_000)}m ago`
-}
-
 interface Props { caseId: string }
 
 export default function WorkflowTracker({ caseId }: Props) {
   const { data: summary, isLoading: summaryLoading } = useCaseProgress(caseId)
-  const { data: caseDetail } = useCaseDetail(caseId)
   const [mobileExpanded, setMobileExpanded] = useState(false)
 
   const currentStage    = summary?.current_stage ?? 'INTAKE'
@@ -89,39 +75,6 @@ export default function WorkflowTracker({ caseId }: Props) {
 
       {/* Collapsible body */}
       <div className={['flex-col flex-1 overflow-y-auto', mobileExpanded ? 'flex' : 'hidden md:flex'].join(' ')}>
-        {/* Case info section */}
-        <div className="border-b border-gray-200 px-4 py-4 dark:border-gray-800">
-          <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Case Info</p>
-          {caseDetail ? (
-            <div className="space-y-1.5 text-[10px]">
-              <div className="flex justify-between gap-2">
-                <span className="text-gray-500 dark:text-gray-500">ID</span>
-                <span className="font-mono text-gray-600 dark:text-gray-400 truncate">{caseDetail.id.slice(0, 8)}…</span>
-              </div>
-              {caseDetail.assigned_advisor_name && (
-                <div className="flex justify-between gap-2">
-                  <span className="text-gray-500 dark:text-gray-500">Advisor</span>
-                  <span className="truncate text-gray-700 dark:text-gray-300">{caseDetail.assigned_advisor_name}</span>
-                </div>
-              )}
-              <div className="flex justify-between gap-2">
-                <span className="text-gray-500 dark:text-gray-500">Created</span>
-                <span className="font-mono text-gray-600 dark:text-gray-400">{fmtDate(caseDetail.created_at)}</span>
-              </div>
-              <div className="flex justify-between gap-2">
-                <span className="text-gray-500 dark:text-gray-500">Updated</span>
-                <span className="font-mono text-gray-600 dark:text-gray-400">{relativeTime(caseDetail.updated_at)}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-2 animate-pulse bg-gray-200 dark:bg-gray-800" />
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Workflow steps */}
         <div className="flex-1 py-4">
           <p className="mb-3 px-4 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
