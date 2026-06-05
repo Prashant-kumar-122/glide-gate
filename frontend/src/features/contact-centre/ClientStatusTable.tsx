@@ -20,13 +20,13 @@ const STAGE_LABELS: Record<string, string> = {
 }
 
 const STAGE_STYLES: Record<string, { badge: string; dot: string; optionDot: string }> = {
-  INTAKE:            { badge: 'border border-gray-600/50 text-gray-400',    dot: 'bg-gray-500',   optionDot: 'bg-gray-400' },
-  REVIEW:            { badge: 'border border-amber-600/50 text-amber-400',  dot: 'bg-amber-500',  optionDot: 'bg-amber-400' },
-  SALES_REVIEW:      { badge: 'border border-amber-600/50 text-amber-400',  dot: 'bg-amber-500',  optionDot: 'bg-amber-400' },
-  KYC:               { badge: 'border border-blue-600/50 text-blue-400',    dot: 'bg-blue-500',   optionDot: 'bg-blue-400' },
-  PARALLEL_PRODUCTS: { badge: 'border border-violet-600/50 text-violet-400',dot: 'bg-violet-500', optionDot: 'bg-violet-400' },
-  COMPLETE:          { badge: 'border border-green-600/50 text-green-400',  dot: 'bg-green-500',  optionDot: 'bg-green-400' },
-  ESCALATED:         { badge: 'border border-red-600/50 text-red-400',      dot: 'bg-red-500',    optionDot: 'bg-red-400' },
+  INTAKE:            { badge: 'text-gray-400',    dot: 'bg-gray-500',   optionDot: 'bg-gray-400' },
+  REVIEW:            { badge: 'text-amber-400',   dot: 'bg-amber-500',  optionDot: 'bg-amber-400' },
+  SALES_REVIEW:      { badge: 'text-amber-400',   dot: 'bg-amber-500',  optionDot: 'bg-amber-400' },
+  KYC:               { badge: 'text-blue-400',    dot: 'bg-blue-500',   optionDot: 'bg-blue-400' },
+  PARALLEL_PRODUCTS: { badge: 'text-violet-400',  dot: 'bg-violet-500', optionDot: 'bg-violet-400' },
+  COMPLETE:          { badge: 'text-green-400',   dot: 'bg-green-500',  optionDot: 'bg-green-400' },
+  ESCALATED:         { badge: 'text-red-400',     dot: 'bg-red-500',    optionDot: 'bg-red-400' },
 }
 
 const ALL_STAGES = ['INTAKE', 'REVIEW', 'SALES_REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE', 'ESCALATED']
@@ -65,7 +65,7 @@ function ProductsCell({ value }: ICellRendererParams<CaseOut, string[]>) {
 
 function StageCell({ value }: ICellRendererParams<CaseOut, string>) {
   if (!value) return null
-  const style = STAGE_STYLES[value] ?? { badge: 'border border-gray-600/50 text-gray-400', dot: 'bg-gray-500', optionDot: 'bg-gray-400' }
+  const style = STAGE_STYLES[value] ?? { badge: 'text-gray-400', dot: 'bg-gray-500', optionDot: 'bg-gray-400' }
   return (
     <span className={['inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide', style.badge].join(' ')}>
       <span className={['h-1.5 w-1.5 rounded-full', style.dot].join(' ')} />

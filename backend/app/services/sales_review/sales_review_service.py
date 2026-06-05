@@ -9,6 +9,7 @@ Responsibilities:
 - Emit WebSocket events for real-time frontend updates.
 """
 
+import asyncio
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
@@ -70,6 +71,11 @@ class SalesReviewService:
 
         await db.commit()
         await db.refresh(review)
+
+        # Create SM task in a background task (uses its own DB session)
+        asyncio.create_task(
+            self._create_sm_task(review_id=str(review.id), case_id=case_id)
+        )
 
         # Emit socket event so the SM's browser updates in real time
         await socket_emitter.sales_review_triggered(case_id, {
@@ -147,7 +153,6 @@ class SalesReviewService:
         )
 
         # Resume or hold the workflow in a background task
-        import asyncio
         asyncio.create_task(
             self._post_decision_workflow(
                 review_id=review_id,
@@ -359,6 +364,25 @@ class SalesReviewService:
                 f"Manual review recommended before proceeding to KYC."
             )
             return summary, risk_score
+
+
+    async def _create_sm_task(self, review_id: str, case_id: UUID) -> None:
+        try:
+            from app.services.task.task_service import task_service
+            async with AsyncSessionLocal() as db:
+                await task_service.create_task(
+                    case_id=case_id,
+                    assignee_id=None,
+                    assignee_role="sales_manager",
+                    task_type="SALES_REVIEW",
+                    title="Sales Manager Review Required",
+                    review_id=UUID(review_id),
+                    db=db,
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                f"[SalesReviewService] _create_sm_task failed (non-fatal): {exc}"
+            )
 
 
 # Module-level singleton

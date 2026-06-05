@@ -47,6 +47,7 @@ _ALL_TABLES = [
     "mcp_tool_calls",
     "event_logs",
     "agent_tasks",
+    "workspace_tasks",
     "human_reviews",
     "kyc_checks",
     "documents",
@@ -88,6 +89,7 @@ SEED_FILES = [
     ("08 — Admin Config",                "08_admin_config.py"),
     ("09 — Institutional Products",      "09_institutional_products.py"),
     ("10 — Trading Questionnaires",      "10_trading_questionnaires.py"),
+    ("11 — Workspace Tasks",             "11_workspace_tasks.py"),
 ]
 
 

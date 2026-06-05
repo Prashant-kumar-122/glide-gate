@@ -18,6 +18,7 @@ from app.models.communications import (
     ConversationMessage,
     Notification,
 )
+from app.models.tasks import WorkspaceTask
 from app.models.questionnaire import (
     OnboardingAnswer,
     OnboardingQuestion,
@@ -61,6 +62,8 @@ __all__ = [
     "CollaborationParticipant",
     "CollaborationComment",
     "ConversationMessage",
+    # workspace tasks
+    "WorkspaceTask",
     # questionnaire
     "OnboardingQuestionnaire",
     "OnboardingQuestion",

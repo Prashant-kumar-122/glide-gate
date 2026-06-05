@@ -88,6 +88,12 @@ class SocketEmitter:
     async def progress_update(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
         await self.emit(case_id, SocketEvent.PROGRESS_UPDATE, payload)
 
+    async def task_created(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
+        await self.emit(case_id, SocketEvent.TASK_CREATED, payload)
+
+    async def task_updated(self, case_id: str | UUID, payload: dict[str, Any]) -> None:
+        await self.emit(case_id, SocketEvent.TASK_UPDATED, payload)
+
 
 # Module-level singleton — import and use directly:
 #   from app.websocket.socket_emitter import socket_emitter

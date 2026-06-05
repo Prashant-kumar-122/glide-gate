@@ -4,8 +4,8 @@ import { useCaseProgress, useQuestionnaireSchema, useCollectedFields, useAccount
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
 import OnboardingFormView from '@/features/client/OnboardingFormView'
 
-// Retail:        Application → Documents → KYC Review → Products → Complete
-// Institutional: Application → Documents → Sales Review → KYC Review → Products → Complete
+// Retail:        Application → Documents → KYC Review → Account Setup → Complete
+// Institutional: Application → Documents → Sales Review → KYC Review → Account Setup → Complete
 const STAGES_RETAIL        = ['INTAKE', 'REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE'] as const
 const STAGES_INSTITUTIONAL = ['INTAKE', 'REVIEW', 'SALES_REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE'] as const
 
@@ -14,7 +14,7 @@ const STAGE_LABELS: Record<string, string> = {
   REVIEW:            'Documents',
   SALES_REVIEW:      'Sales Review',
   KYC:               'KYC Review',
-  PARALLEL_PRODUCTS: 'Products',
+  PARALLEL_PRODUCTS: 'Account Setup',
   COMPLETE:          'Complete',
   ESCALATED:         'Escalated',
 }

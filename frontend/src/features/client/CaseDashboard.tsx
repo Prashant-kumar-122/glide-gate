@@ -64,9 +64,6 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
         {/* Title row */}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
-              Client Portal
-            </p>
             <h1 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">
               Welcome, {firstName}
             </h1>
@@ -125,7 +122,7 @@ export default function CaseDashboard({ firstName, onOpenNewAccount, onOpenCase 
             )}
 
             {!isLoading && visibleCases.length > 0 && (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {visibleCases.map((c) => (
                   <CaseCard key={c.id} caseData={c} onClick={() => onOpenCase(c)} />
                 ))}

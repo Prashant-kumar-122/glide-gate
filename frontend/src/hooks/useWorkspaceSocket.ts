@@ -10,6 +10,7 @@ import {
   applyValidationResult,
   qk,
 } from '@/hooks/useDocuments'
+import { taskQk } from '@/hooks/useTasks'
 import type { CaseSummary, ValidationResult } from '@/lib/api'
 
 const EVENTS = {
@@ -25,6 +26,8 @@ const EVENTS = {
   AGENT_MESSAGE: 'agent_message',
   TASK_ASSIGNED: 'task_assigned',
   TASK_COMPLETE: 'task_complete',
+  TASK_CREATED: 'task_created',
+  TASK_UPDATED: 'task_updated',
 } as const
 
 
@@ -135,6 +138,13 @@ export function useWorkspaceSocket(caseId: string | null) {
       }
     }
 
+    function onTaskCreated() {
+      qc.invalidateQueries({ queryKey: taskQk.all })
+    }
+    function onTaskUpdated() {
+      qc.invalidateQueries({ queryKey: taskQk.all })
+    }
+
     socket.on(EVENTS.DOCUMENT_STATUS_CHANGED, onDocStatusChanged)
     socket.on(EVENTS.DOCUMENT_UPLOADED, onDocUploaded)
     socket.on(EVENTS.PRODUCT_TRACK_UPDATE, onProductTrackUpdate)
@@ -142,6 +152,8 @@ export function useWorkspaceSocket(caseId: string | null) {
     socket.on(EVENTS.CASE_STAGE_CHANGED, onCaseStageChanged)
     socket.on(EVENTS.KYC_RESULT, onKycResult)
     socket.on(EVENTS.TASK_COMPLETE, onTaskComplete)
+    socket.on(EVENTS.TASK_CREATED, onTaskCreated)
+    socket.on(EVENTS.TASK_UPDATED, onTaskUpdated)
 
     return () => {
       socket.off(EVENTS.DOCUMENT_STATUS_CHANGED, onDocStatusChanged)
@@ -151,6 +163,8 @@ export function useWorkspaceSocket(caseId: string | null) {
       socket.off(EVENTS.CASE_STAGE_CHANGED, onCaseStageChanged)
       socket.off(EVENTS.KYC_RESULT, onKycResult)
       socket.off(EVENTS.TASK_COMPLETE, onTaskComplete)
+      socket.off(EVENTS.TASK_CREATED, onTaskCreated)
+      socket.off(EVENTS.TASK_UPDATED, onTaskUpdated)
       socket.emit('leave_case_room', { case_id: caseId })
       joinedRoom.current = null
     }

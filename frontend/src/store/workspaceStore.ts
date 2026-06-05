@@ -21,6 +21,8 @@ interface WorkspaceStore {
   incrementBadge: (caseId: string) => void
   clearBadge: (caseId: string) => void
   setSocketConnected: (connected: boolean) => void
+  pendingTaskId: string | null
+  setPendingTaskId: (id: string | null) => void
   openCaseTab: (caseId: string, clientId: string, label: string) => void
   closeCaseTab: (caseId: string) => void
   setActiveTab: (tabId: string) => void
@@ -53,6 +55,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       return { uploadBadgeCounts: next }
     }),
   setSocketConnected: (connected) => set({ socketConnected: connected }),
+  pendingTaskId: null,
+  setPendingTaskId: (id) => set({ pendingTaskId: id }),
   openCaseTab: (caseId, clientId, label) =>
     set((s) => {
       const exists = s.openTabs.find((t) => t.caseId === caseId)

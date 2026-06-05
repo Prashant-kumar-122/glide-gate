@@ -30,6 +30,10 @@ class SocketEvent(StrEnum):
     CASE_STAGE_CHANGED = "case_stage_changed"
     PROGRESS_UPDATE = "progress_update"
 
+    # Workspace tasks
+    TASK_CREATED = "task_created"
+    TASK_UPDATED = "task_updated"
+
     # Connection management
     JOIN_CASE_ROOM = "join_case_room"
     LEAVE_CASE_ROOM = "leave_case_room"

@@ -1,17 +1,30 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useWorkspaceSocket } from '@/hooks/useWorkspaceSocket'
-import DocumentWorkspacePanel from '@/features/advisor/DocumentWorkspacePanel'
+import { useAuthStore } from '@/store/authStore'
+import { useTasks } from '@/hooks/useTasks'
+import { useCases } from '@/hooks/useDocuments'
+import CaseOverviewPanel from '@/features/advisor/CaseOverviewPanel'
 import DocumentDetailDrawer from '@/features/advisor/DocumentDetailDrawer'
 import CaseListTable from '@/features/advisor/CaseListTable'
+import TaskListPanel from '@/features/advisor/TaskListPanel'
+
 import WorkflowTracker from '@/features/advisor/WorkflowTracker'
 import { LayoutDashboard, X } from 'lucide-react'
 
 export default function AdvisorWorkspace() {
   const { selectedCaseId, isDrawerOpen, openTabs, activeTabId, closeCaseTab, setActiveTab } =
     useWorkspaceStore()
-  const scrollRef   = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const activeTabRef = useRef<HTMLDivElement>(null)
+  const [activeView, setActiveView] = useState<'cases' | 'tasks'>('cases')
+
+  const userRole = useAuthStore(s => s.user?.role) as 'advisor' | 'sales_manager' | undefined
+  const role: 'advisor' | 'sales_manager' = userRole === 'sales_manager' ? 'sales_manager' : 'advisor'
+  const { data: tasks = [] } = useTasks(role)
+  const { data: cases = [] } = useCases()
+
+  const pendingTaskCount = tasks.filter(t => t.status === 'PENDING').length
 
   useWorkspaceSocket(selectedCaseId)
 
@@ -21,9 +34,9 @@ export default function AdvisorWorkspace() {
 
   return (
     <div className="flex h-[calc(100vh-44px)] flex-col overflow-hidden bg-white dark:bg-gray-950">
-      {/* Tab bar — professional underline style */}
+      {/* Tab bar */}
       <div className="flex shrink-0 items-end border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-        {/* Dashboard tab — always pinned left */}
+        {/* Dashboard tab */}
         <div className="shrink-0 px-1">
           <button
             onClick={() => setActiveTab('dashboard')}
@@ -39,7 +52,6 @@ export default function AdvisorWorkspace() {
           </button>
         </div>
 
-        {/* Divider */}
         <div className="h-4 w-px bg-gray-200 dark:bg-gray-800 self-center shrink-0" />
 
         {/* Scrollable case tabs */}
@@ -80,11 +92,47 @@ export default function AdvisorWorkspace() {
 
       {/* Content */}
       {activeTabId === 'dashboard' ? (
-        <CaseListTable />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          {/* View toggle */}
+          <div className="flex shrink-0 items-center gap-1 border-b border-gray-200 dark:border-gray-800 px-4 py-2">
+            <button
+              onClick={() => setActiveView('tasks')}
+              className={[
+                'flex items-center gap-1.5 border-b-2 px-3 pb-1.5 pt-1.5 text-xs font-medium transition-colors',
+                activeView === 'tasks'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300',
+              ].join(' ')}
+            >
+              My Tasks
+              {pendingTaskCount > 0 && (
+                <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[10px] font-bold bg-amber-500 text-white rounded-full">
+                  {pendingTaskCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveView('cases')}
+              className={[
+                'flex items-center gap-1.5 border-b-2 px-3 pb-1.5 pt-1.5 text-xs font-medium transition-colors',
+                activeView === 'cases'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300',
+              ].join(' ')}
+            >
+              All Cases
+              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[10px] font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
+                {cases.length}
+              </span>
+            </button>
+          </div>
+
+          {activeView === 'tasks' ? <TaskListPanel /> : <CaseListTable />}
+        </div>
       ) : (
-        <div className="flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+        <div className="flex flex-1 overflow-hidden md:flex-row">
           {selectedCaseId && <WorkflowTracker caseId={selectedCaseId} />}
-          {selectedCaseId && <DocumentWorkspacePanel caseId={selectedCaseId} />}
+          {selectedCaseId && <CaseOverviewPanel caseId={selectedCaseId} />}
           {selectedCaseId && isDrawerOpen && <DocumentDetailDrawer caseId={selectedCaseId} />}
         </div>
       )}

@@ -2,10 +2,6 @@ import { Package, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
 import ProgressBar from '@/components/ProgressBar'
 import type { ProductTrack } from '@/lib/api'
 
-const PRODUCT_LABELS: Record<string, string> = {
-  cash_account: 'Cash Account',
-  retirement_account: 'Retirement Account',
-}
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'text-gray-400',
@@ -30,7 +26,7 @@ interface ProductTrackCardProps {
 }
 
 function ProductTrackCard({ track }: ProductTrackCardProps) {
-  const label = PRODUCT_LABELS[track.product_code] ?? track.product_name ?? track.product_code
+  const label = (track.product_name ?? track.product_code).replace(/_/g, ' ')
   const statusColor = STATUS_COLORS[track.status] ?? 'text-gray-500'
 
   return (
