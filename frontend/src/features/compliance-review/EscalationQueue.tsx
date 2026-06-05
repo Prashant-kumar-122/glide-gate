@@ -28,7 +28,7 @@ export function EscalationQueue({ selectedReviewId, onSelect }: Props) {
     return (
       <div className="p-4 space-y-3">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse dark:bg-gray-700" />
+          <div key={i} className="h-20 bg-gray-100 animate-pulse dark:bg-gray-700" />
         ))}
       </div>
     )
@@ -77,7 +77,7 @@ export function EscalationQueue({ selectedReviewId, onSelect }: Props) {
                 </span>
               </div>
               <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                className={`text-xs font-semibold px-2 py-0.5 shrink-0 ${
                   RISK_BAND_COLOR[riskBand] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                 }`}
               >

@@ -21,7 +21,7 @@ function SliderField({ label, description, value, min, max, step, onChange }: Sl
           <label className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</label>
           <div className="group relative">
             <Info className="h-3 w-3 text-gray-300 dark:text-gray-600" />
-            <div className="absolute left-5 top-0 z-10 hidden w-52 rounded-lg border border-gray-200 bg-white p-2 text-[10px] text-gray-500 shadow-md group-hover:block dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+            <div className="absolute left-5 top-0 z-10 hidden w-52 border border-gray-200 bg-white p-2 text-[10px] text-gray-500 group-hover:block dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
               {description}
             </div>
           </div>
@@ -74,7 +74,7 @@ function NumField({ label, description, value, min, max, step, onChange }: NumFi
         step={step}
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value, 10))}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs text-gray-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+        className="w-full border border-gray-200 px-3 py-2 font-mono text-xs text-gray-700 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
       />
     </div>
   )
@@ -226,7 +226,7 @@ export default function DeterministicControls() {
         onClick={handleSave}
         disabled={update.isPending}
         className={[
-          'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
+          'flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all',
           saved ? 'bg-green-500' : 'bg-blue-600 hover:bg-blue-700 disabled:opacity-60',
         ].join(' ')}
       >

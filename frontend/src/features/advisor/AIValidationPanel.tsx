@@ -61,7 +61,7 @@ export default function AIValidationPanel({
           <button
             onClick={onRunValidation}
             disabled={isRunning}
-            className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+            className="flex items-center gap-1.5 bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
             {isRunning ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -74,7 +74,7 @@ export default function AIValidationPanel({
       </div>
 
       {!result && !isRunning && (
-        <div className="rounded-lg border border-dashed border-gray-200 py-8 text-center dark:border-gray-700">
+        <div className="border border-dashed border-gray-200 py-8 text-center dark:border-gray-700">
           <p className="text-xs text-gray-400">No validation result yet.</p>
           {onRunValidation && (
             <p className="mt-1 text-xs text-gray-400">Click "Run AI Check" to start.</p>
@@ -95,7 +95,7 @@ export default function AIValidationPanel({
           <div className="flex items-center gap-2">
             <span
               className={[
-                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
+                'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
                 OVERALL_BADGE[result.overall_status],
               ].join(' ')}
             >
@@ -117,7 +117,7 @@ export default function AIValidationPanel({
               <div
                 key={i}
                 className={[
-                  'flex items-start gap-2.5 rounded-lg border px-3 py-2',
+                  'flex items-start gap-2.5 border px-3 py-2',
                   VERDICT_BG[f.severity],
                 ].join(' ')}
               >

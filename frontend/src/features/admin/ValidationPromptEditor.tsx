@@ -61,7 +61,7 @@ function CategoryEditor({ prompt }: EditorProps) {
           rows={3}
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
-          className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+          className="w-full resize-none border border-gray-200 px-3 py-2 text-xs text-gray-700 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
           placeholder="Describe the validation objective for this document category…"
         />
       </div>
@@ -72,7 +72,7 @@ function CategoryEditor({ prompt }: EditorProps) {
         <ul className="space-y-1.5">
           {factors.map((f, i) => (
             <li key={i} className="flex items-center gap-2">
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[8px] font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center bg-blue-100 text-[8px] font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
                 {i + 1}
               </span>
               <span className="flex-1 rounded bg-gray-50 px-2 py-1 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-200">{f}</span>
@@ -94,11 +94,11 @@ function CategoryEditor({ prompt }: EditorProps) {
             onChange={(e) => setNewFactor(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addFactor()}
             placeholder="Add a check factor…"
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+            className="flex-1 border border-gray-200 px-3 py-1.5 text-xs text-gray-700 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
           />
           <button
             onClick={addFactor}
-            className="flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            className="flex items-center gap-1 bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
           >
             <Plus className="h-3 w-3" />
             Add
@@ -110,7 +110,7 @@ function CategoryEditor({ prompt }: EditorProps) {
         onClick={handleSave}
         disabled={update.isPending}
         className={[
-          'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
+          'flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all',
           saved ? 'bg-green-500' : 'bg-blue-600 hover:bg-blue-700 disabled:opacity-60',
         ].join(' ')}
       >
@@ -155,9 +155,9 @@ export default function ValidationPromptEditor() {
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={[
-                'rounded-lg px-3 py-2 text-left text-xs font-medium transition-all',
+                'px-3 py-2 text-left text-xs font-medium transition-all',
                 activeCategory === cat
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                  ? 'bg-blue-50 text-primary dark:bg-primary-subtle dark:text-blue-300'
                   : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200',
               ].join(' ')}
             >

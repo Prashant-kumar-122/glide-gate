@@ -69,7 +69,7 @@ export function AgentNode({ data, selected }: NodeProps) {
   return (
     <div
       className={[
-        'relative flex w-36 flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-2.5 shadow-sm transition-all duration-300',
+        'relative flex w-36 flex-col items-center gap-1.5 border-2 px-3 py-2.5 transition-all duration-300',
         s.wrapper,
         selected ? 'ring-2 ring-blue-400 ring-offset-1' : '',
       ].join(' ')}
@@ -93,7 +93,7 @@ export function AgentNode({ data, selected }: NodeProps) {
 
       <span
         className={[
-          'rounded-full px-1.5 py-0.5 text-[9px] font-medium capitalize',
+          'px-1.5 py-0.5 text-[9px] font-medium capitalize',
           s.badge,
         ].join(' ')}
       >

@@ -53,7 +53,7 @@ export function ReplayControls({ activeCaseId, tasks }: ReplayControlsProps) {
       {isPlaying ? (
         <button
           onClick={stopReplay}
-          className="flex items-center gap-1.5 rounded-lg bg-red-100 px-3 py-1.5 text-[11px] font-medium text-red-700 transition-colors hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+          className="flex items-center gap-1.5 bg-red-100 px-3 py-1.5 text-[11px] font-medium text-red-700 transition-colors hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
         >
           <Square className="h-3 w-3 fill-current" />
           Stop
@@ -66,7 +66,7 @@ export function ReplayControls({ activeCaseId, tasks }: ReplayControlsProps) {
           className={[
             'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-colors',
             canReplay
-              ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40'
+              ? 'bg-blue-50 text-primary hover:bg-blue-100 dark:bg-primary-subtle dark:text-blue-300 dark:hover:bg-primary-subtle/80'
               : 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500',
           ].join(' ')}
         >

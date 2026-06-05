@@ -63,7 +63,7 @@ export default function ProfileCard() {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-4 rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
+      <div className="animate-pulse space-y-4 border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-800">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-10 rounded bg-gray-100 dark:bg-gray-700" />
         ))}
@@ -78,21 +78,21 @@ export default function ProfileCard() {
 
   return (
     <>
-      <div className="rounded-xl bg-white shadow-sm dark:bg-gray-800">
+      <div className="border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800">
         <div className="flex items-center gap-4 border-b border-gray-100 p-6 dark:border-gray-700">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
             <User className="h-7 w-7 text-blue-600 dark:text-blue-300" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{displayName}</h2>
-            <span className="inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium capitalize text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            <span className="inline-block bg-gray-100 px-2.5 py-0.5 text-xs font-medium capitalize text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {user?.role}
             </span>
           </div>
           {isClient && !editing && (
             <button
               onClick={startEdit}
-              className="ml-auto rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+              className="ml-auto border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               Edit profile
             </button>
@@ -101,7 +101,7 @@ export default function ProfileCard() {
 
         <div className="space-y-4 p-6">
           {updateProfile.error && (
-            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+            <div className="bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
               {(updateProfile.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Update failed.'}
             </div>
           )}
@@ -115,7 +115,7 @@ export default function ProfileCard() {
                     type="text"
                     value={form.first_name}
                     onChange={set('first_name')}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                    className="border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -124,7 +124,7 @@ export default function ProfileCard() {
                     type="text"
                     value={form.last_name}
                     onChange={set('last_name')}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                    className="border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
                   />
                 </div>
               </div>
@@ -135,7 +135,7 @@ export default function ProfileCard() {
                   type="email"
                   value={form.email}
                   onChange={set('email')}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                  className="border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
                 />
               </div>
 
@@ -147,14 +147,14 @@ export default function ProfileCard() {
                     placeholder="New password"
                     value={form.password}
                     onChange={set('password')}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+                    className="border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-500"
                   />
                   <input
                     type="password"
                     placeholder="Confirm new password"
                     value={form.confirm_password}
                     onChange={set('confirm_password')}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+                    className="border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-500"
                   />
                 </div>
               </div>
@@ -163,13 +163,13 @@ export default function ProfileCard() {
                 <button
                   onClick={handleSave}
                   disabled={updateProfile.isPending}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-50"
                 >
                   {updateProfile.isPending ? 'Saving…' : 'Save changes'}
                 </button>
                 <button
                   onClick={() => setEditing(false)}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                  className="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>

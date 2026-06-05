@@ -104,7 +104,7 @@ export default function InstitutionalCaseModal({ onCreated, onClose }: Props) {
         <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5">
           {/* Legal Entity Name */}
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-500">
+            <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
               <Building2 className="h-3 w-3 text-gray-400" />
               Legal Entity Name
             </label>
@@ -120,7 +120,7 @@ export default function InstitutionalCaseModal({ onCreated, onClose }: Props) {
 
           {/* Product Selection */}
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-500">
+            <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
               <Briefcase className="h-3 w-3 text-gray-400" />
               Products
               <span className="ml-1 normal-case text-[10px] font-normal text-gray-400">(select one or more)</span>
@@ -161,7 +161,7 @@ export default function InstitutionalCaseModal({ onCreated, onClose }: Props) {
 
           {/* Invite Client */}
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-600 dark:text-gray-500">
+            <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
               <UserSearch className="h-3 w-3 text-gray-400" />
               Invite Client
             </label>
@@ -185,14 +185,14 @@ export default function InstitutionalCaseModal({ onCreated, onClose }: Props) {
             {foundClient && (
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">First name</p>
+                  <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">First name</p>
                   <div className="flex items-center gap-1.5 border border-green-300 bg-green-50 px-3 py-2.5 text-sm text-green-800 dark:border-green-700 dark:bg-green-950 dark:text-green-300">
                     <CheckCircle className="h-3.5 w-3.5 shrink-0" />
                     {foundClient.first_name}
                   </div>
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Last name</p>
+                  <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">Last name</p>
                   <div className="flex items-center gap-1.5 border border-green-300 bg-green-50 px-3 py-2.5 text-sm text-green-800 dark:border-green-700 dark:bg-green-950 dark:text-green-300">
                     {foundClient.last_name}
                   </div>

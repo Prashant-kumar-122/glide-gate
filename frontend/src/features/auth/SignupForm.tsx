@@ -22,7 +22,7 @@ export default function SignupForm() {
     signup.mutate(form)
   }
 
-  const inputClass = "rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+  const inputClass = "border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -103,7 +103,7 @@ export default function SignupForm() {
       <button
         type="submit"
         disabled={signup.isPending}
-        className="mt-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
+        className="mt-2 bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 transition-colors"
       >
         {signup.isPending ? 'Creating account…' : 'Create account'}
       </button>

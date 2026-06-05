@@ -105,7 +105,7 @@ export function ReviewActionBar({ review, onDecided }: Props) {
                 key={decision}
                 onClick={() => setPendingDecision(decision)}
                 disabled={decide.isPending}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 ${colorClass}`}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border text-sm font-medium transition-colors disabled:opacity-50 ${colorClass}`}
               >
                 {decide.isPending && pendingDecision === decision ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -136,7 +136,7 @@ export function ReviewActionBar({ review, onDecided }: Props) {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                className="w-full border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                 placeholder="Add decision notes for the audit trail…"
               />
             </div>

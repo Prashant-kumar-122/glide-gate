@@ -28,8 +28,8 @@ export function NotificationToast() {
   const Icon = visible.channel === 'email' ? Mail : Bell
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex w-80 items-start gap-3 rounded-xl border border-gray-200 bg-white p-3.5 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950">
+    <div className="fixed bottom-5 right-5 z-50 flex w-80 items-start gap-3 border border-gray-200 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-blue-50 dark:bg-blue-950">
         <Icon className="h-4 w-4 text-blue-500" />
       </div>
       <div className="min-w-0 flex-1">

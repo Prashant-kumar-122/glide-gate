@@ -45,7 +45,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
+      <div className="w-full max-w-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 max-h-[90dvh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700">
           <div>
@@ -56,7 +56,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+            className="p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
           >
             <X className="h-5 w-5" />
           </button>
@@ -74,7 +74,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
               placeholder="e.g. Retirement Planning 2026"
               value={caseName}
               onChange={(e) => setCaseName(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+              className="w-full border border-gray-200 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 dark:placeholder-gray-500"
               required
             />
           </div>
@@ -101,10 +101,10 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
                       type="button"
                       onClick={() => toggleProduct(p.product_code)}
                       className={[
-                        'rounded-xl border px-3 py-2.5 text-left text-sm transition-all',
+                        'border px-3 py-2.5 text-left text-sm transition-all',
                         active
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-400 dark:bg-blue-950 dark:text-blue-300'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
+                          ? 'border-primary bg-blue-50 text-primary ring-1 ring-primary dark:bg-primary-subtle dark:text-blue-300'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700',
                       ].join(' ')}
                     >
                       <span className="block font-medium">{p.name}</span>
@@ -136,7 +136,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
               <select
                 value={advisorId}
                 onChange={(e) => setAdvisorId(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                className="w-full border border-gray-200 px-4 py-2.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
               >
                 <option value="">Assign me to any available advisor</option>
                 {(advisors ?? []).map((a) => (
@@ -150,7 +150,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
 
           {/* Error */}
           {errorMessage && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+            <p className="bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
               {errorMessage}
             </p>
           )}
@@ -159,7 +159,7 @@ export default function CreateCaseModal({ onCreated, onClose }: Props) {
           <button
             type="submit"
             disabled={!ready || initiate.isPending}
-            className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full bg-primary py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {initiate.isPending ? 'Creating case…' : 'Create case'}
           </button>

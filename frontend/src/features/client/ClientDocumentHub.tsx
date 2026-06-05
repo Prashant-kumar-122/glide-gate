@@ -98,7 +98,7 @@ function AccordionItem({
   return (
     <div
       className={[
-        'rounded-xl border bg-white overflow-hidden transition-colors dark:bg-gray-800',
+        'border bg-white overflow-hidden transition-colors dark:bg-gray-800',
         needsAction ? 'border-red-200 dark:border-red-800' : allApproved ? 'border-green-200 dark:border-green-800' : 'border-gray-200 dark:border-gray-700',
       ].join(' ')}
     >
@@ -126,7 +126,7 @@ function AccordionItem({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {documents.length > 0 && (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            <span className="bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {documents.length}
             </span>
           )}
@@ -149,7 +149,7 @@ function AccordionItem({
                 <div
                   key={doc.id}
                   onClick={() => onDocumentClick(doc)}
-                  className="group flex cursor-pointer items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
+                  className="group flex cursor-pointer items-center justify-between gap-2 bg-gray-50 px-3 py-2 hover:bg-gray-100 transition-colors dark:bg-gray-700 dark:hover:bg-gray-600"
                 >
                   <div className="flex min-w-0 items-center gap-2">
                     <FileText className="h-3 w-3 shrink-0 text-gray-400" />
@@ -160,7 +160,7 @@ function AccordionItem({
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {(commentCountByDoc[doc.id] ?? 0) > 0 && (
-                      <span className="flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                      <span className="flex items-center gap-0.5 bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
                         <MessageCircle className="h-2.5 w-2.5" />
                         {commentCountByDoc[doc.id]}
                       </span>
@@ -174,12 +174,12 @@ function AccordionItem({
 
           {/* Upload zone */}
           {readOnly ? (
-            <div className="flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+            <div className="flex items-center justify-center gap-2 border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
               <Lock className="h-3.5 w-3.5 shrink-0" />
               <span>Uploads locked during KYC review or once completed</span>
             </div>
           ) : documents[documents.length - 1]?.status === 'APPROVED' ? (
-            <div className="flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
+            <div className="flex items-center justify-center gap-2 border border-green-200 bg-green-50 px-4 py-3 text-xs font-medium text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
               <CheckCircle className="h-3.5 w-3.5 shrink-0" />
               <span>Document approved — no further uploads needed</span>
             </div>
@@ -200,7 +200,7 @@ function AccordionItem({
               tabIndex={isUploading ? -1 : 0}
               onKeyDown={(e) => e.key === 'Enter' && openPicker()}
               className={[
-                'flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-3 text-center transition-colors',
+                'flex items-center justify-center gap-2 border-2 border-dashed py-3 text-center transition-colors',
                 dragging
                   ? 'border-blue-400 bg-blue-50 cursor-copy dark:border-blue-500 dark:bg-blue-950'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 cursor-pointer dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700',
@@ -275,7 +275,7 @@ export default function ClientDocumentHub({ caseId, readOnly = false }: ClientDo
     return (
       <div className="space-y-2">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-14 animate-pulse rounded-xl bg-gray-200" />
+          <div key={i} className="h-14 animate-pulse bg-gray-200 dark:bg-gray-700" />
         ))}
       </div>
     )
@@ -287,7 +287,7 @@ export default function ClientDocumentHub({ caseId, readOnly = false }: ClientDo
   return (
     <div>
       {totalDocs > 0 && (
-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
+        <div className="mb-4 flex items-center gap-2 border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800">
           <FolderOpen className="h-4 w-4 text-gray-400" />
           <p className="text-xs text-gray-600 dark:text-gray-300">
             <span className="font-semibold text-gray-900 dark:text-gray-100">{approvedDocs}</span> of{' '}
