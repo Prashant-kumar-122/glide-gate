@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import App from './App'
+import '@fontsource-variable/inter'
+import '@fontsource-variable/inter/wght-italic.css'
 import './index.css'
 
 const queryClient = new QueryClient({

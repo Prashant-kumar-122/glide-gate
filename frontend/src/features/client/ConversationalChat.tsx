@@ -22,10 +22,10 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       </div>
       <div
         className={[
-          'max-w-[76%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+          'max-w-[76%] px-4 py-2.5 text-sm leading-relaxed',
           isUser
-            ? 'rounded-tr-sm bg-blue-600 text-white'
-            : 'rounded-tl-sm bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100',
+            ? 'bg-blue-600 text-white'
+            : 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100',
         ].join(' ')}
       >
         <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -51,7 +51,7 @@ function TypingIndicator() {
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
         <Bot className="h-4 w-4 text-gray-600 dark:text-gray-300" />
       </div>
-      <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3 dark:bg-gray-700">
+      <div className="bg-gray-100 px-4 py-3 dark:bg-gray-700">
         <div className="flex gap-1 items-center">
           {[0, 1, 2].map((i) => (
             <span
@@ -78,7 +78,7 @@ function OptionChips({ options, onSelect }: OptionChipsProps) {
         <button
           key={opt}
           onClick={() => onSelect(opt)}
-          className="rounded-full border border-blue-300 bg-white px-3.5 py-1.5 text-sm font-medium text-blue-700 shadow-sm transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 active:scale-95 dark:border-blue-700 dark:bg-gray-800 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white"
+          className="border border-blue-300 bg-white px-3.5 py-1.5 text-sm font-medium text-blue-700 transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 dark:border-blue-700 dark:bg-gray-800 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white"
         >
           {opt}
         </button>
@@ -142,7 +142,7 @@ export default function ConversationalChat({ caseId, questionnaireDone = false }
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-950">
+        <div className="flex h-8 w-8 items-center justify-center bg-blue-50 dark:bg-blue-950">
           <Bot className="h-4 w-4 text-blue-600 dark:text-blue-400" />
         </div>
         <div>
@@ -155,7 +155,7 @@ export default function ConversationalChat({ caseId, questionnaireDone = false }
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.length === 0 && !typingIndicator && !streamingText && (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-            <div className="rounded-full bg-blue-50 p-4 dark:bg-blue-950">
+            <div className="bg-blue-50 p-4 dark:bg-blue-950">
               <Bot className="h-7 w-7 text-blue-500" />
             </div>
             <div>
@@ -194,7 +194,7 @@ export default function ConversationalChat({ caseId, questionnaireDone = false }
       {/* Input area */}
       <div className="border-t border-gray-100 p-3 dark:border-gray-700">
         {isComplete ? (
-          <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-center dark:bg-green-950 dark:border-green-800">
+          <div className="bg-green-50 border border-green-200 px-4 py-3 text-center dark:bg-green-950 dark:border-green-800">
             <p className="text-sm font-medium text-green-700 dark:text-green-300">All questions answered</p>
             <p className="mt-0.5 text-xs text-green-500 dark:text-green-400">
               You can review your answers in the Details panel
@@ -215,12 +215,12 @@ export default function ConversationalChat({ caseId, questionnaireDone = false }
                 placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
                 rows={2}
                 disabled={!caseId || sendMessage.isPending}
-                className="flex-1 resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:cursor-not-allowed disabled:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:disabled:bg-gray-900"
+                className="flex-1 resize-none border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 dark:disabled:bg-gray-900"
               />
               <button
                 onClick={handleSend}
                 disabled={!caseId || !input.trim() || sendMessage.isPending}
-                className="flex items-center justify-center self-end rounded-xl bg-blue-600 p-2.5 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-700"
+                className="flex items-center justify-center self-end bg-primary p-2.5 text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-700"
               >
                 <Send className="h-4 w-4" />
               </button>

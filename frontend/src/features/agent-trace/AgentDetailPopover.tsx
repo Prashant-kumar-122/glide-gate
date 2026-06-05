@@ -60,7 +60,7 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
         <div className="flex shrink-0 items-center gap-2">
           <span
             className={[
-              'rounded-full px-2 py-0.5 text-[10px] font-medium capitalize',
+              'px-2 py-0.5 text-[10px] font-medium capitalize',
               STATE_BADGE[nodeState] ?? STATE_BADGE.idle,
             ].join(' ')}
           >
@@ -83,7 +83,7 @@ export function AgentDetailPopover({ agentId, traceData, onClose }: Props) {
           </p>
           <ul className="max-h-48 space-y-1.5 overflow-y-auto">
             {recentTasks.map((task) => (
-              <li key={task.id} className="flex items-center gap-2 rounded-lg bg-gray-50 px-2 py-1.5 dark:bg-gray-800">
+              <li key={task.id} className="flex items-center gap-2 bg-gray-50 px-2 py-1.5 dark:bg-gray-800">
                 {STATUS_ICON[task.status] ?? <Loader className="h-3.5 w-3.5 text-gray-400" />}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[10px] font-medium text-gray-700 dark:text-gray-200">

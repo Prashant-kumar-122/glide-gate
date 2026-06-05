@@ -53,7 +53,7 @@ export default function VersionDiffPanel({ diff, isLoading }: VersionDiffPanelPr
         <>
           <SimilarityRing ratio={diff.similarity_ratio} />
 
-          <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+          <p className="bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300">
             {diff.summary}
           </p>
 
@@ -66,7 +66,7 @@ export default function VersionDiffPanel({ diff, isLoading }: VersionDiffPanelPr
                   <div
                     key={i}
                     className={[
-                      'rounded-lg border px-3 py-2',
+                      'border px-3 py-2',
                       style.bg,
                     ].join(' ')}
                   >

@@ -57,7 +57,7 @@ export default function ClientDocumentModal({ doc, caseId, onClose }: ClientDocu
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="flex w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl dark:bg-gray-800" style={{ maxHeight: '85vh' }}>
+      <div className="flex w-full max-w-md flex-col border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 max-h-[90dvh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
           <div className="flex items-start gap-2 min-w-0">
@@ -86,7 +86,7 @@ export default function ClientDocumentModal({ doc, caseId, onClose }: ClientDocu
               className={[
                 'flex-1 px-3 py-2.5 text-xs font-medium transition-colors',
                 activeTab === t.key
-                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  ? 'border-b-2 border-primary text-primary'
                   : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
               ].join(' ')}
             >
@@ -136,7 +136,7 @@ export default function ClientDocumentModal({ doc, caseId, onClose }: ClientDocu
               <button
                 onClick={handleDownload}
                 disabled={downloading}
-                className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                className="mt-2 flex items-center justify-center gap-2 border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 {downloading
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

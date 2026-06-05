@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,7 +11,7 @@
 
   body {
     overflow-x: hidden;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: 'Inter Variable', 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
@@ -241,6 +239,11 @@
   /* Investment banking section label utility */
   .ib-label {
     @apply text-[10px] font-semibold uppercase tracking-widest text-gray-500;
+  }
+
+  /* Signature field — oblique slant beyond standard italic */
+  .signature-text {
+    font-style: oblique 20deg;
   }
 }
 

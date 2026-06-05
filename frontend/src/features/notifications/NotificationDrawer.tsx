@@ -31,7 +31,7 @@ export function NotificationDrawer({ onClose }: { onClose: () => void }) {
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
 
-      <div className="fixed right-0 top-12 z-50 flex h-[calc(100vh-48px)] w-96 flex-col border-l border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900">
+      <div className="fixed right-0 top-12 z-50 flex h-[calc(100dvh-48px)] w-96 max-w-[calc(100vw-3rem)] flex-col border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             Notifications
@@ -75,7 +75,7 @@ export function NotificationDrawer({ onClose }: { onClose: () => void }) {
                       !n.read ? 'bg-blue-50/40 dark:bg-blue-950/20' : '',
                     ].join(' ')}
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center bg-gray-100 dark:bg-gray-800">
                       <Icon className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -97,7 +97,7 @@ export function NotificationDrawer({ onClose }: { onClose: () => void }) {
                           {n.bodyPreview}
                         </p>
                       )}
-                      <p className="mt-0.5 text-[9px] text-gray-300 dark:text-gray-600">
+                      <p className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
                         {fmtTime(n.receivedAt)}
                       </p>
                     </div>

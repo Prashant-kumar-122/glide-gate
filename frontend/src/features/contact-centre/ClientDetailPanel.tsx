@@ -46,7 +46,7 @@ export default function ClientDetailPanel({
     return (
       <div className="flex h-full flex-col gap-4 p-6">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-700" />
+          <div key={i} className="h-28 animate-pulse bg-gray-100 dark:bg-gray-700" />
         ))}
       </div>
     )
@@ -71,7 +71,7 @@ export default function ClientDetailPanel({
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-6">
       {/* Client header */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <div className="border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900 dark:text-blue-300">
@@ -93,7 +93,7 @@ export default function ClientDetailPanel({
               ))}
             </div>
           </div>
-          <span className={['rounded-full px-2.5 py-1 text-xs font-medium', badgeClass].join(' ')}>
+          <span className={['px-2.5 py-1 text-xs font-medium', badgeClass].join(' ')}>
             {stageLabel}
           </span>
         </div>
@@ -123,8 +123,8 @@ export default function ClientDetailPanel({
       </div>
 
       {/* Actions */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+      <div className="border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <p className="mb-3 text-[10px] font-semibold text-gray-400">
           Actions
         </p>
         <CCActionBar summary={summary} />
@@ -132,10 +132,10 @@ export default function ClientDetailPanel({
 
       {/* Product tracks */}
       {summary.products && summary.products.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <div className="mb-3 flex items-center gap-2">
             <Package className="h-4 w-4 text-gray-400" />
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            <p className="text-[10px] font-semibold text-gray-400">
               Product Tracks
             </p>
           </div>

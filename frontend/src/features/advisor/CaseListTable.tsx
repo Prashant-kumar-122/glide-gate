@@ -310,7 +310,7 @@ export default function CaseListTable() {
           {user?.role === 'sales_manager' && (
             <button
               onClick={() => setShowInstModal(true)}
-              className="flex items-center gap-1.5 border border-primary/40 bg-primary-subtle px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:border-primary hover:bg-primary hover:text-white"
+              className="flex items-center gap-1.5 bg-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-hover"
             >
               <Plus className="h-3 w-3" />
               Open New Account

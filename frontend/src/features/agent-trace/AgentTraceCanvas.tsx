@@ -184,7 +184,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
         {/* Mobile: "Log" button — top-right floating */}
         <button
           onClick={() => setShowPanel(true)}
-          className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-[11px] font-medium text-gray-600 shadow-sm backdrop-blur-sm transition-colors hover:bg-white lg:hidden dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-400 dark:hover:bg-gray-800"
+          className="absolute right-3 top-3 z-10 flex items-center gap-1.5 border border-gray-200 bg-white/90 px-3 py-2 text-[11px] font-medium text-gray-600 backdrop-blur-sm transition-colors hover:bg-white lg:hidden dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-400 dark:hover:bg-gray-800"
           aria-label="Open message log"
         >
           <List className="h-3.5 w-3.5" />
@@ -192,7 +192,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
         </button>
 
         {/* Status legend — bottom-left floating card */}
-        <div className="absolute bottom-16 left-3 z-10 flex flex-col gap-1 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 text-[9px] shadow-sm backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/90">
+        <div className="absolute bottom-16 left-3 z-10 flex flex-col gap-1 border border-gray-200 bg-white/90 px-3 py-2 text-[9px] backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/90">
           {(
             [
               { color: 'bg-gray-300', label: 'Idle' },

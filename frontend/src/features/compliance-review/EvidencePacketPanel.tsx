@@ -20,7 +20,7 @@ export function EvidencePacketPanel({ reviewId }: Props) {
     return (
       <div className="p-4 space-y-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-24 bg-gray-100 rounded-lg animate-pulse dark:bg-gray-700" />
+          <div key={i} className="h-24 bg-gray-100 animate-pulse dark:bg-gray-700" />
         ))}
       </div>
     )
@@ -48,7 +48,7 @@ export function EvidencePacketPanel({ reviewId }: Props) {
         <div className="mt-2 flex items-center gap-2">
           <span className="text-xs text-gray-500 dark:text-gray-400">Risk Band:</span>
           <span
-            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+            className={`text-xs font-semibold px-2 py-0.5 ${
               RISK_BAND_COLOR[packet.kyc_result.risk_band] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
             }`}
           >
@@ -132,7 +132,7 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="border border-gray-200 rounded-lg p-3 dark:border-gray-700">
+    <div className="border border-gray-200 p-3 dark:border-gray-700">
       <div className="flex items-center gap-1.5 font-semibold text-sm text-gray-800 dark:text-gray-100">
         {icon}
         {title}
@@ -151,7 +151,7 @@ function ScoreCard({ label, value }: { label: string; value: number | null }) {
     : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
 
   return (
-    <div className={`rounded-md p-2 text-center ${color}`}>
+    <div className={`p-2 text-center ${color}`}>
       <p className="text-xs font-medium">{label}</p>
       <p className="text-lg font-bold">{pct != null ? `${pct}%` : '—'}</p>
     </div>

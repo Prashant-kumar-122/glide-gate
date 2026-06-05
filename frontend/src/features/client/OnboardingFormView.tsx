@@ -114,7 +114,7 @@ function ChoiceInput({ options, value, onChange }: ChoiceInputProps) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-blue-500 dark:text-gray-100"
+      className="w-full border border-blue-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:bg-gray-800 dark:border-blue-500 dark:text-gray-100"
     >
       {options.map((opt) => (
         <option key={opt} value={opt}>
@@ -136,7 +136,7 @@ function MultiChoiceInput({ options, values, onChange }: MultiChoiceInputProps) 
     onChange(values.includes(opt) ? values.filter((v) => v !== opt) : [...values, opt])
   }
   return (
-    <div className="space-y-1.5 rounded-lg border border-blue-300 bg-white px-3 py-2 dark:bg-gray-800 dark:border-blue-500">
+    <div className="space-y-1.5 border border-blue-300 bg-white px-3 py-2 dark:bg-gray-800 dark:border-blue-500">
       {options.map((opt) => (
         <label key={opt} className="flex cursor-pointer items-center gap-2">
           <input
@@ -284,11 +284,11 @@ export default function OnboardingFormView({
     return (
       <div className="space-y-3 p-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="animate-pulse rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <div className="mb-3 h-4 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+          <div key={i} className="animate-pulse border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div className="mb-3 h-4 w-32 bg-gray-200 dark:bg-gray-700" />
             <div className="space-y-2">
-              <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-700" />
-              <div className="h-8 rounded-lg bg-gray-100 dark:bg-gray-700" />
+              <div className="h-8 bg-gray-100 dark:bg-gray-700" />
+              <div className="h-8 bg-gray-100 dark:bg-gray-700" />
             </div>
           </div>
         ))}
@@ -300,7 +300,7 @@ export default function OnboardingFormView({
   if (orderedSections.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-        <div className="rounded-full bg-blue-50 p-4 dark:bg-blue-950">
+        <div className="bg-blue-50 p-4 dark:bg-blue-950">
           <ClipboardList className="h-7 w-7 text-blue-400" />
         </div>
         <div>
@@ -344,7 +344,7 @@ export default function OnboardingFormView({
           return (
             <div
               key={sectionKey}
-              className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+              className="overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
             >
               <button
                 type="button"
@@ -409,7 +409,7 @@ export default function OnboardingFormView({
                               onChange={(e) => { setEditValue(e.target.value); setEditError(null) }}
                               onKeyDown={handleEditKeyDown}
                               className={[
-                                'w-full rounded-lg border border-blue-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-800 dark:border-blue-500 dark:text-gray-100',
+                                'w-full border border-blue-300 bg-white px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:bg-gray-800 dark:border-blue-500 dark:text-gray-100',
                                 isSignature(question_key) ? 'text-blue-900 dark:text-blue-200' : '',
                               ].join(' ')}
                               style={isSignature(question_key)
@@ -428,7 +428,7 @@ export default function OnboardingFormView({
                           <div className="flex justify-end gap-1.5">
                             <button
                               onClick={cancelEdit}
-                              className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+                              className="flex items-center gap-1 border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
                             >
                               <X className="h-3 w-3" />
                               Cancel
@@ -436,7 +436,7 @@ export default function OnboardingFormView({
                             <button
                               onClick={saveEdit}
                               disabled={updateField.isPending}
-                              className="flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                              className="flex items-center gap-1 bg-primary px-2.5 py-1 text-[11px] font-medium text-white hover:bg-primary-hover disabled:opacity-60 transition-colors"
                             >
                               <Check className="h-3 w-3" />
                               {updateField.isPending ? 'Saving…' : 'Save'}
@@ -445,7 +445,7 @@ export default function OnboardingFormView({
                         </div>
                       ) : (
                         <div className={[
-                          'rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-700',
+                          'border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-700',
                           isSignature(question_key) ? 'bg-white dark:bg-gray-800' : '',
                         ].join(' ')}>
                           <p

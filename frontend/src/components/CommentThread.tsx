@@ -36,7 +36,7 @@ function CommentBubble({ comment }: { comment: Comment }) {
           {new Date(comment.createdAt).toLocaleString()}
         </span>
       </div>
-      <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-200">{comment.body}</p>
+      <p className="bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-200">{comment.body}</p>
       <p className="text-[10px] text-gray-400">
         Visible to: {VISIBILITY_LABELS[comment.visibility]}
       </p>
@@ -74,14 +74,14 @@ function VisibilitySelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+        className="flex items-center gap-1.5 border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
       >
         {selected.label}
         <ChevronDown className={['h-3 w-3 text-gray-400 transition-transform', open ? 'rotate-180' : ''].join(' ')} />
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 min-w-[130px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
+        <div className="absolute top-full left-0 z-50 mt-1 min-w-[130px] overflow-hidden border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
           {VISIBILITY_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -90,7 +90,7 @@ function VisibilitySelect({
               className={[
                 'flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium transition-colors',
                 opt.value === value
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                  ? 'bg-blue-50 text-primary dark:bg-primary-subtle dark:text-blue-300'
                   : 'text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700',
               ].join(' ')}
             >
@@ -137,7 +137,7 @@ export default function CommentThread({
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add a comment…"
             rows={3}
-            className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-500"
+            className="w-full resize-none border border-gray-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-500"
           />
           <div className="flex items-center justify-between">
             {!hideVisibility && (
@@ -147,7 +147,7 @@ export default function CommentThread({
             <button
               onClick={handleSubmit}
               disabled={!draft.trim()}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
+              className="flex items-center gap-1.5 bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
             >
               <Send className="h-3 w-3" />
               Send

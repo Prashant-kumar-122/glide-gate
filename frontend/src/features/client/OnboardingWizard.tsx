@@ -262,7 +262,7 @@ function DatePickerField({
           type="button"
           onClick={() => { setOpen((o) => !o); setMode('day') }}
           className={[
-            'w-full flex items-center justify-between rounded-md border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-1 dark:bg-gray-950 dark:text-gray-100',
+            'w-full flex items-center justify-between border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-1 dark:bg-gray-950 dark:text-gray-100',
             hasError  ? 'border-red-400 focus:ring-red-400'
             : open    ? 'border-primary ring-1 ring-primary'
             : 'border-gray-200 focus:ring-primary dark:border-gray-700',
@@ -274,7 +274,7 @@ function DatePickerField({
         </button>
 
         {open && (
-          <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-md border border-gray-200 bg-white shadow-xl p-4 dark:border-gray-700 dark:bg-gray-900">
+          <div className="absolute left-0 top-full mt-2 z-50 w-72 border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
 
             {/* ── Header ── */}
             <div className="flex items-center justify-between mb-3">
@@ -477,7 +477,7 @@ function CustomSelectField({
           type="button"
           onClick={() => setOpen((o) => !o)}
           className={[
-            'w-full flex items-center justify-between rounded-md border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-1 dark:bg-gray-950',
+            'w-full flex items-center justify-between border px-3 py-2.5 text-sm bg-white transition-colors focus:outline-none focus:ring-1 dark:bg-gray-950',
             hasError  ? 'border-red-400 focus:ring-red-400'
             : open    ? 'border-primary ring-1 ring-primary'
             : 'border-gray-200 focus:ring-primary dark:border-gray-700',
@@ -490,7 +490,7 @@ function CustomSelectField({
 
         {/* Dropdown list */}
         {open && (
-          <div className="absolute left-0 top-full mt-1.5 z-50 w-full rounded-md border border-gray-200 bg-white shadow-xl overflow-hidden dark:border-gray-700 dark:bg-gray-900">
+          <div className="absolute left-0 top-full mt-1.5 z-50 w-full border border-gray-200 bg-white overflow-hidden dark:border-gray-700 dark:bg-gray-900">
             <div className="max-h-56 overflow-y-auto py-1">
               {options.map((o) => {
                 const isSelected = strVal === o
@@ -541,7 +541,7 @@ function SchemaField({
   const ringClass = hasError
     ? 'border-red-400 focus:ring-red-400'
     : 'border-gray-200 focus:ring-primary'
-  const base = `w-full rounded-md border px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-1 transition-colors dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 ${ringClass}`
+  const base = `w-full border px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-1 transition-colors dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100 ${ringClass}`
   const strVal = value !== undefined && value !== null ? String(value) : ''
 
   // ── Choice: radio buttons (≤3 opts) or styled dropdown (4+) ─────────────
@@ -664,13 +664,13 @@ function SchemaField({
   if (field.question_key === 'full_name_signature') {
     return (
       <div className="space-y-1.5">
-        <div className={`relative w-full rounded-md border bg-gray-50 px-4 py-3 dark:bg-gray-900 ${hasError ? 'border-red-400' : 'border-gray-200 dark:border-gray-700'}`}>
+        <div className={`relative w-full border bg-gray-50 px-4 py-3 dark:bg-gray-900 ${hasError ? 'border-red-400' : 'border-gray-200 dark:border-gray-700'}`}>
           <input
             type="text"
             value={strVal}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Sign your full name"
-            className="w-full bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 text-2xl placeholder:text-gray-300 dark:placeholder:text-gray-500 placeholder:text-lg"
+            className="signature-text w-full bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 text-2xl placeholder:text-gray-300 dark:placeholder:text-gray-500 placeholder:text-lg placeholder:not-italic"
           />
           <div className="absolute bottom-0 left-4 right-4 border-b border-gray-300 dark:border-gray-600" />
         </div>
@@ -718,7 +718,7 @@ function ProductCard({
     <button
       onClick={onToggle}
       className={[
-        'w-full text-left rounded-md border-2 p-4 transition-all',
+        'w-full text-left border-2 p-4 transition-all',
         selected
           ? 'border-primary bg-blue-50 dark:bg-primary-subtle'
           : 'border-gray-200 bg-white hover:border-primary/50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary',
@@ -733,7 +733,7 @@ function ProductCard({
         </div>
         <div
           className={[
-            'w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all',
+            'w-5 h-5 border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all',
             selected ? 'border-primary bg-primary' : 'border-gray-300',
           ].join(' ')}
         >
@@ -784,7 +784,7 @@ function ReviewStep({
             <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
               {formatSectionTitle(section)}
             </h4>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
               {fields.map((f) => (
                 <div key={f.question_key}>
                   <p className="text-xs text-gray-400">{f.label}</p>
@@ -811,7 +811,7 @@ function ReviewStep({
       <button
         onClick={onSubmit}
         disabled={isSubmitting}
-        className="w-full flex items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center justify-center gap-2 bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {isSubmitting ? (
           <><Loader className="w-4 h-4 animate-spin" />Submitting…</>
@@ -1270,19 +1270,19 @@ export default function OnboardingWizard({
       </div>
 
       {/* Header */}
-      <header className="shrink-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
+      <header className="shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary flex items-center justify-center">
             <Building2 className="w-4 h-4 text-white" />
           </div>
           <div>
-            <div className="font-bold text-sm text-white">GlideGate</div>
-            <div className="text-gray-400 text-xs">New Account Application</div>
+            <div className="font-bold text-sm text-gray-900 dark:text-white">GlideGate</div>
+            <div className="text-gray-500 dark:text-gray-400 text-xs">New Account Application</div>
           </div>
         </div>
         <button
           onClick={onCancel}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 border border-gray-600 hover:border-gray-500 px-3 py-1.5 transition-colors"
+          className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 px-3 py-1.5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Cancel
@@ -1292,7 +1292,7 @@ export default function OnboardingWizard({
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar — stepper */}
-        <aside className="w-60 shrink-0 bg-gray-900 flex flex-col overflow-hidden hidden lg:flex">
+        <aside className="w-60 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden hidden lg:flex">
           <nav className="flex-1 px-4 py-8 overflow-y-auto">
             <div className="space-y-1">
               {steps.map((s, idx) => {
@@ -1307,8 +1307,8 @@ export default function OnboardingWizard({
                     disabled={isPending}
                     className={[
                       'w-full flex items-center gap-3 px-3 py-3 text-left transition-all',
-                      isActive && 'bg-white/10',
-                      isCompleted && 'hover:bg-white/5 cursor-pointer',
+                      isActive && 'bg-gray-100 dark:bg-white/10',
+                      isCompleted && 'hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer',
                       isPending && 'cursor-default opacity-40',
                     ].filter(Boolean).join(' ')}
                   >
@@ -1317,7 +1317,7 @@ export default function OnboardingWizard({
                         'w-8 h-8 flex items-center justify-center shrink-0 text-xs font-bold transition-all',
                         isCompleted ? 'bg-success text-white' :
                         isActive ? 'bg-primary text-white' :
-                        'bg-white/10 text-gray-400',
+                        'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400',
                       ].join(' ')}
                     >
                       {isCompleted ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
@@ -1326,7 +1326,7 @@ export default function OnboardingWizard({
                       <div
                         className={[
                           'text-xs font-medium leading-tight truncate',
-                          isActive ? 'text-white' : isCompleted ? 'text-gray-300' : 'text-gray-500',
+                          isActive ? 'text-gray-900 dark:text-white' : isCompleted ? 'text-gray-600 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500',
                         ].join(' ')}
                       >
                         {s.title}
@@ -1339,18 +1339,18 @@ export default function OnboardingWizard({
           </nav>
 
           {/* Progress footer */}
-          <div className="px-5 py-5 border-t border-white/10">
+          <div className="px-5 py-5 border-t border-gray-200 dark:border-white/10">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-gray-400">Overall progress</span>
-              <span className="text-xs font-bold text-white">{progressPct}%</span>
+              <span className="text-xs font-bold text-gray-900 dark:text-white">{progressPct}%</span>
             </div>
-            <div className="h-1.5 bg-white/10 overflow-hidden">
+            <div className="h-1.5 bg-gray-200 dark:bg-white/10 overflow-hidden">
               <div
                 className="h-full bg-primary transition-all duration-500"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
-            <div className="mt-2 text-xs text-gray-500">
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
               Step {step + 1} of {totalSteps}
             </div>
           </div>
@@ -1385,7 +1385,7 @@ export default function OnboardingWizard({
           <div className="shrink-0 bg-white border-t border-gray-100 px-8 py-5 flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+              className="flex items-center gap-2 border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
             >
               <ArrowLeft className="w-4 h-4" />
               {step === 0 ? 'Cancel' : 'Back'}
@@ -1401,7 +1401,7 @@ export default function OnboardingWizard({
                   <button
                     onClick={handleProductsContinue}
                     disabled={!ready || creatingCase}
-                    className="flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-2 bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {creatingCase ? (
                       <><Loader className="w-4 h-4 animate-spin" />Creating…</>
@@ -1417,7 +1417,7 @@ export default function OnboardingWizard({
                         : handleSectionContinue
                     }
                     className={[
-                      'flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold transition-colors',
+                      'flex items-center gap-2 px-5 py-2.5 text-sm font-semibold transition-colors',
                       ready
                         ? 'bg-primary text-white hover:bg-primary-hover'
                         : 'bg-primary text-white hover:bg-primary-hover opacity-60',

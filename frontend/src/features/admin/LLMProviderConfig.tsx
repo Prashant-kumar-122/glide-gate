@@ -76,10 +76,10 @@ export default function LLMProviderConfig() {
                 setModel(p.models[0])
               }}
               className={[
-                'rounded-lg border px-4 py-3 text-left text-sm font-medium transition-all',
+                'border px-4 py-3 text-left text-sm font-medium transition-all',
                 provider === p.value
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500 dark:bg-blue-950 dark:text-blue-300'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-500 dark:hover:bg-gray-700',
+                  ? 'border-primary bg-blue-50 text-primary ring-1 ring-primary dark:bg-primary-subtle dark:text-blue-300'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-gray-700',
               ].join(' ')}
             >
               {p.label}
@@ -96,10 +96,10 @@ export default function LLMProviderConfig() {
             <label
               key={m}
               className={[
-                'flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-all',
+                'flex cursor-pointer items-center gap-3 border px-3 py-2.5 transition-all',
                 model === m
-                  ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950'
-                  : 'border-gray-200 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700',
+                  ? 'border-primary bg-blue-50 dark:border-primary dark:bg-primary-subtle'
+                  : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700',
               ].join(' ')}
             >
               <input
@@ -121,7 +121,7 @@ export default function LLMProviderConfig() {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="Or type a custom model ID…"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-xs text-gray-700 placeholder-gray-300 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-600"
+            className="w-full border border-gray-200 px-3 py-2 font-mono text-xs text-gray-700 placeholder-gray-300 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-600"
           />
         </div>
       </div>
@@ -131,7 +131,7 @@ export default function LLMProviderConfig() {
         onClick={handleSave}
         disabled={update.isPending}
         className={[
-          'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all',
+          'flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-all',
           saved
             ? 'bg-green-500'
             : 'bg-blue-600 hover:bg-blue-700 disabled:opacity-60',

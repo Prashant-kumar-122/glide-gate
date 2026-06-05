@@ -76,7 +76,7 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
 
   if (phase === 'analysing') {
     return (
-      <div className="flex flex-col items-center gap-4 py-16 rounded-2xl bg-violet-50 border border-violet-200 dark:bg-violet-950 dark:border-violet-800">
+      <div className="flex flex-col items-center gap-4 py-16 bg-violet-50 border border-violet-200 dark:bg-violet-950 dark:border-violet-800">
         <div className="h-10 w-10 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
         <div className="text-center">
           <p className="font-semibold text-violet-800 text-sm dark:text-violet-200">AI is reading your documents…</p>
@@ -91,7 +91,7 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
   if (phase === 'done') {
     return (
       <div className="space-y-4">
-        <div className="flex items-start gap-3 rounded-xl bg-violet-50 border border-violet-200 px-4 py-4 dark:bg-violet-950 dark:border-violet-800">
+        <div className="flex items-start gap-3 bg-violet-50 border border-violet-200 px-4 py-4 dark:bg-violet-950 dark:border-violet-800">
           <CheckCircle className="w-5 h-5 text-violet-500 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">Extraction complete</p>
@@ -122,7 +122,7 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
       </div>
 
       {error && (
-        <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 dark:bg-amber-950 dark:border-amber-800">
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-100 px-4 py-3 dark:bg-amber-950 dark:border-amber-800">
           <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700 dark:text-amber-300">{error}</p>
         </div>
@@ -137,7 +137,7 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
             <label
               key={cat.id}
               className={[
-                'cursor-pointer block rounded-xl border-2 border-dashed p-5 transition-colors',
+                'cursor-pointer block border-2 border-dashed p-5 transition-colors',
                 isUploaded
                   ? 'border-emerald-300 bg-emerald-50/60 dark:border-emerald-700 dark:bg-emerald-950/60'
                   : 'border-gray-300 bg-white hover:border-blue-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-blue-500',
@@ -179,7 +179,7 @@ export default function DocumentUploadStep({ caseId, onAnalysed, onSkip }: Props
         {uploadedCount > 0 && (
           <button
             onClick={handleAnalyse}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover transition-colors"
           >
             <Sparkles className="w-4 h-4" />
             Analyse Documents ({uploadedCount})

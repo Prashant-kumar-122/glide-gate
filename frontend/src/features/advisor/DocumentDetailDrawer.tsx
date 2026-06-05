@@ -110,7 +110,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
           </div>
           <button
             onClick={() => setDrawerOpen(false)}
-            className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            className="shrink-0 p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             aria-label="Close document details"
           >
             <X className="h-4 w-4" />
@@ -126,18 +126,18 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
               className={[
                 'flex-1 px-1 py-2.5 text-[11px] font-medium transition-colors sm:text-xs',
                 activeTab === t.key
-                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  ? 'border-b-2 border-primary text-primary'
                   : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
               ].join(' ')}
             >
               {t.label}
               {t.key === 'validation' && doc?.has_validation_result && (
-                <span className="ml-1 rounded-full bg-indigo-100 px-1 py-0.5 text-[9px] font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                <span className="ml-1 bg-indigo-100 px-1 py-0.5 text-[9px] font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
                   ✓
                 </span>
               )}
               {t.key === 'diff' && doc?.has_diff && (
-                <span className="ml-1 rounded-full bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                <span className="ml-1 bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900 dark:text-amber-300">
                   Δ
                 </span>
               )}
@@ -192,7 +192,7 @@ export default function DocumentDetailDrawer({ caseId }: { caseId: string }) {
                   <button
                     onClick={handleDownload}
                     disabled={downloading}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                    className="flex items-center justify-center gap-2 border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                   >
                     {downloading
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
