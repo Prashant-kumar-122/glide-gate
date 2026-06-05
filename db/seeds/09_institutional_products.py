@@ -9,8 +9,12 @@ from app.database import AsyncSessionLocal
 from app.models.cases import Product
 from seed_constants import (
     DCM_PRODUCT_ID,
+    DVP_PRODUCT_ID,
     ECM_PRODUCT_ID,
+    FCM_PRODUCT_ID,
     GCF_PRODUCT_ID,
+    IBCASH_PRODUCT_ID,
+    PB_PRODUCT_ID,
     TFE_PRODUCT_ID,
 )
 
@@ -114,6 +118,91 @@ PRODUCTS = [
             {"step": "account_activation", "name": "Account Activation"},
         ],
         "metadata": {"product_type": "TFE", "product_family": "institutional_trading"},
+    },
+    # Legacy products — inactive, retained for questionnaire FK references
+    {
+        "id": str(PB_PRODUCT_ID),
+        "product_code": "PB",
+        "name": "Prime Brokerage",
+        "description": "Prime brokerage services for institutional hedge funds and asset managers.",
+        "is_active": False,
+        "product_type": "institutional",
+        "required_documents": [
+            "legal_entity_documentation",
+            "regulatory_registration",
+            "aml_kyc_documentation",
+            "authorised_signatory_list",
+        ],
+        "suitability_criteria": {"client_type": "institutional"},
+        "step_sequence": [
+            {"step": "applicant_review", "name": "Applicant Information Review"},
+            {"step": "regulatory_check", "name": "Regulatory Compliance Check"},
+            {"step": "financial_assessment", "name": "Financial Profile Assessment"},
+            {"step": "services_setup", "name": "Services Configuration"},
+            {"step": "account_activation", "name": "Account Activation"},
+        ],
+        "metadata": {"product_type": "Prime Brokerage", "product_family": "institutional_trading"},
+    },
+    {
+        "id": str(DVP_PRODUCT_ID),
+        "product_code": "DVP",
+        "name": "DVP Settlement",
+        "description": "Delivery-versus-payment settlement services for institutional clients.",
+        "is_active": False,
+        "product_type": "institutional",
+        "required_documents": [
+            "legal_entity_documentation",
+            "regulatory_registration",
+            "aml_kyc_documentation",
+        ],
+        "suitability_criteria": {"client_type": "institutional"},
+        "step_sequence": [
+            {"step": "applicant_review", "name": "Applicant Information Review"},
+            {"step": "regulatory_check", "name": "Regulatory Compliance Check"},
+            {"step": "custodian_setup", "name": "Custodian Details Setup"},
+            {"step": "account_activation", "name": "Account Activation"},
+        ],
+        "metadata": {"product_type": "DVP", "product_family": "institutional_trading"},
+    },
+    {
+        "id": str(FCM_PRODUCT_ID),
+        "product_code": "FCM",
+        "name": "FCM Futures",
+        "description": "Futures commission merchant clearing services for institutional clients.",
+        "is_active": False,
+        "product_type": "institutional",
+        "required_documents": [
+            "legal_entity_documentation",
+            "regulatory_registration",
+            "aml_kyc_documentation",
+        ],
+        "suitability_criteria": {"client_type": "institutional"},
+        "step_sequence": [
+            {"step": "applicant_review", "name": "Applicant Information Review"},
+            {"step": "regulatory_check", "name": "Regulatory Compliance Check"},
+            {"step": "financial_assessment", "name": "Financial Profile Assessment"},
+            {"step": "account_activation", "name": "Account Activation"},
+        ],
+        "metadata": {"product_type": "FCM", "product_family": "institutional_trading"},
+    },
+    {
+        "id": str(IBCASH_PRODUCT_ID),
+        "product_code": "IBCash",
+        "name": "IB-Introduced Cash Account",
+        "description": "Cash account for clients introduced through introducing brokers.",
+        "is_active": False,
+        "product_type": "institutional",
+        "required_documents": [
+            "legal_entity_documentation",
+            "aml_kyc_documentation",
+        ],
+        "suitability_criteria": {"client_type": "institutional"},
+        "step_sequence": [
+            {"step": "applicant_review", "name": "Applicant Information Review"},
+            {"step": "regulatory_check", "name": "Regulatory Compliance Check"},
+            {"step": "account_activation", "name": "Account Activation"},
+        ],
+        "metadata": {"product_type": "IBCash", "product_family": "institutional_trading"},
     },
 ]
 
