@@ -74,7 +74,7 @@ function OpenCell({ data, context }: ICellRendererParams<TaskOut>) {
       onClick={() => context.openTask(data)}
       className="text-xs font-medium text-primary hover:underline"
     >
-      Open in Case ›
+      Open Task ›
     </button>
   )
 }
@@ -92,9 +92,12 @@ export default function TaskListPanel() {
   const { openCaseTab } = useWorkspaceStore()
   const [search, setSearch] = useState('')
 
+  const { setPendingTaskId } = useWorkspaceStore()
+
   const openTask = useCallback((task: TaskOut) => {
+    setPendingTaskId(task.id)
     openCaseTab(task.case_id, '', task.case_name ?? task.case_id.slice(0, 8))
-  }, [openCaseTab])
+  }, [openCaseTab, setPendingTaskId])
 
   const context = useMemo(() => ({ openTask }), [openTask])
 

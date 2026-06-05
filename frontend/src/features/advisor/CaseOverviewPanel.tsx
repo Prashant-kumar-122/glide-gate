@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useTasks, useTaskDetail } from '@/hooks/useTasks'
 import { useCaseProgress, useCaseDetail, useQuestionnaireSchema, useCollectedFields } from '@/hooks/useDocuments'
 import { useComments } from '@/hooks/useComments'
 import { useAuthStore } from '@/store/authStore'
+import { useWorkspaceStore } from '@/store/workspaceStore'
 import DocumentWorkspacePanel from './DocumentWorkspacePanel'
 import ParallelProductTracks from './ParallelProductTracks'
 import TaskRow from './TaskRow'
@@ -65,7 +66,13 @@ function CaseSummaryStrip({ caseId }: { caseId: string }) {
 
   if (!summary && !detail) return null
 
-  const clientName   = summary?.client_name ?? detail?.client_name ?? '…'
+  const productsLabel = summary?.products?.length
+    ? summary.products.map(p => p.product_name.replace(/_/g, ' ')).join(' & ')
+    : detail?.selected_products?.length
+    ? detail.selected_products.map(p => p.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(' & ')
+    : null
+
+  const clientName = summary?.case_name || detail?.case_name || productsLabel || summary?.client_name || detail?.client_name || '…'
   const stage        = summary?.current_stage ?? detail?.current_stage ?? ''
 
   const products     = summary?.products ?? []
@@ -232,8 +239,20 @@ export default function CaseOverviewPanel({ caseId }: CaseOverviewPanelProps) {
   const userRole = useAuthStore(s => s.user?.role) as 'advisor' | 'sales_manager' | undefined
   const role: 'advisor' | 'sales_manager' = userRole === 'sales_manager' ? 'sales_manager' : 'advisor'
   const { data: allTasks = [], isLoading: tasksLoading } = useTasks(role, caseId)
+  const { pendingTaskId, setPendingTaskId } = useWorkspaceStore()
 
   const pendingCount = allTasks.filter(t => t.status === 'PENDING').length
+
+  // Auto-open task sub-tab when navigating from My Tasks dashboard
+  useEffect(() => {
+    if (!pendingTaskId || allTasks.length === 0) return
+    const task = allTasks.find(t => t.id === pendingTaskId)
+    if (task) {
+      setOpenTaskTabs(prev => prev.find(t => t.id === task.id) ? prev : [...prev, task])
+      setActiveTab(task.id)
+      setPendingTaskId(null)
+    }
+  }, [pendingTaskId, allTasks, setPendingTaskId])
 
   function openTaskTab(task: TaskOut) {
     if (!openTaskTabs.find(t => t.id === task.id)) {
