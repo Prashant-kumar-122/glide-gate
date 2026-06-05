@@ -10,16 +10,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
-        mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
-      },
-      fontSize: {
-        // Tighter, more data-dense type scale
-        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],  // 10px
-      },
-      letterSpacing: {
-        tightest: '-0.02em',
-        widest2: '0.15em',
+        sans: ['Inter Variable', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['ui-monospace', 'Cascadia Code', 'monospace'],
       },
       colors: {
         // ── Investment banking semantic tokens (static dark palette) ──────────

@@ -670,7 +670,7 @@ function SchemaField({
             value={strVal}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Sign your full name"
-            className="w-full bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 text-2xl placeholder:text-gray-300 dark:placeholder:text-gray-500 placeholder:text-lg"
+            className="signature-text w-full bg-transparent focus:outline-none text-gray-800 dark:text-gray-100 text-2xl placeholder:text-gray-300 dark:placeholder:text-gray-500 placeholder:text-lg placeholder:not-italic"
           />
           <div className="absolute bottom-0 left-4 right-4 border-b border-gray-300 dark:border-gray-600" />
         </div>

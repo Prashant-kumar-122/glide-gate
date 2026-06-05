@@ -13,6 +13,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
     "@tanstack/react-query": "^5.62.0",
     "@xyflow/react": "^12.3.0",
     "ag-grid-community": "^35.3.1",
