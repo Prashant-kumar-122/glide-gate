@@ -24,10 +24,13 @@ dist/
 .cache/
 *.local
 
-# Environment
+# Environment — local overrides (never commit)
 .env
 .env.local
-.env.production
+backend/.env
+
+# Allow production env for CI/CD
+!.env.production
 
 # IDE
 .vscode/
@@ -43,7 +46,6 @@ Thumbs.db
 backend/uploads/
 
 # Poetry
-poetry.lock
 
 # Temp
 frontend-reference-project/

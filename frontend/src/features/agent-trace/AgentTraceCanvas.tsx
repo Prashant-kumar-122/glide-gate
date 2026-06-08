@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   ReactFlow,
   Background,
@@ -8,7 +8,7 @@ import {
   useEdgesState,
   MarkerType,
 } from '@xyflow/react'
-import type { Node, Edge, NodeTypes, OnNodeClick } from '@xyflow/react'
+import type { Node, Edge, NodeTypes, NodeMouseHandler } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { List, X } from 'lucide-react'
 
@@ -152,7 +152,7 @@ export default function AgentTraceCanvas({ activeCaseId }: AgentTraceCanvasProps
     return () => timers.forEach(window.clearTimeout)
   }, [edgeQueue, dequeueEdge])
 
-  const onNodeClick = useCallback<OnNodeClick>(
+  const onNodeClick = useCallback<NodeMouseHandler>(
     (_evt, node) => {
       setSelectedAgent(node.id === selectedAgent ? null : node.id)
       setShowPanel(true)

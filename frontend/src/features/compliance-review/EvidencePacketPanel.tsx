@@ -1,5 +1,4 @@
 import { ShieldAlert, User, FileText, Package, AlertCircle } from 'lucide-react'
-import type { EvidencePacket } from '@/lib/api'
 import { useEvidencePacket } from '@/hooks/usePendingReviews'
 
 const RISK_BAND_COLOR: Record<string, string> = {

@@ -5,7 +5,7 @@
 --   NOT_REQUESTED → REQUESTED → RECEIVED → UNDER_REVIEW → NEEDS_REVISION → APPROVED
 -- =============================================================================
 
-CREATE TYPE IF NOT EXISTS document_status AS ENUM (
+CREATE TYPE document_status AS ENUM (
     'NOT_REQUESTED',
     'REQUESTED',
     'RECEIVED',
