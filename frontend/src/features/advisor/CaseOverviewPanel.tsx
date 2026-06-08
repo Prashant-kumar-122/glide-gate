@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useTasks, useTaskDetail } from '@/hooks/useTasks'
 import { useCaseProgress, useCaseDetail, useQuestionnaireSchema, useCollectedFields } from '@/hooks/useDocuments'
-import { useComments } from '@/hooks/useComments'
 import { useAuthStore } from '@/store/authStore'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import DocumentWorkspacePanel from './DocumentWorkspacePanel'
@@ -62,8 +61,6 @@ const STAGE_LABEL: Record<string, string> = {
 function CaseSummaryStrip({ caseId }: { caseId: string }) {
   const { data: summary } = useCaseProgress(caseId)
   const { data: detail } = useCaseDetail(caseId)
-  const { data: comments = [] } = useComments(caseId)
-
   if (!summary && !detail) return null
 
   const productsLabel = summary?.products?.length
