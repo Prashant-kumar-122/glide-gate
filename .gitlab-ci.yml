@@ -134,15 +134,27 @@ build-feature:
       when: always
     - if: '$CI_COMMIT_BRANCH != "COPS_Agentic_AI_Deploy" && $CI_COMMIT_BRANCH != "main"'
       when: always
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq openssh-client
+    - eval $(ssh-agent -s)
+    - chmod 600 "$EC2_SSH_KEY"
+    - ssh-add "$EC2_SSH_KEY"
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H 18.60.103.228 >> ~/.ssh/known_hosts
   script:
     - echo "=========================================="
     - echo "   [Feature] Building Docker Images"
     - echo "   Branch - $CI_COMMIT_BRANCH"
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
-    - mkdir -p db/data
-    - DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build
-    - echo "✓ Docker build passed"
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        git fetch origin &&
+        git reset --hard origin/$CI_COMMIT_REF_NAME &&
+        mkdir -p db/data &&
+        sudo chown -R 999:999 db/data &&
+        DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
+        echo '✓ Docker build passed'"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Main pipeline — full pipeline triggered on merge to main
