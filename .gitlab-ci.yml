@@ -65,7 +65,7 @@ build:
         mkdir -p db/data &&
         sudo chown -R 999:999 db/data &&
         echo '--- Building Docker images ---' &&
-        DOCKER_BUILDKIT=0 docker-compose build &&
+        DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
         echo '--- Tagging images with $CI_COMMIT_SHORT_SHA ---' &&
         docker tag glidegate_backend:latest glidegate_backend:$CI_COMMIT_SHORT_SHA &&
         docker tag glidegate_frontend:latest glidegate_frontend:$CI_COMMIT_SHORT_SHA &&
@@ -86,9 +86,9 @@ deploy:
     - ssh ubuntu@18.60.103.228 "
         cd /home/ubuntu/office_project/glidegate &&
         echo '--- Stopping old containers ---' &&
-        docker-compose down &&
+        docker-compose -f docker-compose.prod.yml down &&
         echo '--- Starting new containers ---' &&
-        bash docker-startup.sh &&
+        docker-compose -f docker-compose.prod.yml up -d &&
         echo '--- Container Status ---' &&
-        docker-compose ps &&
+        docker-compose -f docker-compose.prod.yml ps &&
         echo '✓ Deployment complete - Commit $CI_COMMIT_SHORT_SHA is live'"
