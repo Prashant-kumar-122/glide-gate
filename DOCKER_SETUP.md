@@ -23,7 +23,7 @@ docker-compose --env-file .env.docker up -d
 
 ## 📍 Access Points
 
-After startup, access your services at:
+After startup,  access your services at:
 
 | Service | URL | Purpose |
 |---------|-----|---------|
@@ -33,6 +33,7 @@ After startup, access your services at:
 | **PostgreSQL** | localhost:5432 | Database (psql connection) |
 
 ---
+
 
 ## 🔧 Environment Configuration
 
