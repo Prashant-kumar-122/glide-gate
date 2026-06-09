@@ -176,6 +176,26 @@ class NotificationAgent(BaseAgent):
         if channel == "in_app" and _user_type != "advisor" and task.client_id:
             # Client-specific in-app → send only to that user's room
             await socket_emitter.notify_user(task.client_id, _socket_payload)
+
+            # Push dedup (v1): if the user has no active socket session, send a push
+            # notification so they're alerted while the app is closed/backgrounded.
+            # Known v1 gap: a backgrounded-but-connected tab may get both; revisit
+            # with a visibilitychange-driven user_active signal in a later iteration.
+            from app.websocket.socket_server import has_active_socket
+            if not has_active_socket(str(task.client_id)):
+                try:
+                    from app.services.push.push_service import push_service
+                    await push_service.send_push_to_user(
+                        str(task.client_id),
+                        {
+                            "title": record.get("subject") or "GlideGate",
+                            "body_preview": record.get("body_preview", ""),
+                            "notification_id": record["notification_id"],
+                            "url": "/",
+                        },
+                    )
+                except Exception as push_exc:
+                    self.logger.error(f"[NotificationAgent] push dispatch failed: {push_exc}")
         else:
             # Advisor/broadcast in-app or email audit → case room
             await socket_emitter.notification_sent(task.case_id, _socket_payload)

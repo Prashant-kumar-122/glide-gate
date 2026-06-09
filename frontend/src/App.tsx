@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
-import { Menu, X, Sun, Moon } from 'lucide-react'
+import { Menu, X, Sun, Moon, WifiOff, RefreshCw } from 'lucide-react'
 
 import Login from '@/routes/Login'
 import Signup from '@/routes/Signup'
@@ -20,6 +20,10 @@ import { NotificationToast } from '@/features/notifications/NotificationToast'
 import { useUserSocket } from '@/hooks/useUserSocket'
 import { useAuthStore } from '@/store/authStore'
 import { useThemeStore } from '@/store/themeStore'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate'
+import { useAuthInit } from '@/hooks/useAuth'
+import { usePushRefresh } from '@/hooks/usePushRefresh'
 
 const NAV_LINKS: { to: string; label: string; roles: string[] }[] = [
   { to: '/',               label: 'Workspace',      roles: ['advisor', 'sales_manager'] },
@@ -71,7 +75,7 @@ function NavBar() {
           <div className="mr-4 h-4 w-px bg-gray-200 dark:bg-gray-800 hidden lg:block" aria-hidden="true" />
         )}
 
-        {/* Desktop nav links — underline-tab style */}
+        {/* Desktop nav links */}
         <div className="hidden h-full items-center lg:flex">
           {visibleLinks.map((l) => {
             const isActive = location.pathname === l.to
@@ -154,16 +158,52 @@ function NavBar() {
 
 export default function App() {
   const theme = useThemeStore((s) => s.theme)
+  const isOnline = useOnlineStatus()
+  const { needsUpdate, applyUpdate } = useServiceWorkerUpdate()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
+  // Re-validate the session cookie on app startup; clears auth if expired
+  useAuthInit()
   useUserSocket()
+  usePushRefresh()
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
       <NavBar />
+
+      {/* Offline banner */}
+      {!isOnline && (
+        <div
+          role="alert"
+          className="flex items-center gap-2 border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/60 dark:text-amber-300"
+        >
+          <WifiOff className="h-3.5 w-3.5 shrink-0" />
+          You are offline. Some features are unavailable until your connection is restored.
+        </div>
+      )}
+
+      {/* SW update banner — non-dismissible; stale banking UI is dangerous */}
+      {needsUpdate && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-2 border-b border-primary/30 bg-primary/10 px-4 py-2 text-xs"
+        >
+          <span className="font-medium text-primary dark:text-blue-300">
+            A new version of GlideGate is available.
+          </span>
+          <button
+            onClick={applyUpdate}
+            className="flex items-center gap-1.5 rounded bg-primary px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-primary-hover transition-colors shrink-0"
+          >
+            <RefreshCw className="h-3 w-3" />
+            Refresh now
+          </button>
+        </div>
+      )}
+
       <main className="flex flex-1 flex-col overflow-y-auto">
         <Suspense fallback={
           <div className="flex min-h-screen items-center justify-center">

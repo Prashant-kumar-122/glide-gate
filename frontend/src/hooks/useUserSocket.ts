@@ -6,9 +6,9 @@ import type { NotificationRecord } from '@/store/notificationStore'
 import { fetchMyNotifications } from '@/lib/api'
 
 /**
- * Joins the user-level socket room (user:{userId}) on authentication.
- * Listens for NOTIFICATION_SENT events that are emitted directly to the user
- * (e.g. case-created notifications that fire before any case room is joined).
+ * Listens for NOTIFICATION_SENT events on the user-level socket room.
+ * Room membership is now server-derived from the authenticated session cookie —
+ * no join/leave emits needed from the client.
  */
 export function useUserSocket() {
   const user = useAuthStore((s) => s.user)
@@ -16,11 +16,9 @@ export function useUserSocket() {
   const clearNotifications = useNotificationStore((s) => s.clearNotifications)
 
   useEffect(() => {
-    // Always start clean when the user identity changes
     clearNotifications()
     if (!user?.id) return
 
-    // Load persisted notifications from DB — shown as read (historical)
     fetchMyNotifications()
       .then((items) => {
         items.forEach((item) => {
@@ -36,18 +34,9 @@ export function useUserSocket() {
           })
         })
       })
-      .catch(() => {/* silently ignore if fetch fails */})
+      .catch(() => { /* silently ignore if fetch fails */ })
 
     const socket = getSocket()
-
-    function joinRoom() {
-      socket.emit('join_user_room', { user_id: user!.id })
-      console.debug('[useUserSocket] joined user room', user!.id)
-    }
-
-    // Join now (or buffer if not yet connected) and re-join on every reconnect
-    joinRoom()
-    socket.on('connect', joinRoom)
 
     function onNotificationSent(data: {
       notification_id?: string
@@ -67,16 +56,13 @@ export function useUserSocket() {
         receivedAt: new Date().toISOString(),
         read: false,
       }
-      console.debug('[useUserSocket] notification_sent received', data)
       appendNotification(record)
     }
 
     socket.on('notification_sent', onNotificationSent)
 
     return () => {
-      socket.off('connect', joinRoom)
       socket.off('notification_sent', onNotificationSent)
-      socket.emit('leave_user_room', { user_id: user.id })
     }
   }, [user?.id, appendNotification, clearNotifications])
 }

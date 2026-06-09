@@ -1,6 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { useAuthStore } from '@/store/authStore'
 import { useChatStore } from '@/store/chatStore'
 
 interface MessageRecord {
@@ -40,9 +39,8 @@ export function useGreeting(caseId: string | null) {
       setTyping(true)
       let assistantText = ''
       try {
-        const token = useAuthStore.getState().token
         const resp = await fetch(`/api/cases/${caseId}/greet`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'include',
         })
         if (resp.ok && resp.headers.get('content-type')?.includes('text/event-stream') && resp.body) {
           const reader = resp.body.getReader()
@@ -117,12 +115,13 @@ export function useSendMessage(caseId: string | null) {
       let assistantText = ''
 
       try {
-        const token = useAuthStore.getState().token
+        const csrfToken = document.cookie.match(/(?:^|;\s*)gg_csrf=([^;]+)/)?.[1]
         const resp = await fetch(`/api/cases/${caseId}/message`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
           },
           body: JSON.stringify({ message: text }),
         })

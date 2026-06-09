@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import re
+import secrets
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import func, select
 
 from app.api.dependencies.auth import get_current_user
+from app.config import settings
 from app.database import get_db
 from app.models.users import User
 from app.services.auth.auth_service import auth_service
@@ -29,8 +31,31 @@ def _validate_password(v: str) -> str:
     return v
 
 
-# ── Pydantic schemas ──────────────────────────────────────────────────────────
+def _set_auth_cookies(response: Response, token: str) -> None:
+    max_age = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    csrf_token = secrets.token_hex(32)
+    response.set_cookie(
+        key=settings.AUTH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=max_age,
+        path="/",
+    )
+    # Non-httpOnly so the frontend JS can read and echo it as X-CSRF-Token
+    response.set_cookie(
+        key=settings.CSRF_COOKIE_NAME,
+        value=csrf_token,
+        httponly=False,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        max_age=max_age,
+        path="/",
+    )
 
+
+# Pydantic schemas
 
 class SignupRequest(BaseModel):
     email: str = Field(max_length=254)
@@ -96,11 +121,14 @@ class TokenResponse(BaseModel):
     user: UserOut
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
+# Endpoints
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def signup(
+    body: SignupRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
     async with db.begin():
         token, user = await auth_service.signup(
             email=body.email,
@@ -109,14 +137,28 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)) -> Tok
             password=body.password,
             db=db,
         )
+    _set_auth_cookies(response, token)
     return TokenResponse(access_token=token, user=UserOut.model_validate(user))
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def login(
+    body: LoginRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
     async with db.begin():
         token, user = await auth_service.login(email=body.email, password=body.password, db=db)
+    _set_auth_cookies(response, token)
     return TokenResponse(access_token=token, user=UserOut.model_validate(user))
+
+
+@router.post("/logout")
+async def logout() -> Response:
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    response.delete_cookie(key=settings.AUTH_COOKIE_NAME, path="/")
+    response.delete_cookie(key=settings.CSRF_COOKIE_NAME, path="/")
+    return response
 
 
 @router.get("/me", response_model=UserOut)

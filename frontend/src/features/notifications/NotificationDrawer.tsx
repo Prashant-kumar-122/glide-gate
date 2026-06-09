@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { X, Mail, Bell } from 'lucide-react'
 import { useNotificationStore } from '@/store/notificationStore'
 import type { NotificationRecord } from '@/store/notificationStore'
@@ -24,8 +25,13 @@ function fmtTime(ts: string) {
 }
 
 export function NotificationDrawer({ onClose }: { onClose: () => void }) {
-  const notifications = useNotificationStore((s) => s.notifications)
+  const raw = useNotificationStore((s) => s.notifications)
   const markAllRead = useNotificationStore((s) => s.markAllRead)
+
+  const notifications = useMemo(
+    () => [...raw].sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()),
+    [raw]
+  )
 
   return (
     <>
