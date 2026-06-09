@@ -10,22 +10,22 @@ export interface AuthUser {
 }
 
 interface AuthState {
-  token: string | null
   user: AuthUser | null
   isAuthenticated: boolean
-  setAuth: (token: string, user: AuthUser) => void
+  setAuth: (user: AuthUser) => void
   clearAuth: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
       user: null,
       isAuthenticated: false,
-      setAuth: (token, user) => set({ token, user, isAuthenticated: true }),
-      clearAuth: () => set({ token: null, user: null, isAuthenticated: false }),
+      setAuth: (user) => set({ user, isAuthenticated: true }),
+      clearAuth: () => set({ user: null, isAuthenticated: false }),
     }),
-    { name: 'gg_auth', storage: createJSONStorage(() => sessionStorage) }
+    // Non-sensitive user profile (no token) kept in localStorage so PWA sessions
+    // survive close/reopen. Cookie validity is re-checked via /api/auth/me on startup.
+    { name: 'gg_auth', storage: createJSONStorage(() => localStorage) }
   )
 )

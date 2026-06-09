@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '@/lib/api'
@@ -5,14 +6,12 @@ import type { TokenResponse, UserOut } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import type { AuthUser } from '@/store/authStore'
 
-// ── Query keys ────────────────────────────────────────────────────────────────
-
+// Query keys
 export const authQk = {
   profile: ['auth', 'profile'] as const,
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
+// Helpers
 function toAuthUser(u: UserOut): AuthUser {
   return {
     id: u.id,
@@ -23,7 +22,7 @@ function toAuthUser(u: UserOut): AuthUser {
   }
 }
 
-// ── Hooks ─────────────────────────────────────────────────────────────────────
+// Hooks
 
 export function useSignup() {
   const { setAuth } = useAuthStore()
@@ -43,7 +42,7 @@ export function useSignup() {
     },
     onSuccess: (data) => {
       qc.clear()
-      setAuth(data.access_token, toAuthUser(data.user))
+      setAuth(toAuthUser(data.user))
       navigate('/client')
     },
   })
@@ -62,13 +61,29 @@ export function useLogin() {
     onSuccess: (data) => {
       const user = toAuthUser(data.user)
       qc.clear()
-      setAuth(data.access_token, user)
+      setAuth(user)
       const defaultRoute: Record<string, string> = {
         client: '/client',
         advisor: '/',
         admin: '/admin',
+        sales_manager: '/',
       }
       navigate(defaultRoute[user.role] ?? '/')
+    },
+  })
+}
+
+export function useLogout() {
+  const { clearAuth } = useAuthStore()
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => api.post('/auth/logout'),
+    onSettled: () => {
+      qc.clear()
+      clearAuth()
+      navigate('/login')
     },
   })
 }
@@ -88,7 +103,7 @@ export function useProfile() {
 
 export function useUpdateProfile() {
   const qc = useQueryClient()
-  const { user, setAuth, token } = useAuthStore()
+  const { setAuth } = useAuthStore()
 
   return useMutation({
     mutationFn: async (data: {
@@ -103,9 +118,20 @@ export function useUpdateProfile() {
     },
     onSuccess: (updated) => {
       qc.setQueryData(authQk.profile, updated)
-      if (token && user) {
-        setAuth(token, toAuthUser(updated))
-      }
+      setAuth(toAuthUser(updated))
     },
   })
+}
+
+// Validates the session cookie on app startup. If the cookie has expired or is
+// absent the backend returns 401, which clears auth store and redirects to /login.
+export function useAuthInit() {
+  const { setAuth, clearAuth } = useAuthStore()
+
+  useEffect(() => {
+    api.get<UserOut>('/auth/me')
+      .then((res) => setAuth(toAuthUser(res.data)))
+      .catch(() => clearAuth())
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 }

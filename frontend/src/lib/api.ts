@@ -2,22 +2,39 @@ import axios from 'axios'
 import type { DocumentStatus } from '@/design-system/tokens'
 import { useAuthStore } from '@/store/authStore'
 
-export const api = axios.create({ baseURL: '/api' })
+export const api = axios.create({
+  baseURL: '/api',
+  withCredentials: true,  // attach httpOnly auth cookie on every request
+})
 
-// ── Axios interceptors ────────────────────────────────────────────────────────
+// CSRF double-submit: read the non-httpOnly gg_csrf cookie and echo as header
+// on all state-mutating requests. Matches the server-side csrf_protection middleware.
+function getCsrfToken(): string | undefined {
+  const match = document.cookie.match(/(?:^|;\s*)gg_csrf=([^;]+)/)
+  return match?.[1]
+}
 
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  const method = config.method?.toLowerCase()
+  if (method && ['post', 'put', 'patch', 'delete'].includes(method)) {
+    const csrf = getCsrfToken()
+    if (csrf) config.headers['X-CSRF-Token'] = csrf
   }
   return config
 })
 
+const AUTH_PATHS = ['/login', '/signup']
+
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err?.response?.status === 401) {
+    // Only force-navigate on 401 when the user is not already on an auth page.
+    // Without this guard, useAuthInit's startup /auth/me call (expected to 401
+    // for unauthenticated users) causes a hard-reload loop in incognito/fresh sessions.
+    if (
+      err?.response?.status === 401 &&
+      !AUTH_PATHS.includes(window.location.pathname)
+    ) {
       useAuthStore.getState().clearAuth()
       window.location.href = '/login'
     }
