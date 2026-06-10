@@ -231,7 +231,7 @@ top of. This is the most consequential design phase — get the schema right bef
 | `domain_task_routing` | What the orchestrator emits on stage entry (`domain_id`, `stage_code`, `target_agent`, `task_type`, `priority`, `payload_template`, `notification_templates JSONB`) |
 | `domain_agent_roster` | Which agent classes participate in a domain (`domain_id`, `agent_id`, `agent_class`) |
 | `domain_agent_capabilities` | Entry + exit contracts per agent (`domain_id`, `agent_id`, `subscribed_task_types TEXT[]`, `emitted_task_types TEXT[]`, `allowed_handoff_targets TEXT[]`) |
-| `domain_product_pipelines` | Per-product ordered/parallel agent composition (`domain_id`, `product_code`, `step_order`, `agent_id`, `is_parallel bool`) |
+| `domain_product_pipelines` | Step sequence executed by each product's `ProductOnboardingAgent` instance (`domain_id`, `product_code`, `step_id`, `step_label`, `step_order`, `is_parallel bool`, `step_config JSONB`) |
 | `domain_agent_prompts` | Per-agent system prompts, domain-scoped (`domain_id`, `agent_id`, `prompt_role`, `prompt_text`) |
 | `domain_agent_skills` | Skill bindings per agent (`domain_id`, `agent_id`, `skill_id`, `bound_parameters JSONB`) |
 | `domain_agent_tool_grants` | MCP tool least-privilege grants (`domain_id`, `agent_id`, `connector_id`, `tool_name`) |
@@ -413,12 +413,20 @@ Migrate each agent:
 This is the mechanism enabling "plug in a new agent with zero orchestrator changes": write the
 agent class → declare its capability spec rows → wire into a product pipeline.
 
-**(c) Per-product agent pipelines**
+**(c) Per-product named agent instances**
 
-Replace `_build_agents()`'s fixed global 8-agent list and `ParallelProductLauncher`'s
-one-size-fits-all `ProductOnboardingAgent` spin-up with per-product composition from
-`domain_product_pipelines` rows. "How many agents, which ones, in what order/parallelism" is now
-data per product, not a hardcoded Python list shared by every case.
+Keep a single `ProductOnboardingAgent` class but change how it is instantiated.
+`ParallelProductLauncher` spawns one instance per selected product, assigning each instance an
+agent name of `ProductOnboardingAgent[{product_code}]` (e.g. `ProductOnboardingAgent[equity_fund]`,
+`ProductOnboardingAgent[savings_account]`). Each instance reads its step sequence from
+`domain_product_pipelines` rows keyed by its product code. Remove `_build_agents()`'s fixed global
+8-agent list and replace with dynamic per-product instantiation.
+
+The named-instance identity flows through `AgentEventBus` so every `TaskPacket` and event log
+entry carries the product-scoped agent name. The agent trace screen displays a distinct row for
+each product's instance — a case with three selected products shows three
+`ProductOnboardingAgent[*]` entries. "Which steps, in what order/parallelism, with what config" is
+data per product; the agent class is shared by all.
 
 **Files modified:** `product_onboarding_agent.py`, `suitability_assessor.py`,
 `parallel_product_launcher.py`, `agent_orchestration_service.py`, `agent_event_bus.py`,
@@ -427,17 +435,21 @@ all agents' `process()` and exit-handler methods (entry/exit contract migration)
 ### Verification
 Snapshot-compare suitability scores, step sequences, and emitted `TaskPacket` handoff sequences
 for existing wealth products before/after — values identical, only source changes (Python constant
-→ JSONB row / capability-spec row). Existing suite green.
+→ JSONB row / capability-spec row). Agent trace records must show `ProductOnboardingAgent[{product_code}]`
+for each selected product. Existing suite green.
 
 ### Session end — commit template
 ```
-feat(cadf-phase-4): make products, questions, and per-product agent pipelines config-driven
+feat(cadf-phase-4): make products, questions, and per-product agent instances config-driven
 
 - Product.step_sequence and suitability_criteria JSONB now live source of truth
 - SuitabilityAssessor reads thresholds/weights from DB, not hardcoded constants
 - AgentCapabilitySpec wired through AgentEventBus.subscribe()
-- Per-product agent pipelines from domain_product_pipelines (replaces _build_agents list)
-- Snapshot tests confirm identical suitability scores and TaskPacket sequences
+- Single ProductOnboardingAgent class; ParallelProductLauncher spawns one named instance per
+  selected product (ProductOnboardingAgent[{product_code}])
+- domain_product_pipelines drives step sequence per instance (replaces _build_agents list)
+- Snapshot tests confirm identical suitability scores and TaskPacket sequences; trace shows
+  named instances
 ```
 Mark **Phase 4** as `[x]` in the Phase Status Tracker and commit this file.
 
@@ -700,7 +712,7 @@ Admin-facing UI + CRUD/validation API letting a business user define a domain en
 **Frontend (new):** `frontend/src/features/admin/*`
 - Domain & FSM editor with visual transition graph
 - Agent behavior editor (prompt, skill-binding, MCP tool-grant, capability contract viewer)
-- Visual per-product pipeline composer (validates entry/exit wiring, shows agent count per product)
+- Visual per-product step sequence editor — shows steps configured for each `ProductOnboardingAgent[{product_code}]` instance (step ID, order, parallel grouping, step config JSONB); preview pane shows expected named agent instances for a given product selection
 - **SLA editor**: grid keyed by stage × tier × product; `is_enabled` toggle (prominent, requires
   confirmation when disabling regulated stages), `window_hours`, `warning_pct`, `escalation_pct`
   (enforced: warning < escalation), `pause_on_human_review`; **SLA health dashboard** showing
@@ -799,7 +811,7 @@ Run every item; any failure means re-visiting the indicated phase:
 - [ ] Case in `pause_on_human_review=true` stage does NOT consume SLA during hold
 - [ ] "instant-account" product has SLA fully disabled — zero SLA events fire
 - [ ] "deposit-ops" persona logs in with correct landing page/nav — no frontend code change
-- [ ] Pipeline composer shows correct agent count and handoff chain per deposit product
+- [ ] Pipeline composer shows correct step sequence per deposit product; agent trace shows distinct `ProductOnboardingAgent[{product_code}]` instances for each selected product
 - [ ] SLA health dashboard shows overdue test case correctly flagged
 
 ### Session end — commit template
