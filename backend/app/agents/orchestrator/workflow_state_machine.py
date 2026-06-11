@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import Callable
 from uuid import UUID
 
@@ -13,42 +15,25 @@ class InvalidTransitionError(Exception):
     pass
 
 
-# Valid forward and backward transitions per stage
+def _load_transitions() -> dict[OnboardingStage, set[OnboardingStage]]:
+    """Load FSM transitions from orchestrator.config.json at the project root."""
+    config_path = Path(__file__).resolve().parents[4] / "configs" / "agents" / "orchestrator.config.json"
+    with config_path.open() as f:
+        config = json.load(f)
+    raw: dict[str, list[str]] = config["fsm"]["transitions"]
+    return {
+        OnboardingStage(stage): {OnboardingStage(t) for t in targets}
+        for stage, targets in raw.items()
+    }
+
+
+# Valid forward and backward transitions per stage — loaded from orchestrator.config.json.
 #
 # Institutional: INTAKE → REVIEW → SALES_REVIEW → KYC → PARALLEL_PRODUCTS → COMPLETE
 # Retail:        INTAKE → REVIEW → KYC → PARALLEL_PRODUCTS → COMPLETE
 # SM reject/info: SALES_REVIEW → REVIEW
 # All docs must be approved before advancing from REVIEW.
-_TRANSITIONS: dict[OnboardingStage, set[OnboardingStage]] = {
-    OnboardingStage.INTAKE: {
-        OnboardingStage.REVIEW,  # all cases enter Advisor Review after intake
-    },
-    OnboardingStage.REVIEW: {
-        OnboardingStage.SALES_REVIEW,  # institutional, all docs approved → SM review
-        OnboardingStage.KYC,           # retail, all docs approved → KYC
-        OnboardingStage.COMPLETE,
-        OnboardingStage.ESCALATED,
-    },
-    OnboardingStage.SALES_REVIEW: {
-        OnboardingStage.KYC,     # SM approved → proceed to KYC
-        OnboardingStage.REVIEW,  # SM rejected / requested info → back to Advisor Review
-    },
-    OnboardingStage.KYC: {
-        OnboardingStage.PARALLEL_PRODUCTS,
-        OnboardingStage.ESCALATED,
-    },
-    OnboardingStage.PARALLEL_PRODUCTS: {
-        OnboardingStage.REVIEW,
-        OnboardingStage.COMPLETE,
-        OnboardingStage.ESCALATED,
-    },
-    OnboardingStage.COMPLETE: set(),
-    OnboardingStage.ESCALATED: {
-        OnboardingStage.REVIEW,
-        OnboardingStage.KYC,
-        OnboardingStage.COMPLETE,
-    },
-}
+_TRANSITIONS: dict[OnboardingStage, set[OnboardingStage]] = _load_transitions()
 
 
 class WorkflowStateMachine:
