@@ -7,8 +7,10 @@ Start every session by reading that file.
 
 ## Session workflow conventions
 
-- **Feature branches.** Every phase must be implemented on `feat/cadf-phase-{N}` (e.g.
-  `feat/cadf-phase-0.5`). Never commit phase work directly to `main`.
+- **Single implementation branch.** All CADF phase work is committed to `feat/cadf-framework`.
+  Never commit phase work directly to `main`. Do not create per-phase branches.
+- **Always on `feat/cadf-framework`.** At the start of every session, check out
+  `feat/cadf-framework` if not already on it — do not assume `main`.
 - **Confirm before committing.** After finishing an implementation, show the user a concise
   summary of what changed and wait for explicit confirmation ("go ahead", "looks good", etc.)
   before running `git add` / `git commit`.
