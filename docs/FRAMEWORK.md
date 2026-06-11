@@ -165,8 +165,7 @@ OnboardingWorkflow (Temporal)
 2. Add a row to `domain_agent_roster` (`agent_id`, `agent_class`, `domain_id`)
 3. Add rows to `domain_agent_capabilities` (subscribed task types, emitted task types,
    allowed handoffs)
-4. Register the agent's Temporal Activities in `agent_orchestration_service.py`'s worker
-   `activities=` list
+4. Add the activity function to `get_all_activities()` in `backend/app/workflows/onboarding_workflow.py` — the worker picks it up automatically at startup
 5. No changes to `OnboardingWorkflow`, `StageDispatcher`, or any existing agent — the bus is
    declarative (Phase 4 extensibility contract)
 6. Update `docs/FRAMEWORK.md` §Agent inventory and `docs/TRACEABILITY.md`

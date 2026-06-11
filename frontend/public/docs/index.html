@@ -261,11 +261,11 @@
       <table>
         <thead><tr><th>Agent</th><th>Responsibility</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>CustomerService</td><td>Intake data collection; conversational Q&amp;A</td><td><span class="badge badge-partial">→ LangGraph Phase 0.5</span></td></tr>
-          <tr><td>KYCCompliance</td><td>Identity verification; AML risk scoring</td><td><span class="badge badge-partial">→ LangGraph Phase 0.5</span></td></tr>
+          <tr><td>CustomerService</td><td>Intake data collection; conversational Q&amp;A</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
+          <tr><td>KYCCompliance</td><td>Identity verification; AML risk scoring</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
           <tr><td>FraudScreening</td><td>Device/velocity/synthetic-identity fraud scoring; gates activation</td><td><span class="badge badge-new">New Phase 4.6</span></td></tr>
-          <tr><td>DocumentIntelligence</td><td>OCR; classification; validation; collect-once enforcement</td><td><span class="badge badge-partial">→ LangGraph Phase 0.5</span></td></tr>
-          <tr><td>ProductOnboarding</td><td>Per-product step execution; suitability; activation gate</td><td><span class="badge badge-partial">→ LangGraph Phase 0.5</span></td></tr>
+          <tr><td>DocumentIntelligence</td><td>OCR; classification; validation; collect-once enforcement</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
+          <tr><td>ProductOnboarding</td><td>Per-product step execution; suitability; activation gate</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
           <tr><td>Collaboration</td><td>Advisor-client collaboration rooms and comments</td><td><span class="badge badge-done">Active</span></td></tr>
           <tr><td>Notification</td><td>Email + in-app + push notifications; SLA warning alerts</td><td><span class="badge badge-done">Active</span></td></tr>
           <tr><td>SalesManager</td><td>Institutional product approval workflow</td><td><span class="badge badge-done">Active</span></td></tr>
@@ -287,7 +287,7 @@
           <p>Python 3.12 · FastAPI · SQLAlchemy (async) · PostgreSQL · asyncpg</p>
         </div>
         <div class="card">
-          <h4>Orchestration <span class="badge badge-planned">Phase 0.5</span></h4>
+          <h4>Orchestration <span class="badge badge-done">Active</span></h4>
           <p>Temporal (self-hosted) · LangGraph StateGraph agents</p>
         </div>
         <div class="card">
@@ -314,16 +314,16 @@
       <table>
         <thead><tr><th>ADR</th><th>Decision</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>ADR-001</td><td>Self-host Temporal for durable workflow orchestration</td><td><span class="badge badge-planned">Phase 0.5</span></td></tr>
+          <tr><td>ADR-001</td><td>Self-host Temporal for durable workflow orchestration</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-002</td><td>Criteria-driven blackboard activation (no static graph)</td><td><span class="badge badge-planned">Phase 3, 4.6</span></td></tr>
           <tr><td>ADR-003</td><td>Bespoke differentiators + OSS commodity stack</td><td><span class="badge badge-done">Active</span></td></tr>
-          <tr><td>ADR-004</td><td>Polyglot — Python/LangGraph agents (JVM core deferred)</td><td><span class="badge badge-planned">Phase 0.5</span></td></tr>
+          <tr><td>ADR-004</td><td>Polyglot — Python/LangGraph agents (JVM core deferred)</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-005</td><td>Dual-AZ active-active + DR</td><td><span class="badge badge-planned">Phase 13</span></td></tr>
           <tr><td>ADR-006</td><td>OPA activation gate; strong-consistency reads</td><td><span class="badge badge-planned">Phase 4.6</span></td></tr>
           <tr><td>ADR-007</td><td>MCP gateway sole egress — no direct integration calls</td><td><span class="badge badge-planned">Phase 6</span></td></tr>
           <tr><td>ADR-008</td><td>Self-hosted / pluggable LLM</td><td><span class="badge badge-partial">Partial</span></td></tr>
-          <tr><td>ADR-009</td><td>Temporal + LangGraph adoption (Python-first)</td><td><span class="badge badge-new">New — Phase 0.5</span></td></tr>
-          <tr><td>ADR-010</td><td>Single-tenant per deployment model</td><td><span class="badge badge-new">New — Phase 0.5</span></td></tr>
+          <tr><td>ADR-009</td><td>Temporal + LangGraph adoption (Python-first)</td><td><span class="badge badge-done">✅ Documented</span></td></tr>
+          <tr><td>ADR-010</td><td>Single-tenant per deployment model</td><td><span class="badge badge-done">✅ Documented</span></td></tr>
         </tbody>
       </table>
     </section>
@@ -334,8 +334,8 @@
         admin-configurable onboarding framework. See
         <code>docs/planning/cadf-framework-plan.md</code> for full detail.</p>
       <ul class="phase-list">
-        <li><span class="phase-num">Phase 0</span><span class="phase-title">Audit &amp; wire dead orchestrator config</span><span class="badge badge-planned">⬜ Planned</span></li>
-        <li><span class="phase-num">Phase 0.5</span><span class="phase-title">Migrate to Temporal + LangGraph (ADR-001/004)</span><span class="badge badge-new">⬜ New</span></li>
+        <li><span class="phase-num">Phase 0</span><span class="phase-title">Audit &amp; wire dead orchestrator config</span><span class="badge badge-done">✅ Done</span></li>
+        <li><span class="phase-num">Phase 0.5</span><span class="phase-title">Migrate to Temporal + LangGraph (ADR-001/004)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 1</span><span class="phase-title">DB-backed DomainDefinition model (15 domain_* tables)</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 2</span><span class="phase-title">Split OnboardingState into typed core + extension bag</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 2.5</span><span class="phase-title">Hash-chain audit log (FR-AU-01 / BSA compliance)</span><span class="badge badge-new">⬜ New</span></li>
@@ -366,7 +366,7 @@
           <tr><td>FR-DM-01/02/03 — Shared-core collect-once</td><td>Phase 4.5</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>FR-AG (fraud) — Fraud screening gate</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>FR-AU-04 — Adverse-action records (ECOA)</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
-          <tr><td>ADR-001 — Temporal orchestration</td><td>Phase 0.5</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
+          <tr><td>ADR-001 — Temporal orchestration</td><td>Phase 0.5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-006 — OPA activation gate</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>NFR-03 — 99.95% availability / DR</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>NFR-10 — OTel observability</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
@@ -381,7 +381,7 @@
         <tbody>
           <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>Backend integration tests</td><td>API endpoints, DB interactions</td><td><span class="badge badge-partial">Partial</span></td></tr>
-          <tr><td>Temporal workflow tests</td><td>Crash recovery, stage transitions</td><td><span class="badge badge-planned">Phase 0.5</span></td></tr>
+          <tr><td>Temporal workflow tests</td><td>Structure snapshot tests; crash recovery (requires live Temporal)</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations</td><td><span class="badge badge-planned">Phase 5</span></td></tr>
           <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-planned">Phase 2.5</span></td></tr>
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block</td><td><span class="badge badge-planned">Phase 4.6</span></td></tr>
@@ -395,8 +395,6 @@
       <h2>Open Gaps &amp; Recommendations</h2>
       <h3>Architecture gaps (being addressed by new CADF phases)</h3>
       <ul style="padding-left:20px; color: var(--text-muted); line-height: 2;">
-        <li><strong>Temporal + LangGraph</strong> — current asyncio/BaseAgent substrate is
-          non-durable (Phase 0.5 migrates to ADR-compliant stack)</li>
         <li><strong>Hash-chained audit log</strong> — current EventLog has no tamper detection;
           BSA compliance requires WORM semantics (Phase 2.5)</li>
         <li><strong>OPA activation gate</strong> — no activation criteria enforced before
