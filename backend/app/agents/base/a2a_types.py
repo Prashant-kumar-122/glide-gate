@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -130,3 +130,62 @@ class OnboardingState(BaseModel):
     version: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class OnboardingStateDict(TypedDict, total=False):
+    """LangGraph-compatible TypedDict mirroring OnboardingState.
+
+    UUIDs and datetimes serialised as strings for Temporal payload compatibility.
+    Used as the state type for all LangGraph StateGraph instances in Phase 0.5+.
+    """
+
+    case_id: str
+    client_id: str
+    stage: str
+    selected_products: list[str]
+    product_tracks: dict[str, dict[str, Any]]
+    client_data: dict[str, Any]
+    documents_required: list[str]
+    documents_received: list[str]
+    kyc_status: str
+    kyc_risk_score: float | None
+    sales_review_id: str | None
+    sales_review_decision: str
+    escalation_reason: str | None
+    human_review_id: str | None
+    version: int
+    created_at: str
+    updated_at: str
+    # Activity-level routing hint set by graph terminal nodes
+    next_stage: str | None
+
+
+# ── Temporal signal / workflow I/O models ─────────────────────────────────────
+
+class StageAdvanceSignal(BaseModel):
+    """Sent to OnboardingWorkflow.advance_stage signal handler."""
+
+    to_stage: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class HumanReviewSignal(BaseModel):
+    """Sent to OnboardingWorkflow.human_review_completed when human acts."""
+
+    decision: str  # APPROVED | REJECTED | MORE_INFO_REQUESTED
+    reviewer_id: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class OnboardingWorkflowInput(BaseModel):
+    case_id: str
+    client_id: str
+    selected_products: list[str] = Field(default_factory=list)
+    client_name: str = ""
+    client_email: str = ""
+    case_name: str = ""
+
+
+class OnboardingWorkflowResult(BaseModel):
+    final_stage: str
+    case_id: str

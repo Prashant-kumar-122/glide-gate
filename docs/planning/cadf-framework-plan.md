@@ -7,7 +7,7 @@
 > When a phase is fully verified and committed, change `[ ]` to `[x]` and commit this file.
 
 - [x] **Phase 0** — Audit & wire dead orchestrator config
-- [ ] **Phase 0.5** — Migrate orchestration to Temporal + LangGraph (ADR-001 / ADR-004)
+- [x] **Phase 0.5** — Migrate orchestration to Temporal + LangGraph (ADR-001 / ADR-004)
 - [ ] **Phase 1** — Design the DB-backed DomainDefinition model
 - [ ] **Phase 2** — Split OnboardingState into typed core + extension bag
 - [ ] **Phase 2.5** — Hash-chain audit log (FR-AU-01 / BSA compliance)

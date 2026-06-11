@@ -19,12 +19,12 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-DM-06 | Secure upload + versioned storage | Existing | ✅ | `document_storage_adapter.py`, `document_version_manager.py` |
 | FR-WF-01 | Per-product configurable workflow | Phase 4 | ⬜ | `domain_product_pipelines`, `ProductOnboardingAgent` LangGraph graph |
 | FR-WF-02 | Per-product configurable rule sets | Phase 4 | ⬜ | `domain_product_pipelines.step_config JSONB`, `SuitabilityAssessor` |
-| FR-OR-01 | Run product onboardings concurrently | Phase 0.5, Phase 4 | ⬜ | Temporal child workflows per product, `ParallelProductLauncher` |
+| FR-OR-01 | Run product onboardings concurrently | Phase 0.5, Phase 4 | 🟡 | Temporal child workflows per product (`ProductOnboardingWorkflow`) |
 | FR-OR-02 | Single client master linking journeys | Existing | ✅ | `Client` model, `OnboardingCase.client_id` FK |
 | FR-OR-03 | Share shared-core results across journeys | Phase 4.5 | ⬜ | Document scope + `GET /cases/{id}/requirements` reuse map |
-| FR-OR-04 | Delay in one product never blocks another | Phase 0.5, Phase 4.6 | ⬜ | Independent Temporal child workflows; per-product activation state |
+| FR-OR-04 | Delay in one product never blocks another | Phase 0.5, Phase 4.6 | 🟡 | Independent Temporal child workflows; per-product activation state (Phase 4.6 adds activation gate) |
 | FR-OR-05 | Unified multi-product status view | Existing | 🟡 | `GET /cases/{id}` status; `ParallelProductTracks.tsx` |
-| FR-AG-01 | Agents autonomously progress the workflow | Phase 0.5 | ⬜ | Temporal `OnboardingWorkflow` + LangGraph agent graphs |
+| FR-AG-01 | Agents autonomously progress the workflow | Phase 0.5 | ✅ | `OnboardingWorkflow` Temporal FSM + LangGraph `StateGraph` per agent |
 | FR-AG-02 | Autonomous document collection and validation | Existing | 🟡 | `DocumentIntelligenceAgent`, `CustomerServiceAgent` |
 | FR-AG-03 | Agents validate data, reconcile shared data | Phase 4.5 | ⬜ | Shared-core doc reuse across product tracks |
 | FR-AG-04 | Agents trigger compliance/identity checks via integrations | Phase 6 | ⬜ | `MCPRegistry.invoke()` grant-checked calls (ADR-007) |
@@ -51,7 +51,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Req | Description | CADF Phase | Status | Artifact(s) |
 |---|---|---|---|---|
 | NFR-01 | Encryption + RBAC + least-privilege + secrets | Phase 7 | 🟡 | `require_permission()`; JWT auth; SPIFFE/Vault deferred |
-| NFR-02 | Crash recovery and workflow resumption | Phase 0.5 | ⬜ | Temporal durable workflows; crash-recovery verified test |
+| NFR-02 | Crash recovery and workflow resumption | Phase 0.5 | ✅ | Temporal durable workflows; `OnboardingWorkflow` resumes from last activity checkpoint |
 | NFR-03 | 99.95% availability; RTO ≤ 15 min; RPO ≈ 0 | Phase 13 | ⬜ | Helm dual-AZ topology; DR runbook |
 | NFR-06 | Decisions explainable/reproducible from logs | Phase 2.5 | ⬜ | `decision_log` captures inputs/rationale/agent version per decision |
 | NFR-07 | Idempotent, retryable integration calls | Phase 6 | ⬜ | `MCPRegistry` idempotency key + bounded retries (Temporal retry policy) |
@@ -66,7 +66,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | OBJ | Metric | CADF Phase | Status |
 |---|---|---|---|
 | OBJ-1 | Time to first live product | Phase 4.6 | ⬜ |
-| OBJ-2 | True parallel onboarding (all products concurrent) | Phase 0.5, Phase 4 | ⬜ |
+| OBJ-2 | True parallel onboarding (all products concurrent) | Phase 0.5, Phase 4 | 🟡 |
 | OBJ-3 | Zero duplicate document requests | Phase 4.5 | ⬜ |
 | OBJ-4 | Admin-configurable domain (no engineer redeploy) | Phase 9 | ⬜ |
 | OBJ-5 | SLA enforcement with audit trail | Phase 5, Phase 2.5 | ⬜ |
@@ -78,16 +78,16 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 
 | ADR | Decision | CADF Phase | Status | Artifact(s) |
 |---|---|---|---|---|
-| ADR-001 | Self-host Temporal for durable orchestration | Phase 0.5 | ⬜ | `docker-compose.yml` Temporal service; `OnboardingWorkflow` |
+| ADR-001 | Self-host Temporal for durable orchestration | Phase 0.5 | ✅ | `docker-compose.yml` Temporal service; `OnboardingWorkflow` |
 | ADR-002 | Criteria-driven blackboard activation (no static graph) | Phase 3, Phase 4.6 | ⬜ | `StageDispatcher`; `ActivationGateService` OPA evaluation |
 | ADR-003 | Bespoke differentiators + OSS commodity | All phases | 🟡 | Monorepo + docker-compose |
-| ADR-004 | Polyglot — Python/LangGraph agents (JVM deferred) | Phase 0.5 | ⬜ | LangGraph `StateGraph` per agent; ADR-009 formalizes Python-first |
+| ADR-004 | Polyglot — Python/LangGraph agents (JVM deferred) | Phase 0.5 | ✅ | LangGraph `StateGraph` per agent; ADR-009 formalizes Python-first |
 | ADR-005 | Dual-AZ active-active + DR | Phase 13 | ⬜ | Helm `values-prod.yaml`; DR runbook |
 | ADR-006 | OPA activation gate; strong-consistency reads | Phase 4.6 | ⬜ | `activation.rego`; `ActivationGateService` reads DB not cache |
 | ADR-007 | MCP gateway sole egress | Phase 6 | ⬜ | `MCPRegistry.invoke()` grant-checking; `_simulate_*` replaced |
 | ADR-008 | Self-hosted/pluggable LLM | Existing | 🟡 | `LLMProviderFactory`; Anthropic/OpenAI/Google/local providers |
-| ADR-009 | Temporal + LangGraph adoption (Python-first) | Phase 0.5 | ⬜ | `docs/specs/ADR-009_temporal_langgraph_adoption.md` |
-| ADR-010 | Single-tenant per deployment | Phase 0.5 | ⬜ | `docs/specs/ADR-010_single_tenant_deployment.md` |
+| ADR-009 | Temporal + LangGraph adoption (Python-first) | Phase 0.5 | ✅ | `docs/specs/ADR-009_temporal_langgraph_adoption.md` |
+| ADR-010 | Single-tenant per deployment | Phase 0.5 | ✅ | `docs/specs/ADR-010_single_tenant_deployment.md` |
 
 ---
 
@@ -95,8 +95,8 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 
 | Phase | Title | Status |
 |---|---|---|
-| Phase 0 | Audit & wire dead orchestrator config | ⬜ |
-| Phase 0.5 | Migrate to Temporal + LangGraph | ⬜ |
+| Phase 0 | Audit & wire dead orchestrator config | ✅ |
+| Phase 0.5 | Migrate to Temporal + LangGraph | ✅ |
 | Phase 1 | DB-backed DomainDefinition model | ⬜ |
 | Phase 2 | Split OnboardingState into typed core + extension bag | ⬜ |
 | Phase 2.5 | Hash-chain audit log (FR-AU-01) | ⬜ |

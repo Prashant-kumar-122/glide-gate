@@ -906,6 +906,11 @@ async def submit_intake(
             "priority": "NORMAL",
         })
 
+    # Advance the Temporal OnboardingWorkflow from INTAKE → REVIEW.
+    asyncio.create_task(
+        orchestration_service.signal_stage_advance(case_id, "REVIEW")
+    )
+
     return SubmitIntakeResponse(case_id=case_id, status=next_stage, current_stage=next_stage)
 
 
@@ -1020,6 +1025,10 @@ async def advisor_approve_case(
                 client_name=_client_name,
                 selected_products=selected,
             )
+        )
+        # Advance the Temporal OnboardingWorkflow from REVIEW → SALES_REVIEW.
+        asyncio.create_task(
+            orchestration_service.signal_stage_advance(case_id, "SALES_REVIEW")
         )
         message = "All documents approved — case advanced to Sales Review."
     else:
