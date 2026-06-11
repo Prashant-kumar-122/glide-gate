@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Documentation-as-Definition-of-Done forcing function.
+# Warns (or blocks, with DOCS_GATE=block) when a commit changes code/config but touches no docs.
+# Install with: make install-hooks
+set -euo pipefail
+
+staged=$(git diff --cached --name-only)
+[ -z "$staged" ] && exit 0
+
+# Source changes (backend, frontend source, db, configs — excluding tests and in-app docs site).
+code=$(echo "$staged" \
+  | grep -E '^(backend/|frontend/src/|db/|configs/|scripts/)' \
+  | grep -vE '/(test|tests|e2e)/' \
+  | grep -vE '^frontend/public/docs/' \
+  || true)
+
+# Anything that counts as a documentation update.
+docs=$(echo "$staged" \
+  | grep -E '(^docs/.*\.md$|^TRACEABILITY\.md$|README\.md$|\.env\.example$|^frontend/public/docs/)' \
+  || true)
+
+if [ -n "$code" ] && [ -z "$docs" ]; then
+  echo ""
+  echo "⚠️  Documentation gate: this commit changes code/config but updates no docs."
+  echo "    Per docs/FRAMEWORK.md, docs are part of the Definition of Done. Consider updating:"
+  echo ""
+  echo "    docs/FRAMEWORK.md      — agents, APIs, schema, config changes"
+  echo "    docs/TRACEABILITY.md   — mark FR/NFR rows as 🟡 or ✅ for implemented requirements"
+  echo "    docs/planning/cadf-framework-plan.md — mark phase [x] if a phase is completed"
+  echo "    docs/specs/ADR-*.md    — new architectural decision? add a new ADR"
+  echo "    frontend/public/docs/  — portal changes? update the in-app docs site"
+  echo "    README.md / .env.example — build/run/config changed?"
+  echo ""
+  if [ "${DOCS_GATE:-warn}" = "block" ]; then
+    echo "    DOCS_GATE=block is set — commit blocked."
+    echo "    Update docs or use 'git commit --no-verify' to override."
+    exit 1
+  fi
+  echo "    (warning only — set DOCS_GATE=block to enforce; 'git commit --no-verify' to skip)"
+  echo ""
+fi
+exit 0
