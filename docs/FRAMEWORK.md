@@ -188,6 +188,67 @@ DirectTaskWorkflow (short-lived, one per fire-and-forget task)
 5. No changes to `OnboardingWorkflow` routing or any existing agent.
 6. Update `docs/FRAMEWORK.md` §Agent inventory and `docs/TRACEABILITY.md`
 
+### Temporal activity constraints (known gotchas)
+
+These rules apply to every LangGraph node that runs inside a Temporal activity.
+
+**1. Declare every `OnboardingStateDict` key you intend to use.**
+
+Temporal's payload codec deserializes `OnboardingStateDict` using the class's declared fields.
+Any key that is *not* declared in `OnboardingStateDict` (`a2a_types.py`) is silently stripped
+when the dict is passed to a child workflow or activity. The symptom is `state.get("_key", "")`
+returning `""` inside the node, which triggers early-return guards and produces no trace records.
+
+Always add new internal routing keys (e.g., `_product_code`, `_product_track_status`) to
+`OnboardingStateDict` before relying on them in any node.
+
+As an extra safety net, `ProductOnboarding`'s `_onboard_product_node` also falls back to
+extracting `product_code` from `activity.info().workflow_id` if the state key is missing.
+
+**2. `await` trace persists — never `asyncio.create_task`.**
+
+Inside a Temporal activity, `asyncio.create_task(self._persist_agent_task(...))` is
+fire-and-forget. The task may not complete before Temporal marks the activity done, silently
+dropping the trace record. `BaseAgent.timed_process` now `await`s `_persist_agent_task`
+in both the success and error paths.
+
+**3. Use a direct write when the packet payload may not be JSON-serializable.**
+
+`_persist_agent_task` silently ignores `Exception`s. If the `TaskPacket.payload` contains
+non-JSON-serializable fields (e.g., large nested `client_data`), the write is dropped.
+For agents where this risk exists (currently `product_onboarding`), write a second `AgentTask`
+row directly via `AsyncSessionLocal` with a minimal JSON-safe payload:
+
+```python
+async with AsyncSessionLocal() as db:
+    db.add(AgentTask(
+        ...,
+        payload={"product_code": product_code},  # minimal, always serializable
+        status=response.status,
+    ))
+    await db.commit()
+```
+
+This guarantees the node appears in the trace canvas regardless of serialization failures.
+
+### Open items — Phase 0.5 asyncio cleanup (pre-Phase 2)
+
+The LangGraph migration preserved the old `BaseAgent` subclass bodies intact. The `process()`
+methods in `kyc_compliance_agent.py` and `orchestrator_agent.py` contain `asyncio.create_task`
+calls that were valid under the old asyncio substrate but are now unreachable from any Temporal
+workflow or activity (the LangGraph graphs call internal helpers directly, bypassing `process()`).
+
+**Before Phase 2**, audit and remove the dead `asyncio.create_task` call sites in:
+- `agents/kyc_compliance/kyc_compliance_agent.py` lines 204–213
+- `agents/orchestrator/orchestrator_agent.py` lines 283, 353, 444
+
+Check `services/conversation/conversation_coordinator.py` and
+`services/orchestration/journey_resumption_service.py` first — if those have been migrated to
+Temporal Signals, the old `process()` method bodies can be deleted. Do not delete the classes;
+the LangGraph graphs still instantiate them for helper methods (`_simulate_*`, `_persist_*`).
+
+Full detail in `docs/planning/cadf-framework-plan.md` §Phase 0.5 Known debt.
+
 ---
 
 ## 5. Data Model

@@ -417,6 +417,24 @@ feat(cadf-phase-0.5): migrate orchestration to Temporal + LangGraph (ADR-001/ADR
 ```
 Then mark **Phase 0.5** as `[x]` in the Phase Status Tracker above and commit this file.
 
+### Known debt from Phase 0.5 (clean up before Phase 2)
+
+The LangGraph migration left old `process()` method bodies in the pre-Temporal agent classes.
+These paths are no longer reachable from Temporal workflows (the graphs call internal helpers
+directly, not `process()`), but the classes still exist and their `process()` methods contain
+`asyncio.create_task` calls that were correct under the old asyncio substrate:
+
+| File | Dead asyncio.create_task call sites | Why unreachable |
+|---|---|---|
+| `agents/kyc_compliance/kyc_compliance_agent.py:204–213` | `_update_stage`, `_notify_kyc_outcome`, `compliance_decision_logger` | `_run_kyc_node` calls `_simulate_identity_verification` + `_persist_agent_task` directly; `process()` is never invoked from the graph |
+| `agents/orchestrator/orchestrator_agent.py:283,353,444` | `_persist_case_stage`, `_route_to_stage` fire-and-forget | `OrchestratorAgent.process()` is not called by any Temporal workflow or activity |
+
+**What to do in Phase 2:** Before restructuring `OnboardingState`, audit every call site of
+`OrchestratorAgent` and `KYCComplianceAgent.process()` (check `journey_resumption_service.py`
+and `conversation_coordinator.py`). If those call sites have been migrated to Temporal Signals,
+delete the old `process()` method bodies and any `asyncio.create_task` calls within them.
+Do not delete the classes — the LangGraph graphs still instantiate them for helper methods.
+
 ---
 
 ## Phase 1 — Design the DB-backed DomainDefinition model
@@ -493,11 +511,19 @@ Mark **Phase 1** as `[x]` in the Phase Status Tracker and commit this file.
 - Grep `backend/app/agents/` for direct field accesses to `kyc_status`, `kyc_risk_score`,
   `sales_review_decision`, `escalation_reason`, `human_review_id`, `sales_review_id`
 
+> **Phase 0.5 trace-fix guard:** `OnboardingStateDict` contains two internal Temporal routing
+> keys — `_product_code: str` and `_product_track_status: str` — added by the Phase 0.5 trace
+> fix. These are NOT wealth-domain extension fields. Keep them in the **typed core** of
+> `OnboardingStateDict`; do NOT move them into the `extra` JSONB bag. Temporal's payload codec
+> strips undeclared TypedDict keys — if these keys are removed or moved to `extra`, the
+> `_onboard_product_node` will silently receive an empty `_product_code` and produce no trace.
+
 ### What to build
 Restructure `OnboardingState` into:
 - **Generic typed core**: `case_id`, `client_id`, `stage: str`, `selected_products`,
   `product_tracks`, `priority_tier: str` *(new — needed for SLA window selection in Phase 5)*,
-  `version`, timestamps
+  `version`, timestamps, `_product_code`, `_product_track_status` *(Temporal routing hints —
+  keep in typed core, see guard note above)*
 - **Extension bag**: `extra: dict[str, Any]` backed by existing `shared_context JSONB` column
 - **Typed extension view helpers**: `WealthExtension.from_state(state)` — zero behavior change,
   just a typed accessor layer
@@ -829,6 +855,13 @@ Mark **Phase 4.5** as `[x]` in the Phase Status Tracker and commit this file.
 - Read `backend/app/agents/product_onboarding/product_onboarding_agent.py` (LangGraph graph)
 - Read the `domain_agent_capabilities` rows for `product_onboarding` — understand existing exit contracts
 - Read `backend/app/models/cases.py` (CaseProductStep — activation state goes here or new table)
+
+> **Phase 0.5 trace-fix guard:** `agents/product_onboarding/graph.py` contains a direct
+> `AgentTask` write with `payload={"product_code": product_code}` at the end of
+> `_onboard_product_node`. This write is what makes the product_onboarding node visible in the
+> trace canvas. When this phase restructures the graph into multiple nodes (adding the activation
+> gate node), ensure the direct trace write stays in or moves to the **terminal node** of the
+> graph — wherever execution ends after all product steps complete. Do not remove it.
 
 ### What to build
 

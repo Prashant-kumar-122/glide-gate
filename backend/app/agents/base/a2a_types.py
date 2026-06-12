@@ -158,6 +158,9 @@ class OnboardingStateDict(TypedDict, total=False):
     updated_at: str
     # Activity-level routing hint set by graph terminal nodes
     next_stage: str | None
+    # Set by OnboardingWorkflow when dispatching ProductOnboardingWorkflow child workflows
+    _product_code: str
+    _product_track_status: str
 
 
 # ── Temporal signal / workflow I/O models ─────────────────────────────────────

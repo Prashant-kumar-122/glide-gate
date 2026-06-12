@@ -30,7 +30,6 @@ class BaseAgent(ABC):
         asyncio.create_task(orchestration_service.publish_task(packet))
 
     async def timed_process(self, task: TaskPacket) -> TaskResponse:
-        import asyncio
         from app.services.audit.audit_log_service import audit_log_service
 
         start = time.monotonic()
@@ -46,29 +45,25 @@ class BaseAgent(ABC):
                 errors=[str(exc)],
                 duration_ms=elapsed,
             )
-            asyncio.create_task(self._persist_agent_task(task, response, elapsed))
-            asyncio.create_task(
-                audit_log_service.log_agent_task_completed(
-                    agent_id=str(self.agent_id),
-                    task_type=str(task.task_type),
-                    case_id=task.case_id,
-                    client_id=task.client_id,
-                    duration_ms=elapsed,
-                    status="FAILED",
-                )
-            )
-            return response
-        response.duration_ms = int((time.monotonic() - start) * 1000)
-        asyncio.create_task(self._persist_agent_task(task, response, response.duration_ms))
-        asyncio.create_task(
-            audit_log_service.log_agent_task_completed(
+            await self._persist_agent_task(task, response, elapsed)
+            await audit_log_service.log_agent_task_completed(
                 agent_id=str(self.agent_id),
                 task_type=str(task.task_type),
                 case_id=task.case_id,
                 client_id=task.client_id,
-                duration_ms=response.duration_ms,
-                status=response.status,
+                duration_ms=elapsed,
+                status="FAILED",
             )
+            return response
+        response.duration_ms = int((time.monotonic() - start) * 1000)
+        await self._persist_agent_task(task, response, response.duration_ms)
+        await audit_log_service.log_agent_task_completed(
+            agent_id=str(self.agent_id),
+            task_type=str(task.task_type),
+            case_id=task.case_id,
+            client_id=task.client_id,
+            duration_ms=response.duration_ms,
+            status=response.status,
         )
         return response
 
