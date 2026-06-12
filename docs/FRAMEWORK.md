@@ -134,40 +134,58 @@ http://localhost:8233
 ### Agent model (post Phase 0.5)
 
 Each agent is a **LangGraph `StateGraph`** compiled to a runnable. The state type is
-`OnboardingStateDict` (TypedDict mirroring `OnboardingState`). Agents communicate via
-**Temporal Signals** — not direct method calls.
+`OnboardingStateDict` (TypedDict mirroring `OnboardingState`). Stage transitions are driven
+by **Temporal Signals** on `OnboardingWorkflow`; per-request tasks (DIA, notifications, etc.)
+run as short-lived `DirectTaskWorkflow` instances.
 
 ```
-OnboardingWorkflow (Temporal)
+OnboardingWorkflow (Temporal root)
   │
-  ├── CustomerServiceWorkflow (Temporal child) → CustomerService LangGraph graph
-  ├── KYCWorkflow (Temporal child)              → KYCCompliance + FraudScreening graphs (parallel)
-  └── ProductWorkflow[product_code] × N         → ProductOnboarding LangGraph graph
+  ├── customer_service_kickoff_activity  → CustomerService kickoff graph (WS emit + DB init)
+  │   [multi-turn conversation via REST API → ConversationCoordinator → LLM stream]
+  │   [on completion → advance_stage signal → workflow advances to KYC]
+  │
+  ├── kyc_compliance_activity            → KYC LangGraph graph (identity + risk + checkpoint)
+  │
+  ├── ProductOnboardingWorkflow (child) × N  → product_onboarding_activity
+  │                                           → ProductOnboarding LangGraph graph
+  │
+  ├── sales_manager_kickoff_activity     → SalesManager kickoff graph
+  ├── collaboration_kickoff_activity     → Collaboration graph
+  ├── notification_activity              → Notification graph
+  └── escalation_alert_activity         → Notification + ContactCentre graphs
+
+DirectTaskWorkflow (short-lived, one per fire-and-forget task)
+  └── dispatches to one of: NotificationAgent · DocumentIntelligenceAgent
+      CollaborationAgent · ContactCentreAgent · SalesManagerAgent
+      ProductOnboardingAgent · CustomerServiceAgent
+      (registered in backend/app/agents/direct_task_activities.py)
 ```
 
 ### Agent inventory
 
-| Agent | Location | LangGraph graph nodes | Key signals emitted |
+| Agent | Location | Entry point | Key signals emitted |
 |---|---|---|---|
-| CustomerService | `agents/customer_service/graph.py` | collect, classify_intent, next_question, signal_advance | ADVANCE_STAGE |
-| KYCCompliance | `agents/kyc_compliance/graph.py` | run_kyc, verify_identity, score_risk, signal_outcome | ADVANCE_STAGE, ESCALATE |
-| FraudScreening (Phase 4.6) | `agents/fraud_screening/graph.py` | score_device, score_velocity, detect_tamper, signal_outcome | FRAUD_FLAGGED, FRAUD_CLEARED |
-| DocumentIntelligence | `agents/document_intelligence/graph.py` | classify, ocr, validate, check_shared_core, diff | DOCUMENT_VALIDATED |
-| ProductOnboarding | `agents/product_onboarding/graph.py` | execute_steps, assess_suitability, check_activation | PRODUCT_TRACK_COMPLETE |
-| Collaboration | `agents/collaboration/graph.py` | create_room, add_comment | — |
-| Notification | `agents/notification/graph.py` | send, escalation_alert, sla_warning | — |
-| SalesManager | `agents/sales_manager/graph.py` | review, decide | SALES_REVIEW_COMPLETE |
-| ContactCentre | `agents/contact_centre/graph.py` | summarise, get_status | — |
+| CustomerService | `agents/customer_service/graph.py` | `customer_service_kickoff_activity` (workflow) + `direct_customer_service_task` (DirectTask) | ADVANCE_STAGE (via ConversationCoordinator) |
+| KYCCompliance | `agents/kyc_compliance/graph.py` | `kyc_compliance_activity` (workflow) | — (outcome written to state; workflow advances stage) |
+| FraudScreening (Phase 4.6) | `agents/fraud_screening/graph.py` | TBD | FRAUD_FLAGGED, FRAUD_CLEARED |
+| DocumentIntelligence | `agents/document_intelligence/graph.py` | `direct_document_task` (DirectTask) | — |
+| ProductOnboarding | `agents/product_onboarding/graph.py` | `product_onboarding_activity` inside `ProductOnboardingWorkflow` (child) | — |
+| Collaboration | `agents/collaboration/graph.py` | `collaboration_kickoff_activity` (workflow) | — |
+| Notification | `agents/notification/graph.py` | `notification_activity` / `escalation_alert_activity` (workflow) | — |
+| SalesManager | `agents/sales_manager/graph.py` | `sales_manager_kickoff_activity` (workflow) + `direct_sales_manager_task` (DirectTask) | — |
+| ContactCentre | `agents/contact_centre/graph.py` | `contact_centre_summary_activity` (workflow) | — |
 
 ### Adding a new agent
 
-1. Create `backend/app/agents/{name}/graph.py` — implement `build_graph() -> CompiledGraph`
+1. Create `backend/app/agents/{name}/graph.py` — implement `build_{name}_graph() -> CompiledGraph`
 2. Add a row to `domain_agent_roster` (`agent_id`, `agent_class`, `domain_id`)
 3. Add rows to `domain_agent_capabilities` (subscribed task types, emitted task types,
    allowed handoffs)
-4. Add the activity function to `get_all_activities()` in `backend/app/workflows/onboarding_workflow.py` — the worker picks it up automatically at startup
-5. No changes to `OnboardingWorkflow`, `StageDispatcher`, or any existing agent — the bus is
-   declarative (Phase 4 extensibility contract)
+4. For workflow-stage agents: add an `@activity.defn` function in `onboarding_workflow.py` and
+   register it in `get_all_activities()`. For per-request agents: add a `direct_{name}_task`
+   activity in `direct_task_activities.py` and add it to `_AGENT_ACTIVITY`.
+5. No changes to `OnboardingWorkflow` routing or any existing agent.
 6. Update `docs/FRAMEWORK.md` §Agent inventory and `docs/TRACEABILITY.md`
 
 ---
