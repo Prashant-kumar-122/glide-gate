@@ -26,7 +26,6 @@ async def _create_collaboration_room_node(state: OnboardingStateDict) -> Onboard
         return state
 
     agent = CollaborationAgent()
-    agent._bus = None
 
     packet = TaskPacket(
         from_agent=AgentID.ORCHESTRATOR,

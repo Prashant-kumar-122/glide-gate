@@ -491,15 +491,37 @@ class ConversationCoordinator:
     async def _signal_advance(
         self, case_id: UUID, client_id: UUID, collected_fields: dict
     ) -> None:
+        import time
+        from app.agents.base.a2a_types import TaskResponse
+        from app.agents.customer_service.customer_service_agent import CustomerServiceAgent
+
+        start = time.monotonic()
+        task = TaskPacket(
+            from_agent=AgentID.ORCHESTRATOR,
+            to_agent=AgentID.CUSTOMER_SERVICE,
+            task_type=TaskType.COLLECT_CLIENT_DATA,
+            case_id=case_id,
+            client_id=client_id,
+            priority="HIGH",
+            payload={"collected_fields": list(collected_fields.keys())},
+        )
+        response = TaskResponse(
+            task_id=task.id,
+            from_agent=AgentID.CUSTOMER_SERVICE,
+            status="SUCCESS",
+            result={
+                "fields_collected": len(collected_fields),
+                "selected_products": collected_fields.get("selected_products", []),
+            },
+            duration_ms=int((time.monotonic() - start) * 1000),
+        )
+        agent = CustomerServiceAgent()
+        await agent._persist_agent_task(task, response, response.duration_ms)
+
         try:
             from app.services.orchestration.agent_orchestration_service import orchestration_service
 
-            orchestrator = orchestration_service.registry.get(AgentID.ORCHESTRATOR)
-            if orchestrator is None:
-                logger.warning("ConversationCoordinator: orchestrator not registered")
-                return
-
-            await orchestrator.send_task(
+            await orchestration_service.publish_task(
                 TaskPacket(
                     from_agent=AgentID.CUSTOMER_SERVICE,
                     to_agent=AgentID.ORCHESTRATOR,

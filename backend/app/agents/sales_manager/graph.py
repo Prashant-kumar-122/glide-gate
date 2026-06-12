@@ -27,7 +27,6 @@ async def _sales_review_kickoff_node(state: OnboardingStateDict) -> OnboardingSt
         return state
 
     agent = SalesManagerAgent()
-    agent._bus = None
 
     packet = TaskPacket(
         from_agent=AgentID.ORCHESTRATOR,

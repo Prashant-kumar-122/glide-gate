@@ -345,9 +345,6 @@ class ProductOnboardingAgent(BaseAgent):
         completed_steps: list[dict[str, Any]],
         total_steps: int,
     ) -> None:
-        if self._bus is None:
-            return
-
         steps_done = len([s for s in completed_steps if s.get("status") == "COMPLETED"])
 
         if track_status in ("FAILED", "UNSUITABLE"):

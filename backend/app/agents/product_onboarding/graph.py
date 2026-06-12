@@ -27,9 +27,6 @@ async def _onboard_product_node(state: OnboardingStateDict) -> OnboardingStateDi
         return {**state, "_product_track_status": "FAILED", "next_stage": None}
 
     agent = ProductOnboardingAgent()
-    # Detach from the event bus — this graph runs inside a Temporal activity;
-    # outcomes are returned via state rather than published to the bus.
-    agent._bus = None
 
     packet = TaskPacket(
         from_agent=AgentID.ORCHESTRATOR,
@@ -44,7 +41,7 @@ async def _onboard_product_node(state: OnboardingStateDict) -> OnboardingStateDi
             "client_data": state.get("client_data", {}),
         },
     )
-    response = await agent.process(packet)
+    response = await agent.timed_process(packet)
 
     track_status = "COMPLETE" if response.status == "SUCCESS" else response.result.get(
         "track_status", "FAILED"

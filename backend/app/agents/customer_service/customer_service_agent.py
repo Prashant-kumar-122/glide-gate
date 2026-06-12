@@ -186,11 +186,6 @@ class CustomerServiceAgent(BaseAgent):
     # ── Orchestrator signalling ───────────────────────────────────────────────
 
     async def _signal_advance(self, task: TaskPacket, status: CollectionStatus) -> None:
-        if self._bus is None:
-            self.logger.warning(
-                f"No event bus; cannot advance stage for case={task.case_id}"
-            )
-            return
         # After questionnaire is complete, move to Advisor Review (REVIEW).
         # The advisor will then advance to SALES_REVIEW (institutional) or KYC (retail)
         # once all documents are approved.

@@ -6,11 +6,57 @@ AI-powered wealth management onboarding platform.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
+| Docker Desktop | 4.x+ | Run Temporal, PostgreSQL, and the full stack |
 | Python | 3.12+ | Backend runtime |
 | Poetry | latest | Python dependency management |
 | Node.js | 18+ | Frontend runtime |
 | npm | 9+ | Frontend package management |
-| PostgreSQL | 15+ | Database |
+
+---
+
+## 0. Install Docker Desktop (Windows)
+
+Docker Desktop is required to run PostgreSQL and Temporal locally.
+
+### Step 1 — Enable WSL 2
+
+Open PowerShell **as Administrator** and run:
+
+```powershell
+wsl --install
+```
+
+Restart your machine when prompted. WSL 2 will be set as the default after restart.
+
+> If you already have WSL installed but on version 1, upgrade it:
+> ```powershell
+> wsl --set-default-version 2
+> ```
+
+### Step 2 — Download and install Docker Desktop
+
+1. Download from **[https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)**
+2. Run the installer (`Docker Desktop Installer.exe`)
+3. On the configuration screen, make sure **"Use WSL 2 instead of Hyper-V"** is checked
+4. Complete the install and restart when prompted
+
+### Step 3 — Verify
+
+Open a new PowerShell window and run:
+
+```powershell
+docker --version
+docker compose version
+```
+
+You should see something like:
+```
+Docker version 27.x.x
+Docker Compose version v2.x.x
+```
+
+> **Troubleshooting:** If Docker Desktop shows "WSL 2 installation is incomplete", run
+> `wsl --update` in PowerShell (as Administrator) then restart Docker Desktop.
 
 ---
 
@@ -29,7 +75,77 @@ At minimum, set:
 
 ---
 
-## 2. Database
+## 2. Temporal (workflow orchestration)
+
+Temporal is the durable workflow engine. It **must be running** before the backend starts —
+the service will not start if Temporal is unreachable.
+
+### Option A — Docker Compose (recommended)
+
+```bash
+# Start PostgreSQL + Temporal + Temporal Web UI together
+docker compose up -d postgres temporal temporal-ui
+```
+
+This starts:
+- **Temporal server** on `localhost:7233` (gRPC, used by the backend worker)
+- **Temporal Web UI** on `http://localhost:8080` — inspect running workflows, signal them,
+  view history and activity retries
+
+Wait ~15 seconds for Temporal to finish bootstrapping its schema in PostgreSQL, then verify:
+```bash
+docker compose logs temporal | grep "temporal server started"
+```
+
+### Option B — Temporal CLI (dev mode, no Docker)
+
+**Install the CLI first (one-time):**
+
+```powershell
+# Windows — Scoop
+scoop install temporal
+
+# Windows — Chocolatey
+choco install temporal
+
+# Windows — direct download (no package manager)
+# Download the latest temporal_cli_windows_amd64.zip from:
+# https://github.com/temporalio/cli/releases/latest
+# Extract temporal.exe and add it to your PATH
+```
+
+Then start a dev server:
+
+```powershell
+temporal server start-dev --port 7233 --ui-port 8233
+```
+
+> Dev mode uses an in-memory store — workflow history is lost on restart. Use Option A for
+> any session longer than a quick smoke test.
+
+### Temporal Web UI
+
+| Mode | URL |
+|------|-----|
+| Docker Compose (Option A) | `http://localhost:8080` |
+| CLI dev mode (Option B) | `http://localhost:8233` |
+
+The worker connects to `localhost:7233` by default. To override:
+```bash
+TEMPORAL_HOST=my-server:7233 poetry run uvicorn app.main:socket_app --reload --port 8000
+```
+
+---
+
+## 3. Database
+
+### Option A — Docker Compose
+
+```bash
+docker compose up -d postgres
+```
+
+### Option B — Local PostgreSQL
 
 Ensure PostgreSQL is running and the database exists:
 
@@ -46,7 +162,7 @@ poetry run alembic upgrade head
 
 ---
 
-## 3. Seed Data
+## 4. Seed Data
 
 Populate the database with demo products, agents, questionnaire, a sample client (Aarav Mehta), a sample case, and a full event log:
 
@@ -72,7 +188,7 @@ The seed is **idempotent** — re-running it skips rows that already exist.
 
 ---
 
-## 4. Backend
+## 5. Backend
 
 ```bash
 cd backend
@@ -91,7 +207,7 @@ The API will be available at:
 
 ---
 
-## 5. Frontend
+## 6. Frontend
 
 ```bash
 cd frontend
@@ -109,17 +225,36 @@ The Vite dev server proxies `/api` and `/socket.io` to the backend at `http://lo
 
 ---
 
-## Running Both Together
+## Running Everything
 
-Open two terminals:
+### Full stack via Docker Compose (simplest)
 
-**Terminal 1 — Backend**
 ```bash
-cd backend && poetry run uvicorn app.main:socket_app --reload --port 8000
+docker compose up -d
 ```
 
-**Terminal 2 — Frontend**
+This starts PostgreSQL, Temporal, Temporal Web UI, the backend, and the frontend all together.
+
+| Service | URL |
+|---------|-----|
+| Frontend | `http://localhost:5173` |
+| Backend API | `http://localhost:8000/api` |
+| API Docs (Swagger) | `http://localhost:8000/docs` |
+| Temporal Web UI | `http://localhost:8080` |
+| Temporal gRPC | `localhost:7233` |
+
+### Local dev (hot-reload)
+
+Run infrastructure via Docker, services locally for faster iteration:
+
 ```bash
+# Step 1 — start infrastructure
+docker compose up -d postgres temporal temporal-ui
+
+# Step 2 — backend (hot-reload)
+cd backend && poetry run uvicorn app.main:socket_app --reload --port 8000
+
+# Step 3 — frontend (hot-reload, separate terminal)
 cd frontend && npm run dev
 ```
 
@@ -177,23 +312,29 @@ poetry run alembic downgrade -1
 
 ```
 glide-gate/
-├── backend/          # FastAPI + SQLAlchemy + python-socketio
+├── backend/                  # FastAPI + SQLAlchemy + python-socketio
 │   ├── app/
-│   │   ├── agents/   # AI agent implementations
-│   │   ├── api/      # REST routers and dependencies
-│   │   ├── mcp/      # MCP connector integrations
-│   │   ├── services/ # Business logic
-│   │   └── websocket/
-│   ├── alembic/      # Database migrations
-│   └── tests/
-├── frontend/         # React 18 + Vite + Tailwind + Zustand + TanStack Query
+│   │   ├── agents/           # LangGraph agent graphs (one graph.py per agent)
+│   │   ├── api/              # REST routers and dependencies
+│   │   ├── domain/           # DomainDefinition model + DomainDefinitionLoader
+│   │   ├── mcp/              # MCP connector integrations
+│   │   ├── models/           # SQLAlchemy ORM models (incl. domain_* tables)
+│   │   ├── services/         # Business logic services
+│   │   ├── websocket/
+│   │   └── workflows/        # Temporal workflow + activity definitions
+│   ├── alembic/versions/     # Database migrations (0001 → 0014+)
+│   └── tests/                # unit / integration / e2e
+├── frontend/                 # React 18 + Vite + Tailwind + Zustand + TanStack Query
 │   └── src/
-│       ├── features/ # Feature-scoped modules
+│       ├── features/         # Feature-scoped modules
 │       ├── components/
-│       ├── store/    # Zustand stores
+│       ├── store/            # Zustand stores
 │       └── hooks/
-├── configs/          # Agent configuration files
-├── prompts/          # LLM prompt templates
-├── db/               # SQL schema and seed files
-└── .env.example      # Environment variable reference
+├── configs/agents/           # Agent configuration JSON files
+├── db/                       # Raw SQL schema and seed files
+├── docs/
+│   ├── planning/             # CADF phase plan (start here)
+│   ├── FRAMEWORK.md          # Developer reference
+│   └── specs/                # BRD, ADRs, Technical Architecture
+└── .env.example              # Environment variable reference
 ```

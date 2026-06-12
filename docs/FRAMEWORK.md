@@ -191,6 +191,32 @@ OnboardingWorkflow (Temporal)
 | `domain_*` (15 tables) | CADF domain model — stages, transitions, SLAs, personas, etc. | 1 |
 | `case_sla_tracking` | SLA elapsed tracking per case/stage | 5 |
 
+### DomainDefinition (Phase 1+)
+
+`backend/app/domain/domain_definition.py` provides:
+
+- **`DomainDefinition`** — Pydantic model holding the fully-loaded in-memory snapshot of one
+  deployed domain: stages, FSM transitions, task routing, agent roster, capabilities, SLA specs,
+  personas, permissions, product catalog, and display vocabulary.
+- **`DomainDefinitionLoader`** — async loader that reads all 15 `domain_*` tables for a given
+  `domain_code` and returns a validated `DomainDefinition`. Raises `DomainValidationError` on:
+  - dangling transition targets or sources
+  - no terminal stages / unreachable terminal
+  - SLA row referencing an undefined stage
+  - `warning_pct >= escalation_pct`
+- **`SLASpec`** — validates `warning_pct < escalation_pct` at construction time (also enforced
+  by `DB CHECK domain_stage_slas_pct_chk`).
+
+Usage in an async service:
+```python
+from app.domain import DomainDefinitionLoader
+
+async with AsyncSessionLocal() as session:
+    loader = DomainDefinitionLoader(session)
+    domain = await loader.load("wealth_management")
+    # domain.stages, domain.transitions, domain.task_routing, ...
+```
+
 ### Adding a migration
 
 ```bash

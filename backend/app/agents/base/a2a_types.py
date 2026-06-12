@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Literal, TypedDict
 from uuid import UUID, uuid4
@@ -69,21 +69,21 @@ class OnboardingStage(StrEnum):
 
 class TaskPacket(BaseModel):
     id: UUID = Field(default_factory=uuid4)
-    from_agent: AgentID
-    to_agent: AgentID
-    task_type: TaskType
+    from_agent: str
+    to_agent: str
+    task_type: str
     case_id: UUID
     client_id: UUID
     priority: Literal["LOW", "NORMAL", "HIGH", "CRITICAL"] = "NORMAL"
     payload: dict[str, Any] = Field(default_factory=dict)
     expected_schema: str = ""
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     ttl: int = 300  # seconds
 
 
 class TaskResponse(BaseModel):
     task_id: UUID
-    from_agent: AgentID
+    from_agent: str
     status: Literal["SUCCESS", "PARTIAL", "FAILED", "ESCALATED"]
     result: dict[str, Any] = Field(default_factory=dict)
     errors: list[str] | None = None
@@ -105,7 +105,7 @@ class OnboardingState(BaseModel):
 
     case_id: UUID
     client_id: UUID
-    stage: OnboardingStage = OnboardingStage.INTAKE
+    stage: str = OnboardingStage.INTAKE
     selected_products: list[str] = Field(default_factory=list)
     product_tracks: dict[str, ProductTrackState] = Field(default_factory=dict)
 
@@ -128,8 +128,8 @@ class OnboardingState(BaseModel):
 
     # Optimistic-lock version for the ContextStoreService
     version: int = 0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class OnboardingStateDict(TypedDict, total=False):

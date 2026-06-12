@@ -97,7 +97,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 |---|---|---|
 | Phase 0 | Audit & wire dead orchestrator config | ✅ |
 | Phase 0.5 | Migrate to Temporal + LangGraph | ✅ |
-| Phase 1 | DB-backed DomainDefinition model | ⬜ |
+| Phase 1 | DB-backed DomainDefinition model | ✅ |
 | Phase 2 | Split OnboardingState into typed core + extension bag | ⬜ |
 | Phase 2.5 | Hash-chain audit log (FR-AU-01) | ⬜ |
 | Phase 3 | Config-driven StageDispatcher | ⬜ |

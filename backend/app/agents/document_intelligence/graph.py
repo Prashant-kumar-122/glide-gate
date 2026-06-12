@@ -36,7 +36,6 @@ async def _process_document_node(state: OnboardingStateDict) -> OnboardingStateD
         task_type = TaskType.CLASSIFY_DOCUMENT
 
     agent = DocumentIntelligenceAgent()
-    agent._bus = None
 
     packet = TaskPacket(
         from_agent=AgentID.ORCHESTRATOR,

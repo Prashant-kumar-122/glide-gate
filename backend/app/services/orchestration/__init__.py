@@ -7,7 +7,6 @@ from app.services.orchestration.journey_resumption_service import (
     JourneyResumptionService,
     journey_resumption_service,
 )
-from app.services.orchestration.parallel_product_launcher import ParallelProductLauncher
 
 __all__ = [
     "AgentOrchestrationService",
@@ -15,5 +14,4 @@ __all__ = [
     "AgentRegistry",
     "JourneyResumptionService",
     "journey_resumption_service",
-    "ParallelProductLauncher",
 ]

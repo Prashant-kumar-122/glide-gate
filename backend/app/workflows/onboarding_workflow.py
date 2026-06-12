@@ -283,13 +283,14 @@ async def completion_activity(state: OnboardingStateDict) -> OnboardingStateDict
 
 @activity.defn(name="persist_stage_activity")
 async def persist_stage_activity(input: dict[str, Any]) -> None:
-    """Write status + current_stage to the onboarding_cases table."""
+    """Write status + current_stage to the onboarding_cases table and notify the frontend."""
     from uuid import UUID
 
     from sqlalchemy import update as sa_update
 
     from app.database import AsyncSessionLocal
     from app.models.cases import OnboardingCase
+    from app.websocket.socket_emitter import socket_emitter
 
     case_id_str = input.get("case_id", "")
     stage = input.get("stage", "")
@@ -307,10 +308,15 @@ async def persist_stage_activity(input: dict[str, Any]) -> None:
             await db.commit()
     except Exception as exc:
         activity.logger.warning(f"persist_stage_activity failed for case {case_id_str}: {exc}")
+        return
+
+    await socket_emitter.case_stage_changed(case_id_str, {"stage": stage, "case_id": case_id_str})
 
 
 def get_all_activities() -> list[Any]:
     """Return the list of all activity functions to register with the Temporal worker."""
+    from app.agents.direct_task_activities import get_direct_task_activities
+
     return [
         initialize_case_activity,
         customer_service_kickoff_activity,
@@ -322,6 +328,8 @@ def get_all_activities() -> list[Any]:
         escalation_alert_activity,
         completion_activity,
         persist_stage_activity,
+        _contact_centre_summary_activity,
+        *get_direct_task_activities(),
     ]
 
 
@@ -381,10 +389,15 @@ class OnboardingWorkflow:
 
     @workflow.signal
     def advance_stage(self, signal: StageAdvanceSignal) -> None:
+        if isinstance(signal, dict):
+            signal = StageAdvanceSignal(**signal)
+        workflow.logger.info(f"advance_stage signal received: to_stage={signal.to_stage}")
         self._advance_signals.append(signal)
 
     @workflow.signal
     def human_review_completed(self, signal: HumanReviewSignal) -> None:
+        if isinstance(signal, dict):
+            signal = HumanReviewSignal(**signal)
         self._human_signals.append(signal)
 
     # ── Run ───────────────────────────────────────────────────────────────────

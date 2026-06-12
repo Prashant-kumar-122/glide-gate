@@ -25,7 +25,6 @@ async def _summarise_status_node(state: OnboardingStateDict) -> OnboardingStateD
         return state
 
     agent = ContactCentreAgent()
-    agent._bus = None
 
     task_type = TaskType.GET_CLIENT_STATUS
     payload: dict[str, Any] = {
