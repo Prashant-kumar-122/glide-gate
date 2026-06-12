@@ -1,15 +1,19 @@
 #!/bin/bash
 set -e
 
+COMPOSE_FILE="docker-compose.prod.yml"
+ENV_FILE=".env.production"
+
 echo "Starting deployment..."
 
 # Get current git commit SHA
 GIT_SHA=$(git rev-parse --short HEAD)
 echo "Deploying commit: $GIT_SHA"
 
-# Pull latest code
-echo "Pulling latest code from COPS_Agentic_AI_Deploy..."
-git pull origin COPS_Agentic_AI_Deploy
+# Pull latest code from current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "Pulling latest code from $CURRENT_BRANCH..."
+git pull origin $CURRENT_BRANCH
 
 # Ensure required directories exist with correct permissions for postgres container
 mkdir -p db/data
@@ -17,11 +21,11 @@ sudo chown -R 999:999 db/data
 
 # Stop old containers
 echo "Stopping old containers..."
-docker-compose down
+docker-compose -f $COMPOSE_FILE down
 
 # Build new images
 echo "Building Docker images..."
-DOCKER_BUILDKIT=0 docker-compose build
+DOCKER_BUILDKIT=0 docker-compose -f $COMPOSE_FILE build
 
 # Tag images with git commit SHA
 echo "Tagging images with commit: $GIT_SHA"
@@ -38,4 +42,4 @@ echo "Starting containers..."
 bash docker-startup.sh
 
 echo "Deployment complete! Deployed commit: $GIT_SHA"
-docker-compose ps
+docker-compose -f $COMPOSE_FILE ps
