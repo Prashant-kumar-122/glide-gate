@@ -199,7 +199,7 @@
       <table>
         <thead><tr><th>Regulation</th><th>Requirement</th><th>Coverage</th></tr></thead>
         <tbody>
-          <tr><td>BSA / FinCEN</td><td>5-year WORM audit trail; SAR obligations</td><td><span class="badge badge-planned">Phase 2.5</span></td></tr>
+          <tr><td>BSA / FinCEN</td><td>5-year WORM audit trail; SAR obligations</td><td><span class="badge badge-done">✅ Phase 2.5</span></td></tr>
           <tr><td>CIP / CDD</td><td>Identity verification + beneficial ownership</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>OFAC</td><td>Sanctions screening via MCP gateway</td><td><span class="badge badge-planned">Phase 6</span></td></tr>
           <tr><td>GLBA</td><td>Privacy notices + data minimization</td><td><span class="badge badge-planned">Planned</span></td></tr>
@@ -338,7 +338,7 @@
         <li><span class="phase-num">Phase 0.5</span><span class="phase-title">Migrate to Temporal + LangGraph (ADR-001/004)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 1</span><span class="phase-title">DB-backed DomainDefinition model (15 domain_* tables)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 2</span><span class="phase-title">Split OnboardingState into typed core + extension bag</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 2.5</span><span class="phase-title">Hash-chain audit log (FR-AU-01 / BSA compliance)</span><span class="badge badge-new">⬜ New</span></li>
+        <li><span class="phase-num">Phase 2.5</span><span class="phase-title">Hash-chain audit log (FR-AU-01 / BSA compliance)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 3</span><span class="phase-title">Config-driven StageDispatcher (replaces if/elif chain)</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 4</span><span class="phase-title">Products, questions, per-product agent pipelines config-driven</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 4.5</span><span class="phase-title">Shared-core document taxonomy — collect once, reuse all</span><span class="badge badge-new">⬜ New</span></li>
@@ -361,7 +361,7 @@
       <table>
         <thead><tr><th>Requirement</th><th>Phase</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>FR-AU-01 — Hash-chained audit trail (BSA)</td><td>Phase 2.5</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
+          <tr><td>FR-AU-01 / FR-AU-03 — Hash-chained audit trail + export (BSA)</td><td>Phase 2.5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>FR-GL-01/02/03 — First-to-complete activation</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>FR-DM-01/02/03 — Shared-core collect-once</td><td>Phase 4.5</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>FR-AG (fraud) — Fraud screening gate</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
@@ -383,7 +383,7 @@
           <tr><td>Backend integration tests</td><td>API endpoints, DB interactions</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>Temporal workflow tests</td><td>Structure snapshot tests; crash recovery (requires live Temporal)</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations</td><td><span class="badge badge-planned">Phase 5</span></td></tr>
-          <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-planned">Phase 2.5</span></td></tr>
+          <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-done">✅ Done (12 unit tests)</span></td></tr>
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block</td><td><span class="badge badge-planned">Phase 4.6</span></td></tr>
           <tr><td>Frontend E2E (Playwright)</td><td>Client portal, advisor workspace, admin</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
           <tr><td>Accessibility (axe)</td><td>WCAG 2.1 AA across light/dark × breakpoints</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
@@ -395,8 +395,6 @@
       <h2>Open Gaps &amp; Recommendations</h2>
       <h3>Architecture gaps (being addressed by new CADF phases)</h3>
       <ul style="padding-left:20px; color: var(--text-muted); line-height: 2;">
-        <li><strong>Hash-chained audit log</strong> — current EventLog has no tamper detection;
-          BSA compliance requires WORM semantics (Phase 2.5)</li>
         <li><strong>OPA activation gate</strong> — no activation criteria enforced before
           product goes live (Phase 4.6)</li>
         <li><strong>Fraud screening agent</strong> — no fraud/anomaly detection in current
