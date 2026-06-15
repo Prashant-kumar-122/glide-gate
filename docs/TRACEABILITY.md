@@ -17,8 +17,8 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-DM-04 | Validate completeness/legibility/type/expiry | Existing | 🟡 | `DocumentIntelligenceAgent`, `AICompletenessValidator` |
 | FR-DM-05 | Track expiry; re-request on expiry/insufficiency | Existing | 🟡 | `document_status_service.py`, `version_diff_detector.py` |
 | FR-DM-06 | Secure upload + versioned storage | Existing | ✅ | `document_storage_adapter.py`, `document_version_manager.py` |
-| FR-WF-01 | Per-product configurable workflow | Phase 4 | ⬜ | `domain_product_pipelines`, `ProductOnboardingAgent` LangGraph graph |
-| FR-WF-02 | Per-product configurable rule sets | Phase 4 | ⬜ | `domain_product_pipelines.step_config JSONB`, `SuitabilityAssessor` |
+| FR-WF-01 | Per-product configurable workflow | Phase 4 | ✅ | migration `0017_product_pipeline_seed.py`; `_load_pipeline_from_db()` in `product_onboarding_agent.py`; `domain_product_pipelines` rows seeded; `step_config JSONB` per step |
+| FR-WF-02 | Per-product configurable rule sets | Phase 4 | ✅ | migration `0017` `suitability_criteria JSONB`; `SuitabilityAssessor.assess_with_criteria()`; `_load_suitability_criteria_from_db()`; 22 parity tests in `test_product_pipeline_config.py` |
 | FR-OR-01 | Run product onboardings concurrently | Phase 0.5, Phase 4 | 🟡 | Temporal child workflows per product (`ProductOnboardingWorkflow`) |
 | FR-OR-02 | Single client master linking journeys | Existing | ✅ | `Client` model, `OnboardingCase.client_id` FK |
 | FR-OR-03 | Share shared-core results across journeys | Phase 4.5 | ⬜ | Document scope + `GET /cases/{id}/requirements` reuse map |
@@ -101,7 +101,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 2 | Split OnboardingState into typed core + extension bag | ✅ |
 | Phase 2.5 | Hash-chain audit log (FR-AU-01) | ✅ |
 | Phase 3 | Config-driven StageDispatcher | ✅ |
-| Phase 4 | Config-driven products + per-product agent pipelines | ⬜ |
+| Phase 4 | Config-driven products + per-product agent pipelines | ✅ |
 | Phase 4.5 | Shared-core document taxonomy (FR-DM-01/02/03) | ⬜ |
 | Phase 4.6 | First-to-complete activation gate (FR-GL-01/02/03) | ⬜ |
 | Phase 5 | Configurable SLA enforcement | ⬜ |

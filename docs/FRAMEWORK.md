@@ -34,7 +34,7 @@ glide-gate/
 │   │   ├── services/            # Business logic services
 │   │   ├── workflows/           # Temporal workflow definitions (Phase 0.5)
 │   │   └── main.py              # FastAPI app + startup
-│   ├── alembic/versions/        # 16 DB migrations (0001–0016)
+│   ├── alembic/versions/        # 17 DB migrations (0001–0017)
 │   └── tests/                   # unit / integration / e2e
 ├── frontend/
 │   ├── src/
@@ -170,7 +170,7 @@ DirectTaskWorkflow (short-lived, one per fire-and-forget task)
 | KYCCompliance | `agents/kyc_compliance/graph.py` | `kyc_compliance_activity` (workflow) | — (outcome written to state; workflow advances stage) |
 | FraudScreening (Phase 4.6) | `agents/fraud_screening/graph.py` | TBD | FRAUD_FLAGGED, FRAUD_CLEARED |
 | DocumentIntelligence | `agents/document_intelligence/graph.py` | `direct_document_task` (DirectTask) | — |
-| ProductOnboarding | `agents/product_onboarding/graph.py` | `product_onboarding_activity` inside `ProductOnboardingWorkflow` (child) | — |
+| ProductOnboarding | `agents/product_onboarding/graph.py` | `product_onboarding_activity` inside `ProductOnboardingWorkflow` (child, one per product) | — (Phase 4: trace written as `product_onboarding[{product_code}]`) |
 | Collaboration | `agents/collaboration/graph.py` | `collaboration_kickoff_activity` (workflow) | — |
 | Notification | `agents/notification/graph.py` | `notification_activity` / `escalation_alert_activity` (workflow) | — |
 | SalesManager | `agents/sales_manager/graph.py` | `sales_manager_kickoff_activity` (workflow) + `direct_sales_manager_task` (DirectTask) | — |
@@ -319,6 +319,69 @@ async with AsyncSessionLocal() as session:
     domain = await loader.load("wealth_management")
     # domain.stages, domain.transitions, domain.task_routing, ...
 ```
+
+### Product Pipeline Config (Phase 4+)
+
+`domain_product_pipelines` and `domain_products.suitability_criteria` are the canonical sources
+for per-product step sequences and suitability thresholds.  Hardcoded Python dicts
+(`_PRODUCT_STEPS`, `_PRODUCT_MIN_RISK`, etc.) remain as fallbacks for environments where the DB
+has not been migrated yet.
+
+**ProductOnboardingAgent load order:**
+
+1. `_load_pipeline_from_db(product_code)` — queries `domain_product_pipelines` ordered by
+   `step_order`; returns `[{step_id, step_config}]` or `None` if no rows exist.
+2. On `None`: falls back to `_PRODUCT_STEPS.get(product_code, _DEFAULT_STEPS)`.
+3. `_load_suitability_criteria_from_db(product_code)` — queries
+   `domain_products.suitability_criteria` JSONB; returns the dict or `None`.
+4. On `None`: calls `SuitabilityAssessor.assess()` (hardcoded constants).
+5. On success: calls `SuitabilityAssessor.assess_with_criteria(product_code, client_data, criteria)`.
+
+**`step_config` JSONB schema:**
+
+```json
+{
+  "min_ms": 200,
+  "max_ms": 600
+}
+```
+
+**`suitability_criteria` JSONB schema:**
+
+```json
+{
+  "min_risk_level": 1,
+  "min_age": 18,
+  "min_income": 0.0,
+  "ideal_horizons": ["short_term", "medium_term", "long_term"],
+  "is_retirement_account": false,
+  "scoring_weights": {"risk": 0.40, "income": 0.30, "age": 0.20, "horizon": 0.10},
+  "risk_capacity_map": {...},
+  "objective_to_risk": {...},
+  "objective_to_horizon": {...},
+  "income_range_to_float": {...}
+}
+```
+
+Any key absent in the criteria dict falls back to the module-level constants in
+`suitability_assessor.py`, so a minimal criteria dict (product-specific thresholds only)
+also works correctly.
+
+**Capability entry validation (Phase 4):**
+
+`_onboard_product_node` in `graph.py` calls `_validate_agent_entry(task_type)` before dispatching
+to `ProductOnboardingAgent`.  This is a *soft* check — it logs a warning if the task type is not
+in `domain_agent_capabilities.subscribed_task_types` for the `product_onboarding` agent, but does
+not block execution.  Intent: surface misconfiguration without breaking existing workflows.
+
+**Trace naming (Phase 4):**
+
+The `AgentTask` trace record and socket events use `product_onboarding[{product_code}]` as the
+`to_agent` value so each parallel product track is individually identifiable in the trace canvas
+and in the Temporal Web UI (child workflow IDs: `onboarding-{case_id}-product-{product_code}`).
+
+**To add a new product:** insert rows into `domain_products` and `domain_product_pipelines`
+for the domain.  No Python code changes required.
 
 ### StageDispatcher (Phase 3+)
 

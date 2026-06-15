@@ -12,7 +12,7 @@
 - [x] **Phase 2** — Split OnboardingState into typed core + extension bag
 - [x] **Phase 2.5** — Hash-chain audit log (FR-AU-01 / BSA compliance)
 - [x] **Phase 3** — Replace if/elif stage routing with config-driven StageDispatcher
-- [ ] **Phase 4** — Make products, questions, and per-product agent pipelines config-driven
+- [x] **Phase 4** — Make products, questions, and per-product agent pipelines config-driven
 - [ ] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03)
 - [ ] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
 - [ ] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
@@ -205,7 +205,7 @@ Full detail in `docs/TRACEABILITY.md`. Summary of coverage:
 | BRD Req | Description | Phase | Status |
 |---|---|---|---|
 | FR-DM-01/02/03 | Shared-core document collect-once + reuse | Phase 4.5 | ⬜ |
-| FR-WF-01/02 | Per-product configurable workflows | Phase 4 | ⬜ |
+| FR-WF-01/02 | Per-product configurable workflows | Phase 4 | ✅ |
 | FR-OR-01/02/03/04/05 | Parallel multi-product orchestration | Phase 0.5, Phase 4 | ⬜ |
 | FR-AG-01/02/03 | Autonomous agent progression + data collection | Phase 0.5 | ⬜ |
 | FR-AG-05/06 | HITL escalation queues + authority limits | Phase 7, Phase 9 | ⬜ |
@@ -720,7 +720,56 @@ produced for every wealth-domain stage.
 
 ---
 
-## Phase 4 — Make products, questions, and per-product agent pipelines config-driven
+## Phase 4 — Make products, questions, and per-product agent pipelines config-driven ✅ Done
+
+### As-built summary (2026-06-15)
+
+**Migration 0017** (`backend/alembic/versions/0017_product_pipeline_seed.py`) seeds
+`domain_product_pipelines` for all 6 wealth products and populates
+`domain_products.suitability_criteria` JSONB for all products.  `down_revision = "0016_decision_log"`.
+
+**`step_config` shape** (per pipeline row): `{"min_ms": N, "max_ms": M}` — latency bounds
+passed to `_execute_step()` for configurable simulation timing.
+
+**`suitability_criteria` shape** (per product row): full threshold + lookup-map dict:
+`min_risk_level`, `min_age`, `min_income`, `ideal_horizons`, `is_retirement_account`,
+`scoring_weights`, `risk_capacity_map`, `objective_to_risk`, `objective_to_horizon`,
+`income_range_to_float`.  Any missing key falls back to the module-level constant.
+
+**`SuitabilityAssessor`** (`suitability_assessor.py`):
+- Added `assess_with_criteria(product_code, client_data, criteria)` — DB-driven path
+- Refactored `assess()` to delegate to shared private `_score()` method
+- `assess_with_criteria()` also delegates to `_score()` — guarantees score parity
+
+**`ProductOnboardingAgent`** (`product_onboarding_agent.py`):
+- `_load_pipeline_from_db(product_code)` — queries `domain_product_pipelines`; returns `None` on miss
+- `_load_suitability_criteria_from_db(product_code)` — queries `domain_products.suitability_criteria`; returns `None` on miss
+- `_handle_onboard()` tries DB path first; falls back to hardcoded constants silently
+- `_execute_step()` accepts `step_config` kwarg with `min_ms`/`max_ms`; falls back to `_STEP_DURATIONS_MS`
+
+**`graph.py`** (`agents/product_onboarding/graph.py`):
+- `_validate_agent_entry(task_type)` — soft check against `domain_agent_capabilities` rows;
+  logs a warning if task type not found; wrapped in try/except, never blocks execution
+- `_onboard_product_node()` calls `_validate_agent_entry` then sets `_named_agent = f"product_onboarding[{product_code}]"`
+- Named agent used in socket events, `AgentTask.to_agent` trace field, and log messages
+
+**22 unit tests** in `backend/tests/unit/agents/test_product_pipeline_config.py`:
+- 8 parametrized snapshot-parity tests (`assess_with_criteria == assess` for 4 client profiles × 2 products)
+- 6 threshold-enforcement tests (min_risk, min_income, min_age, ideal_horizons, retirement bonus, custom weights)
+- 4 hardcoded fallback shape tests (step lists match migration data)
+- 4 backward-compat tests (`assess()` returns correct outcomes)
+
+**Domain code defaulting:** `_load_pipeline_from_db` and `_load_suitability_criteria_from_db`
+default `domain_code="wealth_management"` since `OnboardingStateDict` does not carry it
+(consistent with ADR-010 single-tenant deployment).
+
+### Files changed
+- **New:** `backend/alembic/versions/0017_product_pipeline_seed.py`
+- **New:** `backend/tests/unit/agents/test_product_pipeline_config.py`
+- **Modified:** `backend/app/agents/product_onboarding/suitability_assessor.py` (`assess_with_criteria`, `_score` refactor)
+- **Modified:** `backend/app/agents/product_onboarding/product_onboarding_agent.py` (DB loaders, fallback logic, step_config)
+- **Modified:** `backend/app/agents/product_onboarding/graph.py` (capability validation, named trace)
+- **Modified:** `docs/FRAMEWORK.md`, `docs/TRACEABILITY.md`, `docs/planning/cadf-framework-plan.md`
 
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 3 commit must be present
