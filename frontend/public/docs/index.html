@@ -265,7 +265,7 @@
           <tr><td>KYCCompliance</td><td>Identity verification; AML risk scoring</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
           <tr><td>FraudScreening</td><td>Device/velocity/synthetic-identity fraud scoring; gates activation</td><td><span class="badge badge-new">New Phase 4.6</span></td></tr>
           <tr><td>DocumentIntelligence</td><td>OCR; classification; validation; collect-once enforcement</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
-          <tr><td>ProductOnboarding</td><td>Per-product step execution; suitability; activation gate</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
+          <tr><td>ProductOnboarding</td><td>Per-product step execution; suitability; activation gate. Phase 4: pipeline + criteria loaded from DB; trace written as <code>product_onboarding[{product_code}]</code></td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
           <tr><td>Collaboration</td><td>Advisor-client collaboration rooms and comments</td><td><span class="badge badge-done">Active</span></td></tr>
           <tr><td>Notification</td><td>Email + in-app + push notifications; SLA warning alerts</td><td><span class="badge badge-done">Active</span></td></tr>
           <tr><td>SalesManager</td><td>Institutional product approval workflow</td><td><span class="badge badge-done">Active</span></td></tr>
@@ -340,7 +340,7 @@
         <li><span class="phase-num">Phase 2</span><span class="phase-title">Split OnboardingState into typed core + extension bag</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 2.5</span><span class="phase-title">Hash-chain audit log (FR-AU-01 / BSA compliance)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 3</span><span class="phase-title">Config-driven StageDispatcher (replaces if/elif chain)</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 4</span><span class="phase-title">Products, questions, per-product agent pipelines config-driven</span><span class="badge badge-planned">⬜ Planned</span></li>
+        <li><span class="phase-num">Phase 4</span><span class="phase-title">Products, questions, per-product agent pipelines config-driven</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 4.5</span><span class="phase-title">Shared-core document taxonomy — collect once, reuse all</span><span class="badge badge-new">⬜ New</span></li>
         <li><span class="phase-num">Phase 4.6</span><span class="phase-title">First-to-complete activation gate + Fraud screening + OPA</span><span class="badge badge-new">⬜ New</span></li>
         <li><span class="phase-num">Phase 5</span><span class="phase-title">Configurable SLA enforcement with per-stage feature flags</span><span class="badge badge-planned">⬜ Planned</span></li>
@@ -362,6 +362,7 @@
         <thead><tr><th>Requirement</th><th>Phase</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td>FR-AU-01 / FR-AU-03 — Hash-chained audit trail + export (BSA)</td><td>Phase 2.5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>FR-WF-01/02 — Per-product configurable workflows + rule sets</td><td>Phase 4</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>FR-GL-01/02/03 — First-to-complete activation</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>FR-DM-01/02/03 — Shared-core collect-once</td><td>Phase 4.5</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>FR-AG (fraud) — Fraud screening gate</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
@@ -379,11 +380,12 @@
       <table>
         <thead><tr><th>Layer</th><th>Coverage</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors</td><td><span class="badge badge-partial">Partial</span></td></tr>
+          <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors, pipeline config</td><td><span class="badge badge-partial">Partial (~90 tests)</span></td></tr>
           <tr><td>Backend integration tests</td><td>API endpoints, DB interactions</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>Temporal workflow tests</td><td>Structure snapshot tests; crash recovery (requires live Temporal)</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations</td><td><span class="badge badge-planned">Phase 5</span></td></tr>
           <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-done">✅ Done (12 unit tests)</span></td></tr>
+          <tr><td>Pipeline config tests</td><td>Suitability score parity (DB vs hardcoded), threshold enforcement, fallback shape</td><td><span class="badge badge-done">✅ Done (22 unit tests — Phase 4)</span></td></tr>
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block</td><td><span class="badge badge-planned">Phase 4.6</span></td></tr>
           <tr><td>Frontend E2E (Playwright)</td><td>Client portal, advisor workspace, admin</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
           <tr><td>Accessibility (axe)</td><td>WCAG 2.1 AA across light/dark × breakpoints</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
