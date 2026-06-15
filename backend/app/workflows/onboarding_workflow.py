@@ -1,4 +1,4 @@
-"""Temporal OnboardingWorkflow + all Temporal Activities (Phase 0.5).
+"""Temporal OnboardingWorkflow + all Temporal Activities (Phase 0.5 / Phase 3).
 
 Architecture:
   - OnboardingWorkflow (@workflow.defn) owns the stage-level FSM.
@@ -11,6 +11,15 @@ Architecture:
     workflow.execute_child_workflow().
   - The workflow ID is deterministic: f"onboarding-{case_id}" so any service
     with a case_id can Signal or Query the running workflow.
+
+Phase 3 additions:
+  - load_domain_definition_activity: loads DomainDefinition from DB at workflow
+    start; result is stored in Temporal history so replays are deterministic.
+  - StageDispatcher: maps stage_code → Temporal activity name via
+    DomainDefinition.task_routing.  Replaces the hardcoded if/elif routing from
+    orchestrator_agent.py.
+  - SLAHook.on_stage_entered(): called at the top of every _handle_* method as
+    a no-op stub; Phase 5 activates the real SLA timer here.
 """
 from __future__ import annotations
 
@@ -29,11 +38,28 @@ from app.agents.base.a2a_types import (
     OnboardingWorkflowResult,
     StageAdvanceSignal,
 )
+from app.services.orchestration.stage_dispatcher import SLAHook, StageDispatcher
 
 _NO_RETRY = RetryPolicy(maximum_attempts=1)
 _STANDARD_RETRY = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds=5))
 
 # ── Activities ────────────────────────────────────────────────────────────────
+
+
+@activity.defn(name="load_domain_definition_activity")
+async def load_domain_definition_activity(domain_code: str) -> dict[str, Any]:
+    """Load a DomainDefinition from DB and return as a JSON-serializable dict.
+
+    Runs once at workflow start.  On Temporal replay the result is returned
+    from history without re-querying the DB, ensuring determinism.
+    """
+    from app.database import AsyncSessionLocal
+    from app.domain.domain_definition import DomainDefinitionLoader
+
+    async with AsyncSessionLocal() as session:
+        loader = DomainDefinitionLoader(session)
+        domain_def = await loader.load(domain_code)
+        return domain_def.model_dump()
 
 
 @activity.defn(name="initialize_case_activity")
@@ -317,11 +343,38 @@ async def persist_stage_activity(input: dict[str, Any]) -> None:
     await socket_emitter.case_stage_changed(case_id_str, {"stage": stage, "case_id": case_id_str})
 
 
+@activity.defn(name="contact_centre_summary_activity")
+async def _contact_centre_summary_activity(state: OnboardingStateDict) -> OnboardingStateDict:
+    """Generate contact-centre status summary for the case."""
+    from app.agents.contact_centre.graph import build_contact_centre_graph
+
+    graph = build_contact_centre_graph()
+    return await graph.ainvoke(state)
+
+
+# ── Activity lookup (Phase 3) ─────────────────────────────────────────────────
+# Maps Temporal activity name strings (from StageDispatcher.resolve().activity_name)
+# to the actual @activity.defn-decorated callable.  Used by OnboardingWorkflow
+# stage handlers to call the correct activity without hardcoding function refs.
+
+_ACTIVITY_LOOKUP: dict[str, Any] = {
+    "customer_service_kickoff_activity": customer_service_kickoff_activity,
+    "collaboration_kickoff_activity":    collaboration_kickoff_activity,
+    "sales_manager_kickoff_activity":    sales_manager_kickoff_activity,
+    "kyc_compliance_activity":           kyc_compliance_activity,
+    "product_onboarding_activity":       product_onboarding_activity,
+    "notification_activity":             notification_activity,
+    "escalation_alert_activity":         escalation_alert_activity,
+    "completion_activity":               completion_activity,
+}
+
+
 def get_all_activities() -> list[Any]:
     """Return the list of all activity functions to register with the Temporal worker."""
     from app.agents.direct_task_activities import get_direct_task_activities
 
     return [
+        load_domain_definition_activity,
         initialize_case_activity,
         customer_service_kickoff_activity,
         kyc_compliance_activity,
@@ -383,11 +436,17 @@ class OnboardingWorkflow:
           → REVIEW? (human: kickoff + wait for human_review_completed)
           → COMPLETE (accounts + notifications)
           or ESCALATED at any stage
+
+    Phase 3: StageDispatcher (driven by DomainDefinition.task_routing) selects
+    the activity to run for each stage.  SLAHook.on_stage_entered() is called
+    at the top of every _handle_* method as a no-op stub (Phase 5 activates it).
     """
 
     def __init__(self) -> None:
         self._advance_signals: list[StageAdvanceSignal] = []
         self._human_signals: list[HumanReviewSignal] = []
+        # Phase 3: populated in run() after load_domain_definition_activity
+        self._dispatcher: StageDispatcher | None = None
 
     # ── Signal handlers ───────────────────────────────────────────────────────
 
@@ -413,6 +472,17 @@ class OnboardingWorkflow:
             f"products={input.selected_products}"
         )
 
+        # Phase 3: load DomainDefinition once at workflow start.
+        # The activity result is stored in Temporal history so replays are
+        # deterministic — the DB is NOT re-queried on replay.
+        domain_dict = await workflow.execute_activity(
+            load_domain_definition_activity,
+            input.domain_code,
+            schedule_to_close_timeout=timedelta(seconds=30),
+            retry_policy=_STANDARD_RETRY,
+        )
+        self._dispatcher = StageDispatcher.from_domain_dict(domain_dict)
+
         state: OnboardingStateDict = await workflow.execute_activity(
             initialize_case_activity,
             input,
@@ -421,8 +491,13 @@ class OnboardingWorkflow:
         )
 
         # Kickoff INTAKE — starts conversation context
+        kickoff_dispatch = self._dispatcher.resolve("INTAKE", state)
+        kickoff_fn = (
+            _ACTIVITY_LOOKUP.get(kickoff_dispatch.activity_name, customer_service_kickoff_activity)
+            if kickoff_dispatch else customer_service_kickoff_activity
+        )
         await workflow.execute_activity(
-            customer_service_kickoff_activity,
+            kickoff_fn,
             state,
             schedule_to_close_timeout=timedelta(minutes=5),
             retry_policy=_NO_RETRY,
@@ -473,6 +548,8 @@ class OnboardingWorkflow:
 
     async def _handle_intake(self, state: OnboardingStateDict) -> OnboardingStateDict:
         """Wait for CustomerService to signal data collection complete."""
+        SLAHook.on_stage_entered(state.get("case_id", ""), "INTAKE", None)
+
         await workflow.wait_condition(
             lambda: len(self._advance_signals) > 0,
             timeout=timedelta(days=7),
@@ -495,8 +572,16 @@ class OnboardingWorkflow:
         (via publish_task(RUN_KYC_CHECK)) on approval. Both signal types are
         accepted so either code path unblocks the workflow.
         """
+        SLAHook.on_stage_entered(state.get("case_id", ""), "SALES_REVIEW", None)
+
+        dispatch = self._dispatcher.resolve("SALES_REVIEW", state) if self._dispatcher else None
+        kickoff_fn = (
+            _ACTIVITY_LOOKUP.get(dispatch.activity_name, sales_manager_kickoff_activity)
+            if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
+            else sales_manager_kickoff_activity
+        )
         await workflow.execute_activity(
-            sales_manager_kickoff_activity,
+            kickoff_fn,
             state,
             schedule_to_close_timeout=timedelta(minutes=5),
             retry_policy=_NO_RETRY,
@@ -530,8 +615,16 @@ class OnboardingWorkflow:
 
     async def _handle_kyc(self, state: OnboardingStateDict) -> OnboardingStateDict:
         """Run KYC compliance check as a synchronous activity."""
+        SLAHook.on_stage_entered(state.get("case_id", ""), "KYC", None)
+
+        dispatch = self._dispatcher.resolve("KYC", state) if self._dispatcher else None
+        kyc_fn = (
+            _ACTIVITY_LOOKUP.get(dispatch.activity_name, kyc_compliance_activity)
+            if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
+            else kyc_compliance_activity
+        )
         result = await workflow.execute_activity(
-            kyc_compliance_activity,
+            kyc_fn,
             state,
             schedule_to_close_timeout=timedelta(minutes=30),
             retry_policy=_STANDARD_RETRY,
@@ -548,9 +641,14 @@ class OnboardingWorkflow:
             retry_policy=_STANDARD_RETRY,
         )
 
-        # Send KYC outcome notifications
+        # Send KYC outcome notifications via dispatcher-selected activity
         selected_products = state.get("selected_products", [])
-        client_id = state.get("client_id", "")
+        dispatch_notif = self._dispatcher.resolve("COMPLETE", state) if self._dispatcher else None
+        notif_fn = (
+            _ACTIVITY_LOOKUP.get(dispatch_notif.activity_name, notification_activity)
+            if dispatch_notif and dispatch_notif.activity_name in _ACTIVITY_LOOKUP
+            else notification_activity
+        )
         if _result_extra.get("kyc_status") in ("PASSED", "FAILED"):
             templates = (
                 [("kyc_passed", "NORMAL")]
@@ -559,7 +657,7 @@ class OnboardingWorkflow:
             )
             for tmpl, priority in templates:
                 await workflow.execute_activity(
-                    notification_activity,
+                    notif_fn,
                     {
                         **state,
                         "_notification_payload": {
@@ -577,6 +675,8 @@ class OnboardingWorkflow:
         self, state: OnboardingStateDict
     ) -> OnboardingStateDict:
         """Launch one child workflow per selected product in parallel."""
+        SLAHook.on_stage_entered(state.get("case_id", ""), "PARALLEL_PRODUCTS", None)
+
         selected_products: list[str] = state.get("selected_products", [])
         case_id = state.get("case_id", "")
 
@@ -595,7 +695,6 @@ class OnboardingWorkflow:
 
         # Merge product track state from child results
         merged_tracks: dict[str, Any] = dict(state.get("product_tracks") or {})
-        terminal = {"COMPLETE", "UNSUITABLE", "FAILED"}
         problematic = {"UNSUITABLE", "FAILED"}
 
         for res in product_results:
@@ -627,8 +726,16 @@ class OnboardingWorkflow:
           carries the decision; APPROVED → COMPLETE, REJECTED → ESCALATED.
         Both signal types are accepted so either path unblocks the workflow.
         """
+        SLAHook.on_stage_entered(state.get("case_id", ""), "REVIEW", None)
+
+        dispatch = self._dispatcher.resolve("REVIEW", state) if self._dispatcher else None
+        collab_fn = (
+            _ACTIVITY_LOOKUP.get(dispatch.activity_name, collaboration_kickoff_activity)
+            if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
+            else collaboration_kickoff_activity
+        )
         await workflow.execute_activity(
-            collaboration_kickoff_activity,
+            collab_fn,
             state,
             schedule_to_close_timeout=timedelta(minutes=5),
             retry_policy=_NO_RETRY,
@@ -657,16 +764,25 @@ class OnboardingWorkflow:
 
     async def _handle_complete(self, state: OnboardingStateDict) -> OnboardingStateDict:
         """Provision accounts and send completion notifications."""
+        SLAHook.on_stage_entered(state.get("case_id", ""), "COMPLETE", None)
+
         result = await workflow.execute_activity(
             completion_activity,
             state,
             schedule_to_close_timeout=timedelta(minutes=10),
             retry_policy=_STANDARD_RETRY,
         )
-        # Completion notifications
+
+        # Completion notifications via dispatcher-selected activity
+        dispatch = self._dispatcher.resolve("COMPLETE", state) if self._dispatcher else None
+        notif_fn = (
+            _ACTIVITY_LOOKUP.get(dispatch.activity_name, notification_activity)
+            if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
+            else notification_activity
+        )
         for tmpl in ("onboarding_complete", "onboarding_complete_inapp"):
             await workflow.execute_activity(
-                notification_activity,
+                notif_fn,
                 {**result, "_notification_payload": {"template": tmpl}},
                 schedule_to_close_timeout=timedelta(minutes=2),
                 retry_policy=_NO_RETRY,
@@ -681,8 +797,16 @@ class OnboardingWorkflow:
         The workflow waits for human_review_completed or advance_stage.
         If no signal arrives within 90 days the workflow exits.
         """
+        SLAHook.on_stage_entered(state.get("case_id", ""), "ESCALATED", None)
+
+        dispatch = self._dispatcher.resolve("ESCALATED", state) if self._dispatcher else None
+        escalation_fn = (
+            _ACTIVITY_LOOKUP.get(dispatch.activity_name, escalation_alert_activity)
+            if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
+            else escalation_alert_activity
+        )
         await workflow.execute_activity(
-            escalation_alert_activity,
+            escalation_fn,
             state,
             schedule_to_close_timeout=timedelta(minutes=5),
             retry_policy=_NO_RETRY,
@@ -713,12 +837,3 @@ class OnboardingWorkflow:
             return {**state, "stage": signal.to_stage}
 
         return {**state, "stage": "ESCALATED"}
-
-
-@activity.defn(name="contact_centre_summary_activity")
-async def _contact_centre_summary_activity(state: OnboardingStateDict) -> OnboardingStateDict:
-    """Generate contact-centre status summary for the case."""
-    from app.agents.contact_centre.graph import build_contact_centre_graph
-
-    graph = build_contact_centre_graph()
-    return await graph.ainvoke(state)

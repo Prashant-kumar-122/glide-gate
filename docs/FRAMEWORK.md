@@ -320,6 +320,37 @@ async with AsyncSessionLocal() as session:
     # domain.stages, domain.transitions, domain.task_routing, ...
 ```
 
+### StageDispatcher (Phase 3+)
+
+`backend/app/services/orchestration/stage_dispatcher.py`
+
+Replaces the hardcoded if/elif stage-routing chain that previously lived in
+`orchestrator_agent.py`.  Given a `stage_code` and a `DomainDefinition`, the dispatcher
+returns the Temporal activity name to invoke — driven by `domain_task_routing` data.
+
+```python
+from app.services.orchestration.stage_dispatcher import StageDispatcher, SLAHook
+
+dispatcher = StageDispatcher(domain_def)
+dispatch = dispatcher.resolve("KYC", state)
+# dispatch.activity_name == "kyc_compliance_activity"
+# dispatch.action_spec.priority == "HIGH"
+
+fn = _ACTIVITY_LOOKUP[dispatch.activity_name]
+result = await workflow.execute_activity(fn, state, ...)
+```
+
+**`_TASK_TYPE_TO_ACTIVITY_NAME` registry** maps `task_type` values from `domain_task_routing`
+rows to `@activity.defn` name strings.  To add a new task type (e.g. in Phase 6), add one entry.
+
+**`SLAHook.on_stage_entered(case_id, stage_code, domain_def)`** — called at the top of every
+`_handle_*` method in `OnboardingWorkflow`.  Phase 3: synchronous no-op stub.  Phase 5 activates
+the real Temporal Timer; the call site will be replaced by a Temporal activity call.
+
+**`load_domain_definition_activity`** — Temporal activity that loads `DomainDefinition` from DB
+once at workflow start and returns a JSON-serializable dict.  On Temporal replay the stored
+history result is returned (no DB re-query), preserving determinism.
+
 ### DecisionLogService (Phase 2.5+)
 
 `backend/app/services/audit/decision_log_service.py`

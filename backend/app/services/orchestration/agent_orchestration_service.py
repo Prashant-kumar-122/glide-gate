@@ -300,6 +300,14 @@ class AgentOrchestrationService:
                     "pydantic",
                     "pydantic_core",
                     "loguru",
+                    # app.services.orchestration is passed through so the sandbox
+                    # reuses the outer-process module cache instead of re-importing
+                    # it.  Re-importing triggers __init__.py → journey_resumption_service
+                    # → app.database → app.config → Settings() → pydantic_settings
+                    # → Path.expanduser(), which the sandbox restricts.
+                    # stage_dispatcher.py itself is pure deterministic Python, so
+                    # passing the whole package through is safe.
+                    "app.services.orchestration",
                 )
             ),
         )

@@ -79,7 +79,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | ADR | Decision | CADF Phase | Status | Artifact(s) |
 |---|---|---|---|---|
 | ADR-001 | Self-host Temporal for durable orchestration | Phase 0.5 | ✅ | `docker-compose.yml` Temporal service; `OnboardingWorkflow` |
-| ADR-002 | Criteria-driven blackboard activation (no static graph) | Phase 3, Phase 4.6 | ⬜ | `StageDispatcher`; `ActivationGateService` OPA evaluation |
+| ADR-002 | Criteria-driven blackboard activation (no static graph) | Phase 3, Phase 4.6 | 🟡 | `StageDispatcher` (Phase 3 ✅); `ActivationGateService` OPA evaluation (Phase 4.6 ⬜) |
 | ADR-003 | Bespoke differentiators + OSS commodity | All phases | 🟡 | Monorepo + docker-compose |
 | ADR-004 | Polyglot — Python/LangGraph agents (JVM deferred) | Phase 0.5 | ✅ | LangGraph `StateGraph` per agent; ADR-009 formalizes Python-first |
 | ADR-005 | Dual-AZ active-active + DR | Phase 13 | ⬜ | Helm `values-prod.yaml`; DR runbook |
@@ -100,7 +100,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 1 | DB-backed DomainDefinition model | ✅ |
 | Phase 2 | Split OnboardingState into typed core + extension bag | ✅ |
 | Phase 2.5 | Hash-chain audit log (FR-AU-01) | ✅ |
-| Phase 3 | Config-driven StageDispatcher | ⬜ |
+| Phase 3 | Config-driven StageDispatcher | ✅ |
 | Phase 4 | Config-driven products + per-product agent pipelines | ⬜ |
 | Phase 4.5 | Shared-core document taxonomy (FR-DM-01/02/03) | ⬜ |
 | Phase 4.6 | First-to-complete activation gate (FR-GL-01/02/03) | ⬜ |

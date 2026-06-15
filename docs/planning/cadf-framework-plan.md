@@ -11,7 +11,7 @@
 - [x] **Phase 1** — Design the DB-backed DomainDefinition model
 - [x] **Phase 2** — Split OnboardingState into typed core + extension bag
 - [x] **Phase 2.5** — Hash-chain audit log (FR-AU-01 / BSA compliance)
-- [ ] **Phase 3** — Replace if/elif stage routing with config-driven StageDispatcher
+- [x] **Phase 3** — Replace if/elif stage routing with config-driven StageDispatcher
 - [ ] **Phase 4** — Make products, questions, and per-product agent pipelines config-driven
 - [ ] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03)
 - [ ] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)

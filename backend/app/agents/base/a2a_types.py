@@ -254,6 +254,7 @@ class OnboardingWorkflowInput(BaseModel):
     client_name: str = ""
     client_email: str = ""
     case_name: str = ""
+    domain_code: str = "wealth_management"  # Phase 3: selects the DomainDefinition to load
 
 
 class OnboardingWorkflowResult(BaseModel):
