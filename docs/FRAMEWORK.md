@@ -34,7 +34,7 @@ glide-gate/
 │   │   ├── services/            # Business logic services
 │   │   ├── workflows/           # Temporal workflow definitions (Phase 0.5)
 │   │   └── main.py              # FastAPI app + startup
-│   ├── alembic/versions/        # 15+ DB migrations
+│   ├── alembic/versions/        # 15 DB migrations (0001–0015)
 │   └── tests/                   # unit / integration / e2e
 ├── frontend/
 │   ├── src/
@@ -251,21 +251,25 @@ async with AsyncSessionLocal() as db:
 
 This guarantees the node appears in the trace canvas regardless of serialization failures.
 
-### Open items — Phase 0.5 asyncio cleanup (pre-Phase 2)
+### Known tech debt — Phase 0.5 asyncio cleanup (still pending)
 
 The LangGraph migration preserved the old `BaseAgent` subclass bodies intact. The `process()`
 methods in `kyc_compliance_agent.py` and `orchestrator_agent.py` contain `asyncio.create_task`
-calls that were valid under the old asyncio substrate but are now unreachable from any Temporal
+calls that were valid under the old asyncio substrate but are now **unreachable** from any Temporal
 workflow or activity (the LangGraph graphs call internal helpers directly, bypassing `process()`).
 
-**Before Phase 2**, audit and remove the dead `asyncio.create_task` call sites in:
+These paths also reference flat `OnboardingState` attributes that no longer exist after Phase 2
+(e.g., `self._states[case_id].escalation_reason = reason` in `orchestrator_agent.py:412`) —
+safe only because the code paths are unreachable.
+
+**Still outstanding:** audit and remove the dead `asyncio.create_task` call sites in:
 - `agents/kyc_compliance/kyc_compliance_agent.py` lines 204–213
 - `agents/orchestrator/orchestrator_agent.py` lines 283, 353, 444
 
-Check `services/conversation/conversation_coordinator.py` and
-`services/orchestration/journey_resumption_service.py` first — if those have been migrated to
-Temporal Signals, the old `process()` method bodies can be deleted. Do not delete the classes;
-the LangGraph graphs still instantiate them for helper methods (`_simulate_*`, `_persist_*`).
+Verify `services/conversation/conversation_coordinator.py` and
+`services/orchestration/journey_resumption_service.py` have been migrated to Temporal Signals
+before deleting. Do not delete the agent classes — the LangGraph graphs still instantiate them
+for helper methods (`_simulate_*`, `_persist_*`).
 
 Full detail in `docs/planning/cadf-framework-plan.md` §Phase 0.5 Known debt.
 
