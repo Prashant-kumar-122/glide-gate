@@ -34,7 +34,7 @@ glide-gate/
 │   │   ├── services/            # Business logic services
 │   │   ├── workflows/           # Temporal workflow definitions (Phase 0.5)
 │   │   └── main.py              # FastAPI app + startup
-│   ├── alembic/versions/        # 15 DB migrations (0001–0015)
+│   ├── alembic/versions/        # 16 DB migrations (0001–0016)
 │   └── tests/                   # unit / integration / e2e
 ├── frontend/
 │   ├── src/
@@ -320,6 +320,34 @@ async with AsyncSessionLocal() as session:
     # domain.stages, domain.transitions, domain.task_routing, ...
 ```
 
+### DecisionLogService (Phase 2.5+)
+
+`backend/app/services/audit/decision_log_service.py`
+
+Every agent decision and compliance event must call `DecisionLogService.append()`. This is the
+tamper-evident compliance trail — distinct from `EventLog` (operational telemetry).
+
+```python
+from app.services.audit.decision_log_service import decision_log_service, DecisionLogEntry
+
+await decision_log_service.append(DecisionLogEntry(
+    agent_id="kyc_compliance",
+    event_type="KYC_PASSED",
+    payload={"case_id": str(case_id), "risk_band": "LOW"},
+    case_id=case_id,
+    client_id=client_id,
+    is_compliance_event=True,
+))
+```
+
+**Chain structure:** `payload_hash = SHA-256(canonical JSON)`;
+`chain_hash = SHA-256(prev_chain_hash + payload_hash)`. Genesis `prev_hash = '0' * 64`.
+
+**WORM:** `DecisionLogService` has no `update()` or `delete()`. In production, revoke
+`UPDATE`/`DELETE` on `decision_log` from the app DB role (see migration `0016_decision_log.py`).
+
+**Verify integrity:** `GET /audit/verify` — returns `{valid, total, broken_at_seq}`.
+
 ### Adding a migration
 
 ```bash
@@ -345,7 +373,7 @@ Update `docs/FRAMEWORK.md` §Data Model for any structural change.
 | reviews | `/reviews` | KYC/compliance review workflow |
 | sales_reviews | `/sales-reviews` | Sales manager approval |
 | clients | `/clients` | Client profile CRUD |
-| audit | `/audit` | Audit log queries, `/verify`, `/export` (Phase 2.5) |
+| audit | `/audit` | `GET /audit/logs` (EventLog), `GET /audit/verify` (chain integrity), `GET /cases/{id}/audit` (decision log), `GET /audit/export` (BSA CSV/JSON) |
 | domain_config | `/api/config/domain` | Domain vocabulary (Phase 10) |
 | admin/* | `/admin/` | Admin portal CRUD (Phase 9) |
 

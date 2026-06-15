@@ -39,9 +39,9 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-CP-03 | Real-time notifications | Existing | 🟡 | `NotificationAgent`, socket.io; push notifications |
 | FR-CP-04 | Collect-once document list per product | Phase 4.5 | ⬜ | `DocumentRequirementsCenter.tsx`, `GET /cases/{id}/requirements` |
 | FR-CP-06 | E-signature & consent capture | Deferred (Phase 9+) | ⬜ | Planned for Phase 9 admin portal; consent endpoint TBD |
-| FR-AU-01 | Immutable, hash-chained audit trail | Phase 2.5 | ⬜ | `decision_log` table; `DecisionLogService`; SHA-256 chain |
+| FR-AU-01 | Immutable, hash-chained audit trail | Phase 2.5 | ✅ | `decision_log` table (migration 0016); `DecisionLogService`; SHA-256 chain; `GET /audit/verify` |
 | FR-AU-02 | Capture human override identity/reason/time | Phase 7 | ⬜ | `HUMAN_OVERRIDE` entries in `decision_log` with resolver identity |
-| FR-AU-03 | Operational/compliance reports, exportable | Phase 2.5 | ⬜ | `GET /cases/{id}/audit`, `GET /audit/export` |
+| FR-AU-03 | Operational/compliance reports, exportable | Phase 2.5 | ✅ | `GET /cases/{id}/audit` (paginated, hash-visible); `GET /audit/export` (CSV+JSON) |
 | FR-AU-04 | Adverse-action records on credit decline (ECOA) | Phase 4.6 | ⬜ | `product_activation.is_adverse_action`; `decision_log` regulatory entry |
 
 ---
@@ -53,9 +53,9 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | NFR-01 | Encryption + RBAC + least-privilege + secrets | Phase 7 | 🟡 | `require_permission()`; JWT auth; SPIFFE/Vault deferred |
 | NFR-02 | Crash recovery and workflow resumption | Phase 0.5 | ✅ | Temporal durable workflows; `OnboardingWorkflow` resumes from last activity checkpoint |
 | NFR-03 | 99.95% availability; RTO ≤ 15 min; RPO ≈ 0 | Phase 13 | ⬜ | Helm dual-AZ topology; DR runbook |
-| NFR-06 | Decisions explainable/reproducible from logs | Phase 2.5 | ⬜ | `decision_log` captures inputs/rationale/agent version per decision |
+| NFR-06 | Decisions explainable/reproducible from logs | Phase 2.5 | ✅ | `decision_log` captures inputs/rationale/agent version per decision; `GET /audit/verify` confirms chain integrity |
 | NFR-07 | Idempotent, retryable integration calls | Phase 6 | ⬜ | `MCPRegistry` idempotency key + bounded retries (Temporal retry policy) |
-| NFR-08 | US residency + BSA 5-yr retention | Phase 2.5, Phase 13 | ⬜ | `decision_log` WORM semantics; retention policy in Ops phase |
+| NFR-08 | US residency + BSA 5-yr retention | Phase 2.5, Phase 13 | 🟡 | `decision_log` WORM semantics enforced at app layer (`DecisionLogService` has no update/delete); `is_regulatory_breach` field; DB-role REVOKE documented in migration 0016; retention policy in Phase 13 |
 | NFR-09 | WCAG 2.1 AA accessibility | Phase 10 | ⬜ | Playwright + axe checks on all frontend screens |
 | NFR-10 | Centralized OTel/Prometheus/Grafana/Loki/Tempo | Phase 13 | ⬜ | OTel SDK; `docker-compose.observability.yml`; Helm subchart |
 
@@ -69,8 +69,8 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | OBJ-2 | True parallel onboarding (all products concurrent) | Phase 0.5, Phase 4 | 🟡 |
 | OBJ-3 | Zero duplicate document requests | Phase 4.5 | ⬜ |
 | OBJ-4 | Admin-configurable domain (no engineer redeploy) | Phase 9 | ⬜ |
-| OBJ-5 | SLA enforcement with audit trail | Phase 5, Phase 2.5 | ⬜ |
-| OBJ-6 | Explainable, tamper-evident audit trail | Phase 2.5 | ⬜ |
+| OBJ-5 | SLA enforcement with audit trail | Phase 5, Phase 2.5 | 🟡 | Audit trail done (Phase 2.5); SLA enforcement in Phase 5 |
+| OBJ-6 | Explainable, tamper-evident audit trail | Phase 2.5 | ✅ | `decision_log` hash chain + `GET /audit/verify` tamper detection |
 
 ---
 
@@ -99,7 +99,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 0.5 | Migrate to Temporal + LangGraph | ✅ |
 | Phase 1 | DB-backed DomainDefinition model | ✅ |
 | Phase 2 | Split OnboardingState into typed core + extension bag | ✅ |
-| Phase 2.5 | Hash-chain audit log (FR-AU-01) | ⬜ |
+| Phase 2.5 | Hash-chain audit log (FR-AU-01) | ✅ |
 | Phase 3 | Config-driven StageDispatcher | ⬜ |
 | Phase 4 | Config-driven products + per-product agent pipelines | ⬜ |
 | Phase 4.5 | Shared-core document taxonomy (FR-DM-01/02/03) | ⬜ |

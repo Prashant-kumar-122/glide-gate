@@ -9,7 +9,7 @@ from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Produ
 from app.models.documents import Document
 from app.models.kyc_reviews import HumanReview, KYCCheck
 from app.models.sales_reviews import SalesManagerReview
-from app.models.agents import Agent, AgentTask, EventLog, MCPToolCall
+from app.models.agents import Agent, AgentTask, DecisionLog, EventLog, MCPToolCall
 from app.models.communications import (
     CaseSummary,
     CollaborationComment,
@@ -53,6 +53,7 @@ __all__ = [
     # agents
     "Agent",
     "AgentTask",
+    "DecisionLog",
     "EventLog",
     "MCPToolCall",
     # communications

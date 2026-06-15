@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
@@ -14,8 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.role_guard import require_role
 from app.database import get_db
-from app.models.agents import EventLog
+from app.models.agents import DecisionLog, EventLog
 from app.services.audit.audit_event_types import AuditEventType
+from app.services.audit.decision_log_service import decision_log_service
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
@@ -165,4 +167,173 @@ async def export_audit_logs_csv(
         _csv_generator(),
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ── Decision log response models ──────────────────────────────────────────────
+
+class DecisionLogEntryOut(BaseModel):
+    seq: int
+    case_id: UUID | None
+    client_id: UUID | None
+    agent_id: str
+    event_type: str
+    payload: dict[str, Any]
+    payload_hash: str
+    prev_hash: str
+    chain_hash: str
+    is_compliance_event: bool
+    is_regulatory_breach: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PaginatedDecisionLogOut(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    items: list[DecisionLogEntryOut]
+
+
+class ChainVerifyOut(BaseModel):
+    valid: bool
+    total: int
+    broken_at_seq: int | None
+
+
+# ── Decision log routes ───────────────────────────────────────────────────────
+
+@router.get("/verify", response_model=ChainVerifyOut)
+async def verify_chain(
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_role("compliance_officer", "admin")),
+) -> ChainVerifyOut:
+    """Walk the full decision_log chain and report whether it is intact."""
+    valid, total, broken_at_seq = await decision_log_service.verify_chain(db)
+    return ChainVerifyOut(valid=valid, total=total, broken_at_seq=broken_at_seq)
+
+
+@router.get("/cases/{case_id}/audit", response_model=PaginatedDecisionLogOut)
+async def get_case_decision_log(
+    case_id: UUID,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin", "sales_manager")),
+) -> PaginatedDecisionLogOut:
+    """Paginated decision log for a single case with chain hashes visible."""
+    base_q = (
+        select(DecisionLog)
+        .where(DecisionLog.case_id == case_id)
+        .order_by(DecisionLog.seq.asc())
+    )
+    count_result = await db.execute(base_q.with_only_columns(DecisionLog.seq))
+    total = len(count_result.scalars().all())
+
+    paged = base_q.offset((page - 1) * page_size).limit(page_size)
+    result = await db.execute(paged)
+    items = result.scalars().all()
+
+    return PaginatedDecisionLogOut(
+        total=total,
+        page=page,
+        page_size=page_size,
+        items=[DecisionLogEntryOut.model_validate(e) for e in items],
+    )
+
+
+@router.get("/export")
+async def export_decision_log(
+    case_id: UUID | None = Query(None),
+    compliance_only: bool = Query(False),
+    regulatory_only: bool = Query(False),
+    from_date: datetime | None = Query(None),
+    to_date: datetime | None = Query(None),
+    fmt: str = Query("csv", pattern="^(csv|json)$"),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_role("compliance_officer", "admin")),
+) -> StreamingResponse:
+    """BSA-compliant export of the decision_log (CSV or JSON) for compliance officers."""
+    query = select(DecisionLog).order_by(DecisionLog.seq.asc())
+
+    if case_id:
+        query = query.where(DecisionLog.case_id == case_id)
+    if compliance_only:
+        query = query.where(DecisionLog.is_compliance_event.is_(True))
+    if regulatory_only:
+        query = query.where(DecisionLog.is_regulatory_breach.is_(True))
+    if from_date:
+        query = query.where(DecisionLog.created_at >= from_date)
+    if to_date:
+        query = query.where(DecisionLog.created_at <= to_date)
+
+    result = await db.execute(query)
+    rows: list[DecisionLog] = result.scalars().all()
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+    if fmt == "json":
+        async def _json_generator():
+            yield "["
+            for i, row in enumerate(rows):
+                entry = {
+                    "seq": row.seq,
+                    "case_id": str(row.case_id) if row.case_id else None,
+                    "client_id": str(row.client_id) if row.client_id else None,
+                    "agent_id": row.agent_id,
+                    "event_type": row.event_type,
+                    "payload": row.payload,
+                    "payload_hash": row.payload_hash,
+                    "prev_hash": row.prev_hash,
+                    "chain_hash": row.chain_hash,
+                    "is_compliance_event": row.is_compliance_event,
+                    "is_regulatory_breach": row.is_regulatory_breach,
+                    "created_at": row.created_at.isoformat(),
+                }
+                yield json.dumps(entry)
+                if i < len(rows) - 1:
+                    yield ","
+            yield "]"
+
+        return StreamingResponse(
+            _json_generator(),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="decision_log_{ts}.json"'},
+        )
+
+    async def _csv_generator():
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            "seq", "created_at", "case_id", "client_id", "agent_id",
+            "event_type", "payload_hash", "prev_hash", "chain_hash",
+            "is_compliance_event", "is_regulatory_breach",
+        ])
+        yield buf.getvalue()
+        buf.seek(0)
+        buf.truncate()
+
+        for row in rows:
+            writer.writerow([
+                row.seq,
+                row.created_at.isoformat(),
+                str(row.case_id) if row.case_id else "",
+                str(row.client_id) if row.client_id else "",
+                row.agent_id,
+                row.event_type,
+                row.payload_hash,
+                row.prev_hash,
+                row.chain_hash,
+                str(row.is_compliance_event),
+                str(row.is_regulatory_breach),
+            ])
+            yield buf.getvalue()
+            buf.seek(0)
+            buf.truncate()
+
+    return StreamingResponse(
+        _csv_generator(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="decision_log_{ts}.csv"'},
     )

@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     ForeignKey,
@@ -84,8 +85,31 @@ class EventLog(Base):
     actor_role: Mapped[str | None] = mapped_column(String(50))
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     is_compliance_event: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_regulatory_breach: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     ip_address: Mapped[str | None] = mapped_column(String(45))
     user_agent: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class DecisionLog(Base):
+    """Append-only hash-chained audit trail for every agent decision and compliance event.
+
+    WORM semantics: no UPDATE or DELETE are ever called from DecisionLogService.
+    In production, revoke UPDATE/DELETE on this table from the app DB role.
+    """
+    __tablename__ = "decision_log"
+
+    seq: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    case_id: Mapped[UUID | None] = mapped_column(ForeignKey("onboarding_cases.id"), index=True)
+    client_id: Mapped[UUID | None] = mapped_column(ForeignKey("clients.id"), index=True)
+    agent_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    prev_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    chain_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    is_compliance_event: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_regulatory_breach: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
