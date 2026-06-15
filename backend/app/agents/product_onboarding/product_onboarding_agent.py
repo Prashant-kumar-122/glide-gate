@@ -99,6 +99,9 @@ async def _persist_product_finish(case_id: UUID, product_code: str, final_status
             cp.completed_at = datetime.utcnow()
             await db.commit()
 
+# ── Hardcoded fallbacks (used when domain_product_pipelines has no rows) ───────
+# Phase 4: these are now the fallback; domain_product_pipelines rows are canonical.
+
 _PRODUCT_STEPS: dict[str, list[str]] = {
     "cash_account": [
         "suitability_assessment",
@@ -133,6 +136,82 @@ _STEP_DURATIONS_MS: dict[str, tuple[int, int]] = {
     "account_provisioning": (300, 700),
     "welcome_kit": (100, 250),
 }
+
+
+# ── DB loaders (Phase 4) ───────────────────────────────────────────────────────
+
+
+async def _load_pipeline_from_db(
+    product_code: str,
+    domain_code: str = "wealth_management",
+) -> list[dict[str, Any]] | None:
+    """Return ordered list of {step_id, step_config} dicts from domain_product_pipelines.
+
+    Returns None if no rows exist so callers can fall back to hardcoded constants.
+    """
+    try:
+        from sqlalchemy import select
+        from app.database import AsyncSessionLocal
+        from app.models.domain import Domain, DomainProductPipeline
+
+        async with AsyncSessionLocal() as db:
+            domain_id = await db.scalar(
+                select(Domain.id).where(Domain.domain_code == domain_code)
+            )
+            if domain_id is None:
+                return None
+
+            rows = (await db.scalars(
+                select(DomainProductPipeline)
+                .where(
+                    DomainProductPipeline.domain_id == domain_id,
+                    DomainProductPipeline.product_code == product_code,
+                )
+                .order_by(DomainProductPipeline.step_order)
+            )).all()
+
+            if not rows:
+                return None
+
+            return [
+                {"step_id": r.step_id, "step_config": r.step_config or {}}
+                for r in rows
+            ]
+    except Exception:
+        return None
+
+
+async def _load_suitability_criteria_from_db(
+    product_code: str,
+    domain_code: str = "wealth_management",
+) -> dict[str, Any] | None:
+    """Return domain_products.suitability_criteria JSONB for the given product.
+
+    Returns None if not found so callers can fall back to hardcoded logic.
+    """
+    try:
+        from sqlalchemy import select
+        from app.database import AsyncSessionLocal
+        from app.models.domain import Domain, DomainProduct
+
+        async with AsyncSessionLocal() as db:
+            domain_id = await db.scalar(
+                select(Domain.id).where(Domain.domain_code == domain_code)
+            )
+            if domain_id is None:
+                return None
+
+            criteria = await db.scalar(
+                select(DomainProduct.suitability_criteria).where(
+                    DomainProduct.domain_id == domain_id,
+                    DomainProduct.product_code == product_code,
+                )
+            )
+            if not criteria:
+                return None
+            return dict(criteria)
+    except Exception:
+        return None
 
 
 class ProductOnboardingAgent(BaseAgent):
@@ -183,18 +262,35 @@ class ProductOnboardingAgent(BaseAgent):
                 errors=["payload.product_code is required"],
             )
 
-        steps = _PRODUCT_STEPS.get(product_code, _DEFAULT_STEPS)
-        total = len(steps)
+        # Phase 4: load steps from domain_product_pipelines; fall back to hardcoded.
+        db_steps = await _load_pipeline_from_db(product_code)
+        if db_steps:
+            steps_with_cfg: list[tuple[str, dict]] = [
+                (s["step_id"], s.get("step_config") or {}) for s in db_steps
+            ]
+        else:
+            fallback = _PRODUCT_STEPS.get(product_code, _DEFAULT_STEPS)
+            steps_with_cfg = [(name, {}) for name in fallback]
+
+        step_names = [s[0] for s in steps_with_cfg]
+        total = len(step_names)
         completed: list[dict[str, Any]] = []
 
         self.logger.info(
             f"Starting product onboarding: case={task.case_id} "
-            f"product={product_code} steps={total} resume_from={resume_from_step}"
+            f"product={product_code} steps={total} resume_from={resume_from_step} "
+            f"source={'db' if db_steps else 'hardcoded'}"
         )
 
-        await _persist_product_start(task.case_id, product_code, steps)
+        await _persist_product_start(task.case_id, product_code, step_names)
 
-        suitability = self._assessor.assess(product_code, client_data)
+        # Phase 4: load suitability criteria from domain_products; fall back to hardcoded.
+        criteria = await _load_suitability_criteria_from_db(product_code)
+        if criteria:
+            suitability = self._assessor.assess_with_criteria(product_code, client_data, criteria)
+        else:
+            suitability = self._assessor.assess(product_code, client_data)
+
         if not suitability.is_suitable:
             self.logger.warning(
                 f"Suitability FAILED for {product_code}: score={suitability.suitability_score}"
@@ -214,14 +310,15 @@ class ProductOnboardingAgent(BaseAgent):
                 },
             )
 
-        for idx, step_name in enumerate(steps):
+        for idx, (step_name, step_cfg) in enumerate(steps_with_cfg):
             if idx < resume_from_step:
                 completed.append({"step": step_name, "status": "SKIPPED_RESUME", "step_index": idx})
                 await _persist_step_done(task.case_id, product_code, step_name, idx, "SKIPPED")
                 continue
 
             step_result = await self._execute_step(
-                step_name, idx, product_code, client_data, suitability.model_dump()
+                step_name, idx, product_code, client_data, suitability.model_dump(),
+                step_config=step_cfg,
             )
             completed.append(step_result)
 
@@ -297,10 +394,14 @@ class ProductOnboardingAgent(BaseAgent):
         product_code: str,
         client_data: dict[str, Any],
         suitability: dict[str, Any],
+        step_config: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         import random
 
-        lo, hi = _STEP_DURATIONS_MS.get(step_name, (200, 600))
+        # Phase 4: prefer step_config latency from DB; fall back to hardcoded table.
+        _default_lo, _default_hi = _STEP_DURATIONS_MS.get(step_name, (200, 600))
+        lo = int((step_config or {}).get("min_ms", _default_lo))
+        hi = int((step_config or {}).get("max_ms", _default_hi))
         latency = random.uniform(lo / 1000, hi / 1000)
         await asyncio.sleep(latency)
 
