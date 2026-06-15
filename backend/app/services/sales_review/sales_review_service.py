@@ -65,7 +65,9 @@ class SalesReviewService:
             case.current_stage = "SALES_REVIEW"
             case.status = "SALES_REVIEW"
             ctx = case.shared_context or {}
-            ctx["sales_review_id"] = str(review.id)
+            _extra = dict(ctx.get("extra") or {})
+            _extra["sales_review_id"] = str(review.id)
+            ctx["extra"] = _extra
             ctx["current_stage"] = "SALES_REVIEW"
             case.shared_context = ctx
 
@@ -240,8 +242,10 @@ class SalesReviewService:
         case.current_stage = "REVIEW"
         case.status = "REVIEW"
         ctx = case.shared_context or {}
+        _extra = dict(ctx.get("extra") or {})
+        _extra["sales_review_decision"] = decision
+        ctx["extra"] = _extra
         ctx["current_stage"] = "REVIEW"
-        ctx["sales_review_decision"] = decision
         case.shared_context = ctx
         await db.commit()
 

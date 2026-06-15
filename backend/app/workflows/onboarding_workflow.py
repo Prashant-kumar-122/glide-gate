@@ -62,19 +62,22 @@ async def initialize_case_activity(input: OnboardingWorkflowInput) -> Onboarding
         "stage": state.stage,
         "selected_products": state.selected_products,
         "product_tracks": {},
+        "priority_tier": getattr(state, "priority_tier", "standard"),
         "client_data": {},
         "documents_required": [],
         "documents_received": [],
-        "kyc_status": "PENDING",
-        "kyc_risk_score": None,
-        "sales_review_id": None,
-        "sales_review_decision": "PENDING",
-        "escalation_reason": None,
-        "human_review_id": None,
         "version": state.version,
         "created_at": state.created_at.isoformat(),
         "updated_at": state.updated_at.isoformat(),
         "next_stage": None,
+        "extra": {
+            "kyc_status": "PENDING",
+            "kyc_risk_score": None,
+            "sales_review_id": None,
+            "sales_review_decision": "PENDING",
+            "escalation_reason": None,
+            "human_review_id": None,
+        },
     }
 
 
@@ -111,7 +114,7 @@ async def _log_kyc_decision(state: OnboardingStateDict) -> None:
     from app.models.cases import OnboardingCase
 
     case_id_str = state.get("case_id", "")
-    kyc_status = state.get("kyc_status", "PENDING")
+    kyc_status = (state.get("extra") or {}).get("kyc_status", "PENDING")
 
     if not case_id_str:
         return
@@ -139,12 +142,13 @@ async def _log_kyc_decision(state: OnboardingStateDict) -> None:
     try:
         from app.services.compliance.compliance_decision_logger import compliance_decision_logger
         client_id_str = state.get("client_id", "")
+        _extra = state.get("extra") or {}
         await compliance_decision_logger.log_automated_kyc_decision(
             case_id=UUID(case_id_str),
             client_id=UUID(client_id_str) if client_id_str else UUID(int=0),
             kyc_status=kyc_status,
             risk_band=state.get("_kyc_risk_band", "UNKNOWN"),
-            composite_score=float(state.get("kyc_risk_score") or 0.0),
+            composite_score=float(_extra.get("kyc_risk_score") or 0.0),
             identity_score=0.0,
             aml_score=0.0,
             profile_score=0.0,
@@ -203,7 +207,7 @@ async def escalation_alert_activity(state: OnboardingStateDict) -> OnboardingSta
     notif_state: OnboardingStateDict = {
         **state,
         "_notification_payload": {
-            "reason": state.get("escalation_reason", ""),
+            "reason": (state.get("extra") or {}).get("escalation_reason", ""),
             "risk_band": state.get("_kyc_risk_band", "UNKNOWN"),
             "evidence_packet_id": state.get("_kyc_evidence_packet_id", ""),
         },
@@ -222,7 +226,7 @@ async def escalation_alert_activity(state: OnboardingStateDict) -> OnboardingSta
                 await human_review_service.create_review(
                     case_id=UUID(case_id_str),
                     client_id=UUID(client_id_str),
-                    escalation_reason=state.get("escalation_reason", ""),
+                    escalation_reason=(state.get("extra") or {}).get("escalation_reason", ""),
                     kyc_payload={
                         "risk_band": state.get("_kyc_risk_band", ""),
                         "escalation_reasons": state.get("_kyc_escalation_reasons", []),
@@ -505,14 +509,16 @@ class OnboardingWorkflow:
         if self._advance_signals:
             signal = self._advance_signals.pop(0)
             next_stage = signal.to_stage
-            state = {**state, "stage": next_stage, "sales_review_decision": "APPROVED"}
+            extra = {**(state.get("extra") or {}), "sales_review_decision": "APPROVED"}
+            state = {**state, "stage": next_stage, "extra": extra}
         else:
             human_sig = self._human_signals.pop(0)
             if human_sig.decision in ("APPROVED", "MORE_INFO_REQUESTED"):
                 next_stage = "KYC"
             else:
                 next_stage = "ESCALATED"
-            state = {**state, "stage": next_stage, "sales_review_decision": human_sig.decision}
+            extra = {**(state.get("extra") or {}), "sales_review_decision": human_sig.decision}
+            state = {**state, "stage": next_stage, "extra": extra}
 
         await workflow.execute_activity(
             persist_stage_activity,
@@ -530,8 +536,9 @@ class OnboardingWorkflow:
             schedule_to_close_timeout=timedelta(minutes=30),
             retry_policy=_STANDARD_RETRY,
         )
+        _result_extra = result.get("extra") or {}
         next_stage = result.get("next_stage") or (
-            "PARALLEL_PRODUCTS" if result.get("kyc_status") == "PASSED" else "ESCALATED"
+            "PARALLEL_PRODUCTS" if _result_extra.get("kyc_status") == "PASSED" else "ESCALATED"
         )
         state = {**result, "stage": next_stage}
         await workflow.execute_activity(
@@ -544,10 +551,10 @@ class OnboardingWorkflow:
         # Send KYC outcome notifications
         selected_products = state.get("selected_products", [])
         client_id = state.get("client_id", "")
-        if result.get("kyc_status") in ("PASSED", "FAILED"):
+        if _result_extra.get("kyc_status") in ("PASSED", "FAILED"):
             templates = (
                 [("kyc_passed", "NORMAL")]
-                if result.get("kyc_status") == "PASSED"
+                if _result_extra.get("kyc_status") == "PASSED"
                 else [("kyc_failed", "HIGH"), ("kyc_failed_inapp", "HIGH")]
             )
             for tmpl, priority in templates:

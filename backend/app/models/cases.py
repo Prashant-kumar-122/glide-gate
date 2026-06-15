@@ -34,6 +34,7 @@ class OnboardingCase(Base):
     selected_products: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     shared_context: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     assigned_advisor_id: Mapped[UUID | None] = mapped_column(index=True)
+    priority_tier: Mapped[str] = mapped_column(String(50), nullable=False, default="standard")
     sla_deadline: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)

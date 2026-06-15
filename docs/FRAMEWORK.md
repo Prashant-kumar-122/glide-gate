@@ -188,6 +188,26 @@ DirectTaskWorkflow (short-lived, one per fire-and-forget task)
 5. No changes to `OnboardingWorkflow` routing or any existing agent.
 6. Update `docs/FRAMEWORK.md` §Agent inventory and `docs/TRACEABILITY.md`
 
+### OnboardingState layout (Phase 2+)
+
+`OnboardingState` (`a2a_types.py`) splits into a **generic typed core** and a domain-specific
+**extension bag**:
+
+| Layer | Fields | Access pattern |
+|---|---|---|
+| Typed core | `case_id`, `client_id`, `stage`, `selected_products`, `product_tracks`, `priority_tier`, `client_data`, `documents_*`, `version`, timestamps | Direct attributes (`state.stage`, `state.priority_tier`) |
+| Extension bag | `extra: dict[str, Any]` (JSONB-backed) | `WealthExtension.from_state(state).kyc_status` |
+
+Wealth-specific fields (`kyc_status`, `kyc_risk_score`, `sales_review_id`,
+`sales_review_decision`, `escalation_reason`, `human_review_id`) live in `extra`.
+
+**Backward compatibility:** A `model_validator` on `OnboardingState` migrates old flat
+`shared_context` rows (pre-Phase-2) into `extra` automatically on load — no data migration needed.
+
+`OnboardingStateDict` (the LangGraph TypedDict) mirrors this: `extra: dict[str, Any]` replaces
+the old top-level wealth fields. `_product_code` and `_product_track_status` **must** stay in the
+typed core (Temporal payload codec strips undeclared keys).
+
 ### Temporal activity constraints (known gotchas)
 
 These rules apply to every LangGraph node that runs inside a Temporal activity.
@@ -257,7 +277,7 @@ Full detail in `docs/planning/cadf-framework-plan.md` §Phase 0.5 Known debt.
 
 | Table | Purpose | Phase added |
 |---|---|---|
-| `onboarding_cases` | Central case record | Initial |
+| `onboarding_cases` | Central case record (`priority_tier` added Phase 2) | Initial + 2 |
 | `clients` | Client profile | Initial |
 | `products` | Product catalog (JSONB step_sequence, suitability_criteria) | Initial |
 | `onboarding_questions` | Per-product questionnaire | Initial |

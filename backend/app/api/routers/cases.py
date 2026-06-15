@@ -519,7 +519,7 @@ async def get_case_summary(
         documents_received=received,
         documents_approved=approved,
         products=[_build_product_track(cp) for cp in case.case_products],
-        kyc_status=ctx.get("kyc_status"),
+        kyc_status=(ctx.get("extra") or {}).get("kyc_status"),
         escalated=escalated,
         is_institutional=is_institutional,
     )

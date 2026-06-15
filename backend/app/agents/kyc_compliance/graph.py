@@ -81,10 +81,10 @@ async def _run_kyc_node(state: OnboardingStateDict) -> OnboardingStateDict:
         )
         await agent._persist_agent_task(task_packet, response, duration_ms)
 
+    extra = {**(state.get("extra") or {}), "kyc_status": kyc_status, "kyc_risk_score": float(risk_score.composite_score)}
     return {
         **state,
-        "kyc_status": kyc_status,
-        "kyc_risk_score": float(risk_score.composite_score),
+        "extra": extra,
         "next_stage": next_stage,
         "_kyc_evidence_packet_id": str(evidence.packet_id),
         "_kyc_escalation_reasons": checkpoint.escalation_reasons,

@@ -17,11 +17,12 @@ import pytest
 def test_onboarding_state_dict_importable() -> None:
     from app.agents.base.a2a_types import OnboardingStateDict
 
+    # Phase 2: wealth-specific fields moved to `extra`; priority_tier added to core
     required_keys = {
         "case_id", "client_id", "stage", "selected_products",
-        "product_tracks", "kyc_status", "kyc_risk_score",
-        "sales_review_id", "sales_review_decision", "escalation_reason",
-        "human_review_id", "version", "created_at", "updated_at",
+        "product_tracks", "priority_tier", "extra",
+        "version", "created_at", "updated_at",
+        "_product_code", "_product_track_status",
     }
     missing = required_keys - OnboardingStateDict.__annotations__.keys()
     assert not missing, f"OnboardingStateDict missing fields: {missing}"

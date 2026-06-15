@@ -32,9 +32,10 @@ async def _summarise_status_node(state: OnboardingStateDict) -> OnboardingStateD
         "client_data": state.get("client_data", {}),
     }
     # Use SUMMARISE_CALL on escalation
-    if state.get("escalation_reason"):
+    _escalation_reason = (state.get("extra") or {}).get("escalation_reason")
+    if _escalation_reason:
         task_type = TaskType.SUMMARISE_CALL
-        payload["onboarding_state"]["escalation_reason"] = state.get("escalation_reason")
+        payload["onboarding_state"]["escalation_reason"] = _escalation_reason
 
     packet = TaskPacket(
         from_agent=AgentID.ORCHESTRATOR,
