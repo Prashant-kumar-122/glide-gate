@@ -325,23 +325,45 @@ async with AsyncSessionLocal() as session:
 `backend/app/services/orchestration/stage_dispatcher.py`
 
 Replaces the hardcoded if/elif stage-routing chain that previously lived in
-`orchestrator_agent.py`.  Given a `stage_code` and a `DomainDefinition`, the dispatcher
-returns the Temporal activity name to invoke — driven by `domain_task_routing` data.
+`orchestrator_agent.py`.  Given a `stage_code` and the domain routing data, the dispatcher
+returns the Temporal activity name to invoke — driven by `domain_task_routing` rows.
+
+**Construction — two paths:**
 
 ```python
 from app.services.orchestration.stage_dispatcher import StageDispatcher, SLAHook
 
-dispatcher = StageDispatcher(domain_def)
+# In workflow code (inside OnboardingWorkflow.run()):
+#   domain_dict is the raw dict returned by load_domain_definition_activity — no SQLAlchemy import
+dispatcher = StageDispatcher.from_domain_dict(domain_dict)
+
+# In test / non-workflow code (passes a DomainDefinition Pydantic model):
+dispatcher = StageDispatcher.from_domain_def(domain_def)
+
 dispatch = dispatcher.resolve("KYC", state)
 # dispatch.activity_name == "kyc_compliance_activity"
+# dispatch.action_spec.task_type == "run_kyc_check"
 # dispatch.action_spec.priority == "HIGH"
 
 fn = _ACTIVITY_LOOKUP[dispatch.activity_name]
 result = await workflow.execute_activity(fn, state, ...)
 ```
 
+**Why two constructors?**  `StageDispatcher` works internally with plain dicts to avoid importing
+`domain_definition.py` (which imports SQLAlchemy) inside the Temporal workflow sandbox.
+`SandboxedWorkflowRunner` re-imports the workflow module in a restricted environment; SQLAlchemy
+is not in the passthrough list. `from_domain_dict` accepts the raw `model_dump()` output from
+`load_domain_definition_activity`, keeping the workflow sandbox clean.
+
+**Temporal sandbox passthrough** — importing `stage_dispatcher` from `app.services.orchestration`
+triggers `__init__.py` → `journey_resumption_service` → `app.database` → `app.config` →
+`Settings()` → `pydantic_settings` → `Path.expanduser()` (restricted).  The worker adds
+`"app.services.orchestration"` to `SandboxRestrictions.default.with_passthrough_modules(...)` so
+the sandbox reuses the outer process's already-loaded module cache instead of re-importing.
+
 **`_TASK_TYPE_TO_ACTIVITY_NAME` registry** maps `task_type` values from `domain_task_routing`
-rows to `@activity.defn` name strings.  To add a new task type (e.g. in Phase 6), add one entry.
+rows to `@activity.defn` name strings.  To add a new task type (e.g. in Phase 6), add one entry —
+no workflow code changes required.
 
 **`SLAHook.on_stage_entered(case_id, stage_code, domain_def)`** — called at the top of every
 `_handle_*` method in `OnboardingWorkflow`.  Phase 3: synchronous no-op stub.  Phase 5 activates
