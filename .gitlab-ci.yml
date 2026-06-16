@@ -91,6 +91,7 @@ build:
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
+        docker system prune -f &&
         cd /home/ubuntu/office_project/glidegate &&
         DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
         docker tag glidegate_backend:latest glidegate_backend:$CI_COMMIT_SHORT_SHA &&
@@ -156,6 +157,7 @@ build-keycloke-sso:
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
+        docker system prune -f &&
         cd /home/ubuntu/office_project/glidegate &&
         DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
         docker tag glidegate_backend:latest glidegate_backend:$CI_COMMIT_SHORT_SHA &&
@@ -226,6 +228,7 @@ build-feature:
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
+        docker system prune -f &&
         cd /home/ubuntu/office_project/glidegate &&
         git fetch origin &&
         git reset --hard origin/$CI_COMMIT_REF_NAME &&
@@ -274,6 +277,7 @@ build-main:
     - echo "   Commit - $CI_COMMIT_SHORT_SHA"
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
+        docker system prune -f &&
         cd /home/ubuntu/office_project/glidegate &&
         DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
         docker tag glidegate_backend:latest glidegate_backend:$CI_COMMIT_SHORT_SHA &&
