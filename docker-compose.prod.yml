@@ -27,10 +27,6 @@ services:
     container_name: glide_gate_keycloak
     command: start-dev --import-realm
     environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
-      KC_DB_USERNAME: ${DB_USER:-postgres}
-      KC_DB_PASSWORD: ${DB_PASSWORD:-Root}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-copskeycloke122}
       KC_HTTP_PORT: 8080
@@ -38,6 +34,7 @@ services:
       KC_HTTP_ENABLED: "true"
     volumes:
       - ./scripts/keycloak:/opt/keycloak/data/import
+      - keycloak_data:/opt/keycloak/data
     ports:
       - "8080:8080"
     depends_on:
@@ -110,6 +107,7 @@ services:
 
 volumes:
   glide_gate_postgres_data:
+  keycloak_data:
 
 networks:
   glide_gate_network:
