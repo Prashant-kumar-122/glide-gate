@@ -115,7 +115,13 @@ async def get_current_user(
         token = request.cookies.get(settings.AUTH_COOKIE_NAME)
 
     if token:
-        if settings.AUTH_PROVIDER == "keycloak":
+        # Auto-detect by algorithm: RS256 = Keycloak JWKS, HS256 = local DB users
+        try:
+            alg = jwt.get_unverified_header(token).get("alg", "HS256")
+        except Exception:
+            alg = "HS256"
+
+        if alg == "RS256":
             return _decode_keycloak_jwt(token)
         return _decode_jwt(token)
 
