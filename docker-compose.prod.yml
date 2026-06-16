@@ -25,7 +25,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.0
     container_name: glide_gate_keycloak
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
@@ -36,6 +36,8 @@ services:
       KC_HTTP_PORT: 8080
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./scripts/keycloak:/opt/keycloak/data/import
     ports:
       - "8080:8080"
     depends_on:

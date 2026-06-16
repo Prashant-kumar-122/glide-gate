@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import type { TokenResponse, UserOut } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import type { AuthUser } from '@/store/authStore'
+import { getStoredToken, clearStoredToken, keycloakLogout } from '@/lib/authConfig'
 
 // Query keys
 export const authQk = {
@@ -79,8 +80,18 @@ export function useLogout() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: () => api.post('/auth/logout'),
+    mutationFn: async () => {
+      if (getStoredToken()) {
+        // Keycloak session — redirect to KC logout (terminates SSO session)
+        qc.clear()
+        clearAuth()
+        keycloakLogout()
+        return
+      }
+      await api.post('/auth/logout')
+    },
     onSettled: () => {
+      clearStoredToken()
       qc.clear()
       clearAuth()
       navigate('/login')
@@ -123,15 +134,23 @@ export function useUpdateProfile() {
   })
 }
 
-// Validates the session cookie on app startup. If the cookie has expired or is
-// absent the backend returns 401, which clears auth store and redirects to /login.
+// Validates the session on app startup (cookie for local auth, Bearer for Keycloak).
+// Clears auth store if the token/cookie is absent or expired.
 export function useAuthInit() {
   const { setAuth, clearAuth } = useAuthStore()
 
   useEffect(() => {
-    api.get<UserOut>('/auth/me')
+    const kcToken = getStoredToken()
+    const req = kcToken
+      ? api.get<UserOut>('/auth/me', { headers: { Authorization: `Bearer ${kcToken}` } })
+      : api.get<UserOut>('/auth/me')
+
+    req
       .then((res) => setAuth(toAuthUser(res.data)))
-      .catch(() => clearAuth())
+      .catch(() => {
+        clearStoredToken()
+        clearAuth()
+      })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 }

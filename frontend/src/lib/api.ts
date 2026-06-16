@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { DocumentStatus } from '@/design-system/tokens'
 import { useAuthStore } from '@/store/authStore'
+import { getStoredToken } from '@/lib/authConfig'
 
 export const api = axios.create({
   baseURL: '/api',
@@ -15,6 +16,12 @@ function getCsrfToken(): string | undefined {
 }
 
 api.interceptors.request.use((config) => {
+  // Keycloak Bearer token (takes precedence over httpOnly cookie for SSO sessions)
+  const kcToken = getStoredToken()
+  if (kcToken && !config.headers['Authorization']) {
+    config.headers['Authorization'] = `Bearer ${kcToken}`
+  }
+
   const method = config.method?.toLowerCase()
   if (method && ['post', 'put', 'patch', 'delete'].includes(method)) {
     const csrf = getCsrfToken()
