@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { exchangeCodeForToken, storeToken } from '@/lib/authConfig'
 import { api } from '@/lib/api'
@@ -16,8 +16,12 @@ export default function AuthCallback() {
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
   const [error, setError] = useState<string | null>(null)
+  const attempted = useRef(false)
 
   useEffect(() => {
+    if (attempted.current) return
+    attempted.current = true
+
     const params  = new URLSearchParams(window.location.search)
     const code    = params.get('code')
     const errParam = params.get('error')
