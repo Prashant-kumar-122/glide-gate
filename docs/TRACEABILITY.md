@@ -22,7 +22,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-OR-01 | Run product onboardings concurrently | Phase 0.5, Phase 4 | 🟡 | Temporal child workflows per product (`ProductOnboardingWorkflow`) |
 | FR-OR-02 | Single client master linking journeys | Existing | ✅ | `Client` model, `OnboardingCase.client_id` FK |
 | FR-OR-03 | Share shared-core results across journeys | Phase 4.5 | ⬜ | Document scope + `GET /cases/{id}/requirements` reuse map |
-| FR-OR-04 | Delay in one product never blocks another | Phase 0.5, Phase 4.6 | 🟡 | Independent Temporal child workflows; per-product activation state (Phase 4.6 adds activation gate) |
+| FR-OR-04 | Delay in one product never blocks another | Phase 0.5, Phase 4.6 | ✅ | Independent Temporal child workflows; per-product activation gate (`ActivationGateService`); products activate independently; `ParallelProductTracks.tsx` "First Live" badge |
 | FR-OR-05 | Unified multi-product status view | Existing | 🟡 | `GET /cases/{id}` status; `ParallelProductTracks.tsx` |
 | FR-AG-01 | Agents autonomously progress the workflow | Phase 0.5 | ✅ | `OnboardingWorkflow` Temporal FSM + LangGraph `StateGraph` per agent |
 | FR-AG-02 | Autonomous document collection and validation | Existing | 🟡 | `DocumentIntelligenceAgent`, `CustomerServiceAgent` |
@@ -65,7 +65,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 
 | OBJ | Metric | CADF Phase | Status |
 |---|---|---|---|
-| OBJ-1 | Time to first live product | Phase 4.6 | ⬜ |
+| OBJ-1 | Time to first live product | Phase 4.6 | ✅ |
 | OBJ-2 | True parallel onboarding (all products concurrent) | Phase 0.5, Phase 4 | 🟡 |
 | OBJ-3 | Zero duplicate document requests | Phase 4.5 | ⬜ |
 | OBJ-4 | Admin-configurable domain (no engineer redeploy) | Phase 9 | ⬜ |

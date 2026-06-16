@@ -203,7 +203,7 @@
           <tr><td>CIP / CDD</td><td>Identity verification + beneficial ownership</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>OFAC</td><td>Sanctions screening via MCP gateway</td><td><span class="badge badge-planned">Phase 6</span></td></tr>
           <tr><td>GLBA</td><td>Privacy notices + data minimization</td><td><span class="badge badge-planned">Planned</span></td></tr>
-          <tr><td>ECOA</td><td>Adverse-action notices on credit decline</td><td><span class="badge badge-planned">Phase 4.6</span></td></tr>
+          <tr><td>ECOA</td><td>Adverse-action notices on credit decline</td><td><span class="badge badge-done">✅ Phase 4.6</span></td></tr>
           <tr><td>SEC / FINRA</td><td>Suitability / Reg BI at account opening</td><td><span class="badge badge-partial">Partial</span></td></tr>
         </tbody>
       </table>
@@ -232,13 +232,13 @@
         one Temporal child workflow per selected product concurrently — the first to meet its
         activation criteria goes live independently.</p>
 
-      <h3>First-to-complete go-live <span class="badge badge-planned">Phase 4.6</span></h3>
+      <h3>First-to-complete go-live <span class="badge badge-done">✅ Phase 4.6</span></h3>
       <p>
         When a client selects multiple products, each runs in parallel. The <strong>first product
-        to satisfy all its activation criteria</strong> — KYC passed, documents validated, fraud
-        cleared, suitability assessed — is provisioned immediately with an account number. Other
-        products continue in background. A client with Deposit + Wealth selected sees their
-        Deposit account go live while Wealth continues KYC review.
+        to satisfy all its activation criteria</strong> — KYC passed, fraud cleared, suitability
+        assessed — is provisioned immediately with an account number. Other products continue in
+        background. The advisor panel shows per-product activation badges (ACTIVATED / DECLINED /
+        PENDING) and a "First Live" highlight on the first product to activate.
       </p>
 
       <h3>Document collect-once pattern <span class="badge badge-planned">Phase 4.5</span></h3>
@@ -263,7 +263,7 @@
         <tbody>
           <tr><td>CustomerService</td><td>Intake data collection; conversational Q&amp;A</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
           <tr><td>KYCCompliance</td><td>Identity verification; AML risk scoring</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
-          <tr><td>FraudScreening</td><td>Device/velocity/synthetic-identity fraud scoring; gates activation</td><td><span class="badge badge-new">New Phase 4.6</span></td></tr>
+          <tr><td>FraudScreening</td><td>Device/velocity/synthetic-identity fraud scoring; gates activation. Runs concurrently with KYC. Seeded RNG per case — reproducible results.</td><td><span class="badge badge-done">✅ Phase 4.6</span></td></tr>
           <tr><td>DocumentIntelligence</td><td>OCR; classification; validation; collect-once enforcement</td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
           <tr><td>ProductOnboarding</td><td>Per-product step execution; suitability; activation gate. Phase 4: pipeline + criteria loaded from DB; trace written as <code>product_onboarding[{product_code}]</code></td><td><span class="badge badge-done">✅ LangGraph Active</span></td></tr>
           <tr><td>Collaboration</td><td>Advisor-client collaboration rooms and comments</td><td><span class="badge badge-done">Active</span></td></tr>
@@ -315,11 +315,11 @@
         <thead><tr><th>ADR</th><th>Decision</th><th>Status</th></tr></thead>
         <tbody>
           <tr><td>ADR-001</td><td>Self-host Temporal for durable workflow orchestration</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
-          <tr><td>ADR-002</td><td>Criteria-driven blackboard activation (no static graph)</td><td><span class="badge badge-partial">🟡 Phase 3 ✅ · Phase 4.6 ⬜</span></td></tr>
+          <tr><td>ADR-002</td><td>Criteria-driven blackboard activation (no static graph)</td><td><span class="badge badge-done">✅ Implemented (Phase 3 + Phase 4.6)</span></td></tr>
           <tr><td>ADR-003</td><td>Bespoke differentiators + OSS commodity stack</td><td><span class="badge badge-done">Active</span></td></tr>
           <tr><td>ADR-004</td><td>Polyglot — Python/LangGraph agents (JVM core deferred)</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-005</td><td>Dual-AZ active-active + DR</td><td><span class="badge badge-planned">Phase 13</span></td></tr>
-          <tr><td>ADR-006</td><td>OPA activation gate; strong-consistency reads</td><td><span class="badge badge-planned">Phase 4.6</span></td></tr>
+          <tr><td>ADR-006</td><td>OPA activation gate; strong-consistency reads</td><td><span class="badge badge-done">✅ Implemented (Phase 4.6)</span></td></tr>
           <tr><td>ADR-007</td><td>MCP gateway sole egress — no direct integration calls</td><td><span class="badge badge-planned">Phase 6</span></td></tr>
           <tr><td>ADR-008</td><td>Self-hosted / pluggable LLM</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>ADR-009</td><td>Temporal + LangGraph adoption (Python-first)</td><td><span class="badge badge-done">✅ Documented</span></td></tr>
@@ -341,8 +341,8 @@
         <li><span class="phase-num">Phase 2.5</span><span class="phase-title">Hash-chain audit log (FR-AU-01 / BSA compliance)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 3</span><span class="phase-title">Config-driven StageDispatcher (replaces if/elif chain)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 4</span><span class="phase-title">Products, questions, per-product agent pipelines config-driven</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 4.5</span><span class="phase-title">Shared-core document taxonomy — collect once, reuse all</span><span class="badge badge-new">⬜ New</span></li>
-        <li><span class="phase-num">Phase 4.6</span><span class="phase-title">First-to-complete activation gate + Fraud screening + OPA</span><span class="badge badge-new">⬜ New</span></li>
+        <li><span class="phase-num">Phase 4.5</span><span class="phase-title">Shared-core document taxonomy — collect once, reuse all</span><span class="badge badge-partial">~ Skipped</span></li>
+        <li><span class="phase-num">Phase 4.6</span><span class="phase-title">First-to-complete activation gate + Fraud screening + OPA</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 5</span><span class="phase-title">Configurable SLA enforcement with per-stage feature flags</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 6</span><span class="phase-title">Wire Skills &amp; MCP into live agent execution</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 7</span><span class="phase-title">Configurable persona + permission model (15-scope catalog)</span><span class="badge badge-planned">⬜ Planned</span></li>
@@ -363,12 +363,12 @@
         <tbody>
           <tr><td>FR-AU-01 / FR-AU-03 — Hash-chained audit trail + export (BSA)</td><td>Phase 2.5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>FR-WF-01/02 — Per-product configurable workflows + rule sets</td><td>Phase 4</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
-          <tr><td>FR-GL-01/02/03 — First-to-complete activation</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
-          <tr><td>FR-DM-01/02/03 — Shared-core collect-once</td><td>Phase 4.5</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
-          <tr><td>FR-AG (fraud) — Fraud screening gate</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
-          <tr><td>FR-AU-04 — Adverse-action records (ECOA)</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
+          <tr><td>FR-GL-01/02/03 — First-to-complete activation</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>FR-DM-01/02/03 — Shared-core collect-once</td><td>Phase 4.5</td><td><span class="badge badge-partial">~ Skipped</span></td></tr>
+          <tr><td>FR-AG (fraud) — Fraud screening gate</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>FR-AU-04 — Adverse-action records (ECOA)</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-001 — Temporal orchestration</td><td>Phase 0.5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
-          <tr><td>ADR-006 — OPA activation gate</td><td>Phase 4.6</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
+          <tr><td>ADR-006 — OPA activation gate</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>NFR-03 — 99.95% availability / DR</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>NFR-10 — OTel observability</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
         </tbody>
@@ -386,7 +386,7 @@
           <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations</td><td><span class="badge badge-planned">Phase 5</span></td></tr>
           <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-done">✅ Done (12 unit tests)</span></td></tr>
           <tr><td>Pipeline config tests</td><td>Suitability score parity (DB vs hardcoded), threshold enforcement, fallback shape</td><td><span class="badge badge-done">✅ Done (22 unit tests — Phase 4)</span></td></tr>
-          <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block</td><td><span class="badge badge-planned">Phase 4.6</span></td></tr>
+          <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block, adverse-action, credit/non-credit decline</td><td><span class="badge badge-done">✅ Done (13 unit tests — Phase 4.6)</span></td></tr>
           <tr><td>Frontend E2E (Playwright)</td><td>Client portal, advisor workspace, admin</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
           <tr><td>Accessibility (axe)</td><td>WCAG 2.1 AA across light/dark × breakpoints</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
         </tbody>
@@ -395,14 +395,17 @@
 
     <section id="gaps">
       <h2>Open Gaps &amp; Recommendations</h2>
-      <h3>Architecture gaps (being addressed by new CADF phases)</h3>
+      <h3>Architecture gaps (being addressed by remaining CADF phases)</h3>
       <ul style="padding-left:20px; color: var(--text-muted); line-height: 2;">
-        <li><strong>OPA activation gate</strong> — no activation criteria enforced before
-          product goes live (Phase 4.6)</li>
-        <li><strong>Fraud screening agent</strong> — no fraud/anomaly detection in current
-          pipeline (Phase 4.6)</li>
         <li><strong>Collect-once documents</strong> — current system re-requests shared docs
-          per product (Phase 4.5)</li>
+          per product; FR-DM-01/02/03 deferred to Phase 4.5 (skipped in this run) or
+          a future phase</li>
+        <li><strong>SLA enforcement</strong> — <code>SLAHook</code> stub installed (Phase 3);
+          Temporal Timer activation in Phase 5</li>
+        <li><strong>Skills &amp; MCP wired</strong> — framework built but dormant; Phase 6
+          replaces <code>_simulate_*</code> methods</li>
+        <li><strong>Configurable personas</strong> — hardcoded role guards; Phase 7 introduces
+          <code>require_permission()</code> with admin-configurable scopes</li>
       </ul>
       <h3>Deferred features</h3>
       <ul style="padding-left:20px; color: var(--text-muted); line-height: 2;">

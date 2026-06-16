@@ -34,7 +34,7 @@ glide-gate/
 │   │   ├── services/            # Business logic services
 │   │   ├── workflows/           # Temporal workflow definitions (Phase 0.5)
 │   │   └── main.py              # FastAPI app + startup
-│   ├── alembic/versions/        # 17 DB migrations (0001–0017)
+│   ├── alembic/versions/        # 18 DB migrations (0001–0018)
 │   └── tests/                   # unit / integration / e2e
 ├── frontend/
 │   ├── src/
