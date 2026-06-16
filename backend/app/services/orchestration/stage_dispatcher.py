@@ -216,17 +216,13 @@ def _resolve_payload_template(
 
 
 class SLAHook:
-    """SLA integration point called synchronously on every stage transition.
+    """Phase 3 no-op stub — superseded by _start_sla_timer() in Phase 5.
 
-    Phase 3: guaranteed no-op stub.
-
-    Phase 5 activates the real implementation: it will write a row to the
-    case_sla_tracking table (created by the Phase 5 migration) and start a
-    Temporal Timer for the SLA window.  At that point the call site in each
-    _handle_* method of OnboardingWorkflow will be replaced by a Temporal
-    activity call so that the DB write is durable and crash-safe.
-
-    The stub is safe to call even when case_sla_tracking does not exist.
+    Phase 5 replaced all SLAHook.on_stage_entered() call sites in
+    OnboardingWorkflow with await self._start_sla_timer(state, stage_code),
+    which runs start_sla_tracking_activity (a Temporal activity) and launches
+    a _watch_sla() coroutine as an asyncio.Task.  This class is kept for import
+    compatibility only and should not be used in new code.
     """
 
     @staticmethod
@@ -235,4 +231,4 @@ class SLAHook:
         stage_code: str,
         domain_def: "DomainDefinition | None",
     ) -> None:
-        """Called before each stage's primary activity runs. No-op until Phase 5."""
+        """No-op stub.  Superseded by OnboardingWorkflow._start_sla_timer()."""

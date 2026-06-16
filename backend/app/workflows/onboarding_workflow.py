@@ -1,4 +1,4 @@
-"""Temporal OnboardingWorkflow + all Temporal Activities (Phase 0.5 / Phase 3).
+"""Temporal OnboardingWorkflow + all Temporal Activities (Phase 0.5 / Phase 3 / Phase 5).
 
 Architecture:
   - OnboardingWorkflow (@workflow.defn) owns the stage-level FSM.
@@ -18,8 +18,17 @@ Phase 3 additions:
   - StageDispatcher: maps stage_code → Temporal activity name via
     DomainDefinition.task_routing.  Replaces the hardcoded if/elif routing from
     orchestrator_agent.py.
-  - SLAHook.on_stage_entered(): called at the top of every _handle_* method as
-    a no-op stub; Phase 5 activates the real SLA timer here.
+
+Phase 5 additions:
+  - SLAHook.on_stage_entered() stub replaced by _start_sla_timer() method.
+  - start_sla_tracking_activity: resolves domain_stage_slas config, writes
+    case_sla_tracking row, returns config dict (or None if not configured).
+  - pause_sla_tracking_activity / resume_sla_tracking_activity: clock-pause
+    support for human-pending stages with pause_on_human_review=True.
+  - send_sla_warning_activity / trigger_sla_breach_activity: fire SLA events,
+    write to decision_log (breach sets is_regulatory_breach=True).
+  - _watch_sla(): async Temporal coroutine started as asyncio.create_task()
+    inside each stage handler; cancelled on stage exit via finally block.
 """
 from __future__ import annotations
 
@@ -38,7 +47,7 @@ from app.agents.base.a2a_types import (
     OnboardingWorkflowResult,
     StageAdvanceSignal,
 )
-from app.services.orchestration.stage_dispatcher import SLAHook, StageDispatcher
+from app.services.orchestration.stage_dispatcher import StageDispatcher
 
 _NO_RETRY = RetryPolicy(maximum_attempts=1)
 _STANDARD_RETRY = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds=5))
@@ -361,6 +370,219 @@ async def fraud_screening_activity(state: OnboardingStateDict) -> OnboardingStat
     return await graph.ainvoke(state)
 
 
+@activity.defn(name="start_sla_tracking_activity")
+async def start_sla_tracking_activity(input: dict[str, Any]) -> dict[str, Any] | None:
+    """Resolve domain_stage_slas config, write case_sla_tracking row.
+
+    Returns the resolved SLA config dict (window_hours, warning_pct, …) or None
+    if no SLA is configured for this stage or the matching row has is_enabled=False.
+    """
+    from uuid import UUID
+
+    from app.database import AsyncSessionLocal
+    from app.services.sla.sla_monitor_service import sla_monitor_service
+
+    case_id_str: str = input.get("case_id", "")
+    stage_code: str = input.get("stage_code", "")
+    domain_code: str = input.get("domain_code", "wealth_management")
+    priority_tier: str | None = input.get("priority_tier") or None
+    product_code: str | None = input.get("product_code") or None
+
+    if not case_id_str or not stage_code:
+        return None
+
+    async with AsyncSessionLocal() as db:
+        sla_spec = await sla_monitor_service.resolve_sla(
+            db, domain_code, stage_code, priority_tier, product_code
+        )
+        if sla_spec is None:
+            return None
+
+        await sla_monitor_service.start_tracking(
+            db,
+            case_id=UUID(case_id_str),
+            stage_code=stage_code,
+            sla_spec=sla_spec,
+            priority_tier=priority_tier,
+            product_code=product_code,
+        )
+        await db.commit()
+
+    return {
+        "window_hours": sla_spec.window_hours,
+        "warning_pct": sla_spec.warning_pct,
+        "escalation_pct": sla_spec.escalation_pct,
+        "warning_task_type": sla_spec.warning_task_type,
+        "escalation_task_type": sla_spec.escalation_task_type,
+        "escalation_target_agent": sla_spec.escalation_target_agent,
+        "pause_on_human_review": sla_spec.pause_on_human_review,
+        "is_enabled": sla_spec.is_enabled,
+    }
+
+
+@activity.defn(name="pause_sla_tracking_activity")
+async def pause_sla_tracking_activity(input: dict[str, Any]) -> None:
+    """Record paused_at in case_sla_tracking (clock-pause for human-review stages)."""
+    from uuid import UUID
+
+    from app.database import AsyncSessionLocal
+    from app.services.sla.sla_monitor_service import sla_monitor_service
+
+    case_id_str: str = input.get("case_id", "")
+    stage_code: str = input.get("stage_code", "")
+    if not case_id_str or not stage_code:
+        return
+
+    async with AsyncSessionLocal() as db:
+        await sla_monitor_service.pause_tracking(db, UUID(case_id_str), stage_code)
+        await db.commit()
+
+
+@activity.defn(name="resume_sla_tracking_activity")
+async def resume_sla_tracking_activity(input: dict[str, Any]) -> dict[str, Any]:
+    """Accumulate paused_duration_seconds; return elapsed_active_seconds."""
+    from uuid import UUID
+
+    from app.database import AsyncSessionLocal
+    from app.services.sla.sla_monitor_service import sla_monitor_service
+
+    case_id_str: str = input.get("case_id", "")
+    stage_code: str = input.get("stage_code", "")
+    if not case_id_str or not stage_code:
+        return {"elapsed_active_seconds": 0.0}
+
+    async with AsyncSessionLocal() as db:
+        elapsed = await sla_monitor_service.resume_tracking(db, UUID(case_id_str), stage_code)
+        await db.commit()
+
+    return {"elapsed_active_seconds": elapsed}
+
+
+@activity.defn(name="send_sla_warning_activity")
+async def send_sla_warning_activity(input: dict[str, Any]) -> None:
+    """Record SLA_WARNING in decision_log and send notification.  Idempotent."""
+    from uuid import UUID
+
+    from app.database import AsyncSessionLocal
+    from app.services.sla.sla_monitor_service import sla_monitor_service
+    from app.services.audit.decision_log_service import DecisionLogService, DecisionLogEntry
+    from app.services.audit.audit_event_types import AuditEventType
+
+    case_id_str: str = input.get("case_id", "")
+    stage_code: str = input.get("stage_code", "")
+    if not case_id_str or not stage_code:
+        return
+
+    case_id = UUID(case_id_str)
+
+    async with AsyncSessionLocal() as db:
+        sent = await sla_monitor_service.record_warning_sent(db, case_id, stage_code)
+        await db.commit()
+
+    if not sent:
+        return  # already fired
+
+    try:
+        log_svc = DecisionLogService()
+        await log_svc.append(
+            DecisionLogEntry(
+                agent_id="sla_monitor",
+                event_type=AuditEventType.SLA_WARNING,
+                payload={
+                    "case_id": case_id_str,
+                    "stage_code": stage_code,
+                    "sla_config": input.get("sla_config", {}),
+                },
+                case_id=case_id,
+                is_compliance_event=True,
+                is_regulatory_breach=False,
+            )
+        )
+    except Exception as exc:
+        activity.logger.warning(f"SLA_WARNING decision_log failed for case {case_id_str}: {exc}")
+
+    activity.logger.warning(
+        f"[SLA] Warning threshold reached: case={case_id_str} stage={stage_code}"
+    )
+
+
+@activity.defn(name="trigger_sla_breach_activity")
+async def trigger_sla_breach_activity(input: dict[str, Any]) -> None:
+    """Record SLA_BREACH in decision_log (is_regulatory_breach=True) and escalate case.
+
+    Idempotent: if breach_triggered_at is already set, does nothing.
+    """
+    from uuid import UUID
+
+    from sqlalchemy import update as sa_update
+
+    from app.database import AsyncSessionLocal
+    from app.models.cases import OnboardingCase
+    from app.services.sla.sla_monitor_service import sla_monitor_service
+    from app.services.audit.decision_log_service import DecisionLogService, DecisionLogEntry
+    from app.services.audit.audit_event_types import AuditEventType
+    from app.websocket.socket_emitter import socket_emitter
+
+    case_id_str: str = input.get("case_id", "")
+    stage_code: str = input.get("stage_code", "")
+    if not case_id_str or not stage_code:
+        return
+
+    case_id = UUID(case_id_str)
+
+    async with AsyncSessionLocal() as db:
+        triggered = await sla_monitor_service.record_breach_triggered(db, case_id, stage_code)
+        await db.commit()
+
+    if not triggered:
+        return  # already fired
+
+    # Escalate the case
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                sa_update(OnboardingCase)
+                .where(OnboardingCase.id == case_id)
+                .values(status="ESCALATED", current_stage="ESCALATED")
+            )
+            await db.commit()
+    except Exception as exc:
+        activity.logger.warning(f"SLA breach escalation DB write failed for case {case_id_str}: {exc}")
+
+    # Write to decision_log (is_regulatory_breach=True per FR-AU-01)
+    try:
+        log_svc = DecisionLogService()
+        await log_svc.append(
+            DecisionLogEntry(
+                agent_id="sla_monitor",
+                event_type=AuditEventType.SLA_BREACH,
+                payload={
+                    "case_id": case_id_str,
+                    "stage_code": stage_code,
+                    "sla_config": input.get("sla_config", {}),
+                },
+                case_id=case_id,
+                is_compliance_event=True,
+                is_regulatory_breach=True,
+            )
+        )
+    except Exception as exc:
+        activity.logger.warning(f"SLA_BREACH decision_log failed for case {case_id_str}: {exc}")
+
+    # Notify via socket
+    try:
+        await socket_emitter.case_stage_changed(
+            case_id_str,
+            {"stage": "ESCALATED", "case_id": case_id_str, "reason": "sla_breach"},
+        )
+    except Exception:
+        pass
+
+    activity.logger.warning(
+        f"[SLA] Breach threshold reached, case ESCALATED: case={case_id_str} stage={stage_code}"
+    )
+
+
 @activity.defn(name="contact_centre_summary_activity")
 async def _contact_centre_summary_activity(state: OnboardingStateDict) -> OnboardingStateDict:
     """Generate contact-centre status summary for the case."""
@@ -406,6 +628,12 @@ def get_all_activities() -> list[Any]:
         persist_stage_activity,
         _contact_centre_summary_activity,
         fraud_screening_activity,
+        # Phase 5 SLA activities
+        start_sla_tracking_activity,
+        pause_sla_tracking_activity,
+        resume_sla_tracking_activity,
+        send_sla_warning_activity,
+        trigger_sla_breach_activity,
         *get_direct_task_activities(),
     ]
 
@@ -458,8 +686,13 @@ class OnboardingWorkflow:
           or ESCALATED at any stage
 
     Phase 3: StageDispatcher (driven by DomainDefinition.task_routing) selects
-    the activity to run for each stage.  SLAHook.on_stage_entered() is called
-    at the top of every _handle_* method as a no-op stub (Phase 5 activates it).
+    the activity to run for each stage.
+
+    Phase 5: _start_sla_timer() replaces the no-op SLAHook stub.  Each stage
+    handler starts a Temporal coroutine (_watch_sla) that fires warning/breach
+    activities at configured percentages of the SLA window.  Human-pending stages
+    with pause_on_human_review=True cancel the timer before the wait and restart
+    it after the human responds.
     """
 
     def __init__(self) -> None:
@@ -467,6 +700,126 @@ class OnboardingWorkflow:
         self._human_signals: list[HumanReviewSignal] = []
         # Phase 3: populated in run() after load_domain_definition_activity
         self._dispatcher: StageDispatcher | None = None
+
+    # ── SLA timer helpers (Phase 5) ───────────────────────────────────────────
+
+    async def _start_sla_timer(
+        self, state: OnboardingStateDict, stage_code: str
+    ) -> tuple["asyncio.Task[None] | None", "dict[str, Any] | None"]:
+        """Call start_sla_tracking_activity and launch _watch_sla as a background task.
+
+        Returns (task, sla_config).  Both are None if no SLA is configured.
+        task is an asyncio.Task; the caller must cancel it in a finally block.
+        """
+        try:
+            sla_config = await workflow.execute_activity(
+                start_sla_tracking_activity,
+                {
+                    "case_id": state.get("case_id", ""),
+                    "stage_code": stage_code,
+                    "domain_code": "wealth_management",
+                    "priority_tier": state.get("priority_tier") or None,
+                    "product_code": None,
+                },
+                schedule_to_close_timeout=timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
+            )
+        except Exception as exc:
+            workflow.logger.warning(f"start_sla_tracking_activity failed stage={stage_code}: {exc}")
+            return None, None
+
+        if not sla_config:
+            return None, None
+
+        task = asyncio.create_task(
+            self._watch_sla(state.get("case_id", ""), stage_code, sla_config)
+        )
+        return task, sla_config
+
+    async def _watch_sla(
+        self,
+        case_id: str,
+        stage_code: str,
+        sla_config: "dict[str, Any]",
+        elapsed_seconds: float = 0.0,
+    ) -> None:
+        """Background Temporal coroutine: fires warning then breach activities.
+
+        elapsed_seconds: active seconds already elapsed before this coroutine
+        started (used when resuming after a clock-pause).  The coroutine is
+        cancelled by the caller's finally block when the stage exits.
+        """
+        window_hours = float(sla_config.get("window_hours", 1.0))
+        warning_pct = int(sla_config.get("warning_pct", 80))
+        escalation_pct = int(sla_config.get("escalation_pct", 100))
+
+        warning_total = window_hours * 3600 * warning_pct / 100
+        breach_total = window_hours * 3600 * escalation_pct / 100
+
+        remaining_to_warning = max(0.0, warning_total - elapsed_seconds)
+        remaining_to_breach = max(0.0, breach_total - elapsed_seconds)
+
+        try:
+            if remaining_to_warning > 0:
+                await workflow.sleep(timedelta(seconds=remaining_to_warning))
+            await workflow.execute_activity(
+                send_sla_warning_activity,
+                {"case_id": case_id, "stage_code": stage_code, "sla_config": sla_config},
+                schedule_to_close_timeout=timedelta(minutes=2),
+                retry_policy=_NO_RETRY,
+            )
+            gap = remaining_to_breach - remaining_to_warning
+            if gap > 0:
+                await workflow.sleep(timedelta(seconds=gap))
+            await workflow.execute_activity(
+                trigger_sla_breach_activity,
+                {"case_id": case_id, "stage_code": stage_code, "sla_config": sla_config},
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=_NO_RETRY,
+            )
+        except asyncio.CancelledError:
+            pass  # Stage exited before SLA threshold; timer cancelled cleanly
+
+    async def _pause_sla(
+        self,
+        case_id: str,
+        stage_code: str,
+        sla_task: "asyncio.Task[None] | None",
+    ) -> None:
+        """Cancel the running SLA task and record paused_at in DB."""
+        if sla_task is not None and not sla_task.done():
+            sla_task.cancel()
+        try:
+            await workflow.execute_activity(
+                pause_sla_tracking_activity,
+                {"case_id": case_id, "stage_code": stage_code},
+                schedule_to_close_timeout=timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
+            )
+        except Exception as exc:
+            workflow.logger.warning(f"pause_sla_tracking_activity failed: {exc}")
+
+    async def _resume_sla(
+        self,
+        case_id: str,
+        stage_code: str,
+        sla_config: "dict[str, Any]",
+    ) -> "asyncio.Task[None]":
+        """Accumulate paused duration and restart _watch_sla with remaining time."""
+        try:
+            resume = await workflow.execute_activity(
+                resume_sla_tracking_activity,
+                {"case_id": case_id, "stage_code": stage_code},
+                schedule_to_close_timeout=timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
+            )
+            elapsed = float((resume or {}).get("elapsed_active_seconds", 0.0))
+        except Exception as exc:
+            workflow.logger.warning(f"resume_sla_tracking_activity failed: {exc}")
+            elapsed = 0.0
+        return asyncio.create_task(
+            self._watch_sla(case_id, stage_code, sla_config, elapsed_seconds=elapsed)
+        )
 
     # ── Signal handlers ───────────────────────────────────────────────────────
 
@@ -568,22 +921,25 @@ class OnboardingWorkflow:
 
     async def _handle_intake(self, state: OnboardingStateDict) -> OnboardingStateDict:
         """Wait for CustomerService to signal data collection complete."""
-        SLAHook.on_stage_entered(state.get("case_id", ""), "INTAKE", None)
-
-        await workflow.wait_condition(
-            lambda: len(self._advance_signals) > 0,
-            timeout=timedelta(days=7),
-        )
-        signal = self._advance_signals.pop(0)
-        next_stage = signal.to_stage or "REVIEW"
-        state = {**state, "stage": next_stage, **signal.payload}
-        await workflow.execute_activity(
-            persist_stage_activity,
-            {"case_id": state["case_id"], "stage": next_stage},
-            schedule_to_close_timeout=timedelta(seconds=30),
-            retry_policy=_STANDARD_RETRY,
-        )
-        return state
+        sla_task, _ = await self._start_sla_timer(state, "INTAKE")
+        try:
+            await workflow.wait_condition(
+                lambda: len(self._advance_signals) > 0,
+                timeout=timedelta(days=7),
+            )
+            signal = self._advance_signals.pop(0)
+            next_stage = signal.to_stage or "REVIEW"
+            state = {**state, "stage": next_stage, **signal.payload}
+            await workflow.execute_activity(
+                persist_stage_activity,
+                {"case_id": state["case_id"], "stage": next_stage},
+                schedule_to_close_timeout=timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
+            )
+            return state
+        finally:
+            if sla_task and not sla_task.done():
+                sla_task.cancel()
 
     async def _handle_sales_review(self, state: OnboardingStateDict) -> OnboardingStateDict:
         """Kickoff sales review and wait for a decision signal.
@@ -592,50 +948,72 @@ class OnboardingWorkflow:
         (via publish_task(RUN_KYC_CHECK)) on approval. Both signal types are
         accepted so either code path unblocks the workflow.
         """
-        SLAHook.on_stage_entered(state.get("case_id", ""), "SALES_REVIEW", None)
+        sla_task, sla_config = await self._start_sla_timer(state, "SALES_REVIEW")
+        case_id = state.get("case_id", "")
+        try:
+            dispatch = self._dispatcher.resolve("SALES_REVIEW", state) if self._dispatcher else None
+            kickoff_fn = (
+                _ACTIVITY_LOOKUP.get(dispatch.activity_name, sales_manager_kickoff_activity)
+                if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
+                else sales_manager_kickoff_activity
+            )
+            await workflow.execute_activity(
+                kickoff_fn,
+                state,
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=_NO_RETRY,
+            )
 
-        dispatch = self._dispatcher.resolve("SALES_REVIEW", state) if self._dispatcher else None
-        kickoff_fn = (
-            _ACTIVITY_LOOKUP.get(dispatch.activity_name, sales_manager_kickoff_activity)
-            if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
-            else sales_manager_kickoff_activity
-        )
-        await workflow.execute_activity(
-            kickoff_fn,
-            state,
-            schedule_to_close_timeout=timedelta(minutes=5),
-            retry_policy=_NO_RETRY,
-        )
-        await workflow.wait_condition(
-            lambda: len(self._human_signals) > 0 or len(self._advance_signals) > 0,
-            timeout=timedelta(days=7),
-        )
+            # Pause SLA clock while waiting for human decision
+            if sla_config and sla_config.get("pause_on_human_review"):
+                await self._pause_sla(case_id, "SALES_REVIEW", sla_task)
+                sla_task = None
 
-        if self._advance_signals:
-            signal = self._advance_signals.pop(0)
-            next_stage = signal.to_stage
-            extra = {**(state.get("extra") or {}), "sales_review_decision": "APPROVED"}
-            state = {**state, "stage": next_stage, "extra": extra}
-        else:
-            human_sig = self._human_signals.pop(0)
-            if human_sig.decision in ("APPROVED", "MORE_INFO_REQUESTED"):
-                next_stage = "KYC"
+            await workflow.wait_condition(
+                lambda: len(self._human_signals) > 0 or len(self._advance_signals) > 0,
+                timeout=timedelta(days=7),
+            )
+
+            # Resume SLA clock after human responds
+            if sla_config and sla_config.get("pause_on_human_review"):
+                sla_task = await self._resume_sla(case_id, "SALES_REVIEW", sla_config)
+
+            if self._advance_signals:
+                signal = self._advance_signals.pop(0)
+                next_stage = signal.to_stage
+                extra = {**(state.get("extra") or {}), "sales_review_decision": "APPROVED"}
+                state = {**state, "stage": next_stage, "extra": extra}
             else:
-                next_stage = "ESCALATED"
-            extra = {**(state.get("extra") or {}), "sales_review_decision": human_sig.decision}
-            state = {**state, "stage": next_stage, "extra": extra}
+                human_sig = self._human_signals.pop(0)
+                if human_sig.decision in ("APPROVED", "MORE_INFO_REQUESTED"):
+                    next_stage = "KYC"
+                else:
+                    next_stage = "ESCALATED"
+                extra = {**(state.get("extra") or {}), "sales_review_decision": human_sig.decision}
+                state = {**state, "stage": next_stage, "extra": extra}
 
-        await workflow.execute_activity(
-            persist_stage_activity,
-            {"case_id": state["case_id"], "stage": next_stage},
-            schedule_to_close_timeout=timedelta(seconds=30),
-            retry_policy=_STANDARD_RETRY,
-        )
-        return state
+            await workflow.execute_activity(
+                persist_stage_activity,
+                {"case_id": state["case_id"], "stage": next_stage},
+                schedule_to_close_timeout=timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
+            )
+            return state
+        finally:
+            if sla_task and not sla_task.done():
+                sla_task.cancel()
 
     async def _handle_kyc(self, state: OnboardingStateDict) -> OnboardingStateDict:
         """Run KYC compliance check and fraud screening concurrently (Phase 4.6)."""
-        SLAHook.on_stage_entered(state.get("case_id", ""), "KYC", None)
+        sla_task, _ = await self._start_sla_timer(state, "KYC")
+        try:
+            return await self._run_kyc(state)
+        finally:
+            if sla_task and not sla_task.done():
+                sla_task.cancel()
+
+    async def _run_kyc(self, state: OnboardingStateDict) -> OnboardingStateDict:
+        """Inner KYC logic extracted so _handle_kyc can wrap it with the SLA finally."""
 
         dispatch = self._dispatcher.resolve("KYC", state) if self._dispatcher else None
         kyc_fn = (
@@ -733,46 +1111,49 @@ class OnboardingWorkflow:
         self, state: OnboardingStateDict
     ) -> OnboardingStateDict:
         """Launch one child workflow per selected product in parallel."""
-        SLAHook.on_stage_entered(state.get("case_id", ""), "PARALLEL_PRODUCTS", None)
+        sla_task, _ = await self._start_sla_timer(state, "PARALLEL_PRODUCTS")
+        try:
+            selected_products: list[str] = state.get("selected_products", [])
+            case_id = state.get("case_id", "")
 
-        selected_products: list[str] = state.get("selected_products", [])
-        case_id = state.get("case_id", "")
-
-        child_handles = await asyncio.gather(*[
-            workflow.start_child_workflow(
-                ProductOnboardingWorkflow,
-                {**state, "_product_code": pc},
-                id=f"onboarding-{case_id}-product-{pc}",
-                parent_close_policy=workflow.ParentClosePolicy.TERMINATE,
+            child_handles = await asyncio.gather(*[
+                workflow.start_child_workflow(
+                    ProductOnboardingWorkflow,
+                    {**state, "_product_code": pc},
+                    id=f"onboarding-{case_id}-product-{pc}",
+                    parent_close_policy=workflow.ParentClosePolicy.TERMINATE,
+                )
+                for pc in selected_products
+            ])
+            product_results: list[OnboardingStateDict] = list(
+                await asyncio.gather(*child_handles)
             )
-            for pc in selected_products
-        ])
-        product_results: list[OnboardingStateDict] = list(
-            await asyncio.gather(*child_handles)
-        )
 
-        # Merge product track state from child results
-        merged_tracks: dict[str, Any] = dict(state.get("product_tracks") or {})
-        problematic = {"UNSUITABLE", "FAILED"}
+            # Merge product track state from child results
+            merged_tracks: dict[str, Any] = dict(state.get("product_tracks") or {})
+            problematic = {"UNSUITABLE", "FAILED"}
 
-        for res in product_results:
-            for pc, track in (res.get("product_tracks") or {}).items():
-                merged_tracks[pc] = track
+            for res in product_results:
+                for pc, track in (res.get("product_tracks") or {}).items():
+                    merged_tracks[pc] = track
 
-        has_issues = any(
-            merged_tracks.get(pc, {}).get("stage", "") in problematic
-            for pc in selected_products
-        )
-        next_stage = "REVIEW" if has_issues else "COMPLETE"
-        state = {**state, "product_tracks": merged_tracks, "stage": next_stage}
+            has_issues = any(
+                merged_tracks.get(pc, {}).get("stage", "") in problematic
+                for pc in selected_products
+            )
+            next_stage = "REVIEW" if has_issues else "COMPLETE"
+            state = {**state, "product_tracks": merged_tracks, "stage": next_stage}
 
-        await workflow.execute_activity(
-            persist_stage_activity,
-            {"case_id": case_id, "stage": next_stage},
-            schedule_to_close_timeout=timedelta(seconds=30),
-            retry_policy=_STANDARD_RETRY,
-        )
-        return state
+            await workflow.execute_activity(
+                persist_stage_activity,
+                {"case_id": case_id, "stage": next_stage},
+                schedule_to_close_timeout=timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
+            )
+            return state
+        finally:
+            if sla_task and not sla_task.done():
+                sla_task.cancel()
 
     async def _handle_review(self, state: OnboardingStateDict) -> OnboardingStateDict:
         """Create collaboration room and wait for either a human-review or advance-stage signal.
@@ -784,46 +1165,58 @@ class OnboardingWorkflow:
           carries the decision; APPROVED → COMPLETE, REJECTED → ESCALATED.
         Both signal types are accepted so either path unblocks the workflow.
         """
-        SLAHook.on_stage_entered(state.get("case_id", ""), "REVIEW", None)
+        sla_task, sla_config = await self._start_sla_timer(state, "REVIEW")
+        case_id = state.get("case_id", "")
+        try:
+            dispatch = self._dispatcher.resolve("REVIEW", state) if self._dispatcher else None
+            collab_fn = (
+                _ACTIVITY_LOOKUP.get(dispatch.activity_name, collaboration_kickoff_activity)
+                if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
+                else collaboration_kickoff_activity
+            )
+            await workflow.execute_activity(
+                collab_fn,
+                state,
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=_NO_RETRY,
+            )
 
-        dispatch = self._dispatcher.resolve("REVIEW", state) if self._dispatcher else None
-        collab_fn = (
-            _ACTIVITY_LOOKUP.get(dispatch.activity_name, collaboration_kickoff_activity)
-            if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
-            else collaboration_kickoff_activity
-        )
-        await workflow.execute_activity(
-            collab_fn,
-            state,
-            schedule_to_close_timeout=timedelta(minutes=5),
-            retry_policy=_NO_RETRY,
-        )
-        await workflow.wait_condition(
-            lambda: len(self._human_signals) > 0 or len(self._advance_signals) > 0,
-            timeout=timedelta(days=30),
-        )
+            # Pause SLA clock while waiting for human decision
+            if sla_config and sla_config.get("pause_on_human_review"):
+                await self._pause_sla(case_id, "REVIEW", sla_task)
+                sla_task = None
 
-        if self._advance_signals:
-            signal = self._advance_signals.pop(0)
-            next_stage = signal.to_stage
-            state = {**state, "stage": next_stage, **signal.payload}
-        else:
-            human_sig = self._human_signals.pop(0)
-            next_stage = "COMPLETE" if human_sig.decision == "APPROVED" else "ESCALATED"
-            state = {**state, "stage": next_stage}
+            await workflow.wait_condition(
+                lambda: len(self._human_signals) > 0 or len(self._advance_signals) > 0,
+                timeout=timedelta(days=30),
+            )
 
-        await workflow.execute_activity(
-            persist_stage_activity,
-            {"case_id": state["case_id"], "stage": next_stage},
-            schedule_to_close_timeout=timedelta(seconds=30),
-            retry_policy=_STANDARD_RETRY,
-        )
-        return state
+            # Resume SLA clock after human responds
+            if sla_config and sla_config.get("pause_on_human_review"):
+                sla_task = await self._resume_sla(case_id, "REVIEW", sla_config)
+
+            if self._advance_signals:
+                signal = self._advance_signals.pop(0)
+                next_stage = signal.to_stage
+                state = {**state, "stage": next_stage, **signal.payload}
+            else:
+                human_sig = self._human_signals.pop(0)
+                next_stage = "COMPLETE" if human_sig.decision == "APPROVED" else "ESCALATED"
+                state = {**state, "stage": next_stage}
+
+            await workflow.execute_activity(
+                persist_stage_activity,
+                {"case_id": state["case_id"], "stage": next_stage},
+                schedule_to_close_timeout=timedelta(seconds=30),
+                retry_policy=_STANDARD_RETRY,
+            )
+            return state
+        finally:
+            if sla_task and not sla_task.done():
+                sla_task.cancel()
 
     async def _handle_complete(self, state: OnboardingStateDict) -> OnboardingStateDict:
         """Provision accounts and send completion notifications."""
-        SLAHook.on_stage_entered(state.get("case_id", ""), "COMPLETE", None)
-
         result = await workflow.execute_activity(
             completion_activity,
             state,
@@ -855,43 +1248,46 @@ class OnboardingWorkflow:
         The workflow waits for human_review_completed or advance_stage.
         If no signal arrives within 90 days the workflow exits.
         """
-        SLAHook.on_stage_entered(state.get("case_id", ""), "ESCALATED", None)
+        sla_task, _ = await self._start_sla_timer(state, "ESCALATED")
+        try:
+            dispatch = self._dispatcher.resolve("ESCALATED", state) if self._dispatcher else None
+            escalation_fn = (
+                _ACTIVITY_LOOKUP.get(dispatch.activity_name, escalation_alert_activity)
+                if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
+                else escalation_alert_activity
+            )
+            await workflow.execute_activity(
+                escalation_fn,
+                state,
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=_NO_RETRY,
+            )
+            await workflow.execute_activity(
+                _contact_centre_summary_activity,
+                state,
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=_NO_RETRY,
+            )
 
-        dispatch = self._dispatcher.resolve("ESCALATED", state) if self._dispatcher else None
-        escalation_fn = (
-            _ACTIVITY_LOOKUP.get(dispatch.activity_name, escalation_alert_activity)
-            if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
-            else escalation_alert_activity
-        )
-        await workflow.execute_activity(
-            escalation_fn,
-            state,
-            schedule_to_close_timeout=timedelta(minutes=5),
-            retry_policy=_NO_RETRY,
-        )
-        await workflow.execute_activity(
-            _contact_centre_summary_activity,
-            state,
-            schedule_to_close_timeout=timedelta(minutes=5),
-            retry_policy=_NO_RETRY,
-        )
+            # Wait for a resolution signal (approved → PARALLEL_PRODUCTS, rejected → done).
+            resolved = await workflow.wait_condition(
+                lambda: len(self._human_signals) > 0 or len(self._advance_signals) > 0,
+                timeout=timedelta(days=90),
+            )
 
-        # Wait for a resolution signal (approved → PARALLEL_PRODUCTS, rejected → done).
-        resolved = await workflow.wait_condition(
-            lambda: len(self._human_signals) > 0 or len(self._advance_signals) > 0,
-            timeout=timedelta(days=90),
-        )
+            if not resolved:
+                # Timed out — treat as terminal escalation.
+                return {**state, "stage": "ESCALATED"}
 
-        if not resolved:
-            # Timed out — treat as terminal escalation.
+            if self._human_signals:
+                signal = self._human_signals.pop(0)
+                if signal.decision == "APPROVED":
+                    return {**state, "stage": "PARALLEL_PRODUCTS"}
+            elif self._advance_signals:
+                signal = self._advance_signals.pop(0)
+                return {**state, "stage": signal.to_stage}
+
             return {**state, "stage": "ESCALATED"}
-
-        if self._human_signals:
-            signal = self._human_signals.pop(0)
-            if signal.decision == "APPROVED":
-                return {**state, "stage": "PARALLEL_PRODUCTS"}
-        elif self._advance_signals:
-            signal = self._advance_signals.pop(0)
-            return {**state, "stage": signal.to_stage}
-
-        return {**state, "stage": "ESCALATED"}
+        finally:
+            if sla_task and not sla_task.done():
+                sla_task.cancel()

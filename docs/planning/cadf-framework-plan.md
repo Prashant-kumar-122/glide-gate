@@ -16,7 +16,7 @@
 - [x] **Phase 4** — Make products, questions, and per-product agent pipelines config-driven
 - [~] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03) ⚠️ SKIPPED — implementation was reverted; do not implement, proceed directly to Phase 4.6
 - [x] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
-- [ ] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
+- [x] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
 - [ ] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
 - [ ] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
 - [ ] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
@@ -1192,7 +1192,68 @@ Mark **Phase 4.6** as `[x]` in the Phase Status Tracker and commit this file.
 
 ---
 
-## Phase 5 — Configurable SLA enforcement with feature flags and per-stage parameters
+## Phase 5 — Configurable SLA enforcement with feature flags and per-stage parameters ✅ Done
+
+### As-built summary (2026-06-16)
+
+**Migration 0019** (`backend/alembic/versions/0019_sla_tracking.py`) creates `case_sla_tracking`
+(one row per case+stage; tracks `started_at`, `paused_at`, `paused_duration_seconds`,
+`warning_sent_at`, `breach_triggered_at`) and seeds 8 default `domain_stage_slas` rows for the
+`wealth_management` domain (INTAKE/KYC/PARALLEL_PRODUCTS/REVIEW/SALES_REVIEW/ESCALATED with
+default + SME-tier overrides).
+
+**`CaseSlaTracking`** ORM model (`backend/app/models/sla.py`).
+
+**`SLAMonitorService`** (`backend/app/services/sla/sla_monitor_service.py`):
+- `resolve_sla(db, domain_code, stage_code, priority_tier, product_code)` — 4-step priority chain
+  (most-specific → least); returns `None` if no row or `is_enabled=False`.
+- `start_tracking`, `pause_tracking`, `resume_tracking`, `record_warning_sent`,
+  `record_breach_triggered`, `get_net_elapsed_seconds`.
+
+**New Temporal activities** (in `onboarding_workflow.py`):
+
+| Activity | Purpose |
+|---|---|
+| `start_sla_tracking_activity` | Resolve SLA config + write `case_sla_tracking`; returns config dict or `None` |
+| `pause_sla_tracking_activity` | Record `paused_at` for clock-pause |
+| `resume_sla_tracking_activity` | Accumulate `paused_duration_seconds`; return `elapsed_active_seconds` |
+| `send_sla_warning_activity` | Write `SLA_WARNING` to `decision_log`; idempotent via `warning_sent_at` check |
+| `trigger_sla_breach_activity` | Write `SLA_BREACH` (`is_regulatory_breach=True`); escalate case to ESCALATED; idempotent |
+
+**`_watch_sla(case_id, stage_code, sla_config, elapsed_seconds=0.0)`** — async method on
+`OnboardingWorkflow`; started as `asyncio.create_task()` inside each stage handler; cancelled via
+`finally` block when stage exits; handles `asyncio.CancelledError` gracefully.
+
+**`_start_sla_timer / _pause_sla / _resume_sla`** — helper methods on `OnboardingWorkflow` that
+encapsulate the Temporal activity calls and task lifecycle.
+
+**`SLAHook` stub** (`stage_dispatcher.py`) — docstring updated to reflect Phase 5 supersession;
+class kept for import compatibility.
+
+**`OnboardingWorkflow` stage handlers** — `SLAHook.on_stage_entered()` call sites replaced by
+`await self._start_sla_timer(state, stage_code)` with `try/finally` in all 6 stage handlers.
+`_handle_review` and `_handle_sales_review` additionally call `_pause_sla` / `_resume_sla` around
+their `wait_condition` calls (seeded SLA rows have `pause_on_human_review=True` for these stages).
+`_handle_kyc` extracts inner logic to `_run_kyc()` so the SLA `finally` wraps it cleanly.
+
+**15 unit tests** in `backend/tests/unit/services/test_sla_monitor.py`:
+- resolve_sla: no domain → None; disabled row → None; enabled row → SLASpec
+- Priority-tier exact match wins over domain default
+- Product-scoped `is_enabled=False` overrides domain-level `is_enabled=True`
+- start_tracking writes row with correct fields
+- pause/resume accumulates `paused_duration_seconds` correctly
+- `record_warning_sent` / `record_breach_triggered` idempotency
+- `get_net_elapsed_seconds` excludes completed and in-progress pauses
+
+### Files changed
+- **New:** `backend/alembic/versions/0019_sla_tracking.py`
+- **New:** `backend/app/models/sla.py`
+- **New:** `backend/app/services/sla/__init__.py`
+- **New:** `backend/app/services/sla/sla_monitor_service.py`
+- **New:** `backend/tests/unit/services/test_sla_monitor.py`
+- **Modified:** `backend/app/workflows/onboarding_workflow.py` (SLA activities + `_watch_sla`, `_start_sla_timer`, `_pause_sla`, `_resume_sla`; `SLAHook` import removed; all stage handlers updated)
+- **Modified:** `backend/app/services/orchestration/stage_dispatcher.py` (SLAHook docstring)
+- **Modified:** `docs/FRAMEWORK.md`, `docs/TRACEABILITY.md`, `docs/planning/cadf-framework-plan.md`
 
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 3 commit must be present (Phase 4 not required)

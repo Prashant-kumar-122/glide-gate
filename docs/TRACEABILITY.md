@@ -69,7 +69,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | OBJ-2 | True parallel onboarding (all products concurrent) | Phase 0.5, Phase 4 | 🟡 |
 | OBJ-3 | Zero duplicate document requests | Phase 4.5 | ⬜ |
 | OBJ-4 | Admin-configurable domain (no engineer redeploy) | Phase 9 | ⬜ |
-| OBJ-5 | SLA enforcement with audit trail | Phase 5, Phase 2.5 | 🟡 | Audit trail done (Phase 2.5); SLA enforcement in Phase 5 |
+| OBJ-5 | SLA enforcement with audit trail | Phase 5, Phase 2.5 | ✅ | `SLAMonitorService`; `case_sla_tracking` (migration 0019); Temporal `_watch_sla` timer; `SLA_WARNING`/`SLA_BREACH` in `decision_log` (`is_regulatory_breach=True` on breach) |
 | OBJ-6 | Explainable, tamper-evident audit trail | Phase 2.5 | ✅ | `decision_log` hash chain + `GET /audit/verify` tamper detection |
 
 ---
@@ -104,7 +104,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 4 | Config-driven products + per-product agent pipelines | ✅ |
 | Phase 4.5 | Shared-core document taxonomy (FR-DM-01/02/03) | ~ (skipped) |
 | Phase 4.6 | First-to-complete activation gate (FR-GL-01/02/03) | ✅ |
-| Phase 5 | Configurable SLA enforcement | ⬜ |
+| Phase 5 | Configurable SLA enforcement | ✅ |
 | Phase 6 | Wire Skills & MCP into live execution | ⬜ |
 | Phase 7 | Configurable persona + permission model | ⬜ |
 | Phase 8 | Loosen DB CHECK constraints | ⬜ |

@@ -394,7 +394,7 @@ returns the Temporal activity name to invoke — driven by `domain_task_routing`
 **Construction — two paths:**
 
 ```python
-from app.services.orchestration.stage_dispatcher import StageDispatcher, SLAHook
+from app.services.orchestration.stage_dispatcher import StageDispatcher
 
 # In workflow code (inside OnboardingWorkflow.run()):
 #   domain_dict is the raw dict returned by load_domain_definition_activity — no SQLAlchemy import
@@ -428,13 +428,61 @@ the sandbox reuses the outer process's already-loaded module cache instead of re
 rows to `@activity.defn` name strings.  To add a new task type (e.g. in Phase 6), add one entry —
 no workflow code changes required.
 
-**`SLAHook.on_stage_entered(case_id, stage_code, domain_def)`** — called at the top of every
-`_handle_*` method in `OnboardingWorkflow`.  Phase 3: synchronous no-op stub.  Phase 5 activates
-the real Temporal Timer; the call site will be replaced by a Temporal activity call.
+**`SLAHook`** — Phase 3 no-op stub superseded by `_start_sla_timer()` in Phase 5.  Class is kept
+for import compatibility only; all live call sites have been replaced.
 
 **`load_domain_definition_activity`** — Temporal activity that loads `DomainDefinition` from DB
 once at workflow start and returns a JSON-serializable dict.  On Temporal replay the stored
 history result is returned (no DB re-query), preserving determinism.
+
+### SLAMonitorService (Phase 5+)
+
+`backend/app/services/sla/sla_monitor_service.py`
+
+Handles all DB operations for SLA clock tracking.  The Temporal workflow calls it only via
+Temporal activities (never directly), so all writes are durable and crash-safe.
+
+**Key responsibilities:**
+
+- `resolve_sla(db, domain_code, stage_code, priority_tier, product_code)` — resolves the
+  best-matching `domain_stage_slas` row using a 4-step priority chain (most-specific → least):
+  `(stage + tier + product)` → `(stage + tier)` → `(stage + product)` → `(stage)`.
+  Returns `None` if no row exists or the row has `is_enabled=False`.
+
+- `start_tracking(db, case_id, stage_code, sla_spec, ...)` — writes a `case_sla_tracking` row
+  at stage entry.  `started_at` is set to `now()`.
+
+- `pause_tracking / resume_tracking` — clock-pause support for human-review stages.
+  `resume_tracking` accumulates `paused_duration_seconds` and returns `elapsed_active_seconds`
+  so `_watch_sla` can restart with the correct remaining time.
+
+- `record_warning_sent / record_breach_triggered` — idempotent: returns `False` if the
+  timestamp is already set, so double-fires have no effect.
+
+- `get_net_elapsed_seconds` — subtracts accumulated pause time (including any in-progress pause)
+  from total elapsed.
+
+**SLA Temporal activities (in `onboarding_workflow.py`):**
+
+| Activity | Purpose |
+|---|---|
+| `start_sla_tracking_activity` | Resolve SLA config + write `case_sla_tracking` row; returns config dict or None |
+| `pause_sla_tracking_activity` | Record `paused_at` (human-review stages) |
+| `resume_sla_tracking_activity` | Accumulate pause; return `elapsed_active_seconds` |
+| `send_sla_warning_activity` | Write `SLA_WARNING` to `decision_log`; log warning |
+| `trigger_sla_breach_activity` | Write `SLA_BREACH` (`is_regulatory_breach=True`); escalate case to ESCALATED |
+
+**`_watch_sla(case_id, stage_code, sla_config, elapsed_seconds=0.0)`** — async Temporal coroutine
+started as `asyncio.create_task()` inside each stage handler.  Cancelled via `finally` block when
+the stage exits.  `elapsed_seconds > 0` is used when restarting after a clock-pause.
+
+**Clock pausing (REVIEW, SALES_REVIEW):** if `sla_config["pause_on_human_review"]` is `True`,
+the stage handler cancels the SLA task, calls `pause_sla_tracking_activity`, waits for the
+human signal, then calls `resume_sla_tracking_activity` and restarts `_watch_sla` with the
+remaining active time.
+
+**`is_regulatory_breach=True`** is set on `decision_log` entries written by
+`trigger_sla_breach_activity` — required for BSA 5-year WORM retention.
 
 ### DecisionLogService (Phase 2.5+)
 
