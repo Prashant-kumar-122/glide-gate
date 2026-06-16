@@ -77,8 +77,6 @@ build:
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
         cd /home/ubuntu/office_project/glidegate &&
-        mkdir -p db/data &&
-        sudo chown -R 999:999 db/data &&
         DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
         docker tag glidegate_backend:latest glidegate_backend:$CI_COMMIT_SHORT_SHA &&
         docker tag glidegate_frontend:latest glidegate_frontend:$CI_COMMIT_SHORT_SHA &&
@@ -151,8 +149,6 @@ build-feature:
         cd /home/ubuntu/office_project/glidegate &&
         git fetch origin &&
         git reset --hard origin/$CI_COMMIT_REF_NAME &&
-        mkdir -p db/data &&
-        sudo chown -R 999:999 db/data &&
         DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
         echo '✓ Docker build passed'"
 
@@ -199,8 +195,6 @@ build-main:
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
         cd /home/ubuntu/office_project/glidegate &&
-        mkdir -p db/data &&
-        sudo chown -R 999:999 db/data &&
         DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
         docker tag glidegate_backend:latest glidegate_backend:$CI_COMMIT_SHORT_SHA &&
         docker tag glidegate_frontend:latest glidegate_frontend:$CI_COMMIT_SHORT_SHA &&
