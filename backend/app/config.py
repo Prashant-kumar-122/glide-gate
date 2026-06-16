@@ -44,6 +44,16 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
+    # Auth provider — "local" uses HS256 JWT, "keycloak" validates via JWKS
+    AUTH_PROVIDER: Literal["local", "keycloak"] = "local"
+    KEYCLOAK_URL: str = "http://localhost:8080"
+    KEYCLOAK_REALM: str = "glidegate"
+    KEYCLOAK_CLIENT_ID: str = "glidegate-frontend"
+
+    @property
+    def keycloak_jwks_url(self) -> str:
+        return f"{self.KEYCLOAK_URL}/realms/{self.KEYCLOAK_REALM}/protocol/openid-connect/certs"
+
     # Cookie / CSRF
     AUTH_COOKIE_NAME: str = "gg_access_token"
     CSRF_COOKIE_NAME: str = "gg_csrf"
