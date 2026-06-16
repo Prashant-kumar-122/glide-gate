@@ -20,11 +20,20 @@ function base64url(buf: ArrayBuffer): string {
 }
 
 export async function startKeycloakLogin(): Promise<void> {
-  const verifierBytes = crypto.getRandomValues(new Uint8Array(32))
-  const verifier = base64url(verifierBytes.buffer)
-  const challengeBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
-  const challenge = base64url(challengeBuf)
-  const state = base64url(crypto.getRandomValues(new Uint8Array(16)).buffer)
+  const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)).buffer)
+  const state    = base64url(crypto.getRandomValues(new Uint8Array(16)).buffer)
+
+  // crypto.subtle requires HTTPS or localhost — fall back to plain PKCE on HTTP + IP
+  let challenge: string
+  let challengeMethod: string
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
+    challenge       = base64url(buf)
+    challengeMethod = 'S256'
+  } else {
+    challenge       = verifier
+    challengeMethod = 'plain'
+  }
 
   sessionStorage.setItem('kc_verifier', verifier)
   sessionStorage.setItem('kc_state', state)
@@ -35,7 +44,7 @@ export async function startKeycloakLogin(): Promise<void> {
     response_type:         'code',
     scope:                 'openid email profile',
     code_challenge:        challenge,
-    code_challenge_method: 'S256',
+    code_challenge_method: challengeMethod,
     state,
   })
   window.location.href = `${authEndpoints.auth}?${params}`

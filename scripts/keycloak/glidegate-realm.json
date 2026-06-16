@@ -42,7 +42,6 @@
       ],
       "webOrigins": ["+"],
       "attributes": {
-        "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://18.60.103.228:5173/login##http://localhost:5173/login"
       },
       "protocolMappers": [
