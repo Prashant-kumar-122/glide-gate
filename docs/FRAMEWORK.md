@@ -168,9 +168,9 @@ DirectTaskWorkflow (short-lived, one per fire-and-forget task)
 |---|---|---|---|
 | CustomerService | `agents/customer_service/graph.py` | `customer_service_kickoff_activity` (workflow) + `direct_customer_service_task` (DirectTask) | ADVANCE_STAGE (via ConversationCoordinator) |
 | KYCCompliance | `agents/kyc_compliance/graph.py` | `kyc_compliance_activity` (workflow) | — (outcome written to state; workflow advances stage) |
-| FraudScreening (Phase 4.6) | `agents/fraud_screening/graph.py` | TBD | FRAUD_FLAGGED, FRAUD_CLEARED |
+| FraudScreening | `agents/fraud_screening/graph.py` | `fraud_screening_activity` — runs **concurrently with KYC** via `asyncio.gather` in `_handle_kyc` | FRAUD_FLAGGED, FRAUD_CLEARED (decision_log, is_compliance_event=True) |
 | DocumentIntelligence | `agents/document_intelligence/graph.py` | `direct_document_task` (DirectTask) | — |
-| ProductOnboarding | `agents/product_onboarding/graph.py` | `product_onboarding_activity` inside `ProductOnboardingWorkflow` (child, one per product) | — (Phase 4: trace written as `product_onboarding[{product_code}]`) |
+| ProductOnboarding | `agents/product_onboarding/graph.py` | `product_onboarding_activity` inside `ProductOnboardingWorkflow` (child, one per product) | — (Phase 4: trace written as `product_onboarding[{product_code}]`; Phase 4.6: activation_gate terminal node writes PRODUCT_ACTIVATED/PRODUCT_DECLINED) |
 | Collaboration | `agents/collaboration/graph.py` | `collaboration_kickoff_activity` (workflow) | — |
 | Notification | `agents/notification/graph.py` | `notification_activity` / `escalation_alert_activity` (workflow) | — |
 | SalesManager | `agents/sales_manager/graph.py` | `sales_manager_kickoff_activity` (workflow) + `direct_sales_manager_task` (DirectTask) | — |
@@ -290,7 +290,7 @@ Full detail in `docs/planning/cadf-framework-plan.md` §Phase 0.5 Known debt.
 | `human_reviews` | Manual review records | Initial |
 | `event_log` | Operational telemetry | Initial |
 | `decision_log` | Immutable hash-chained compliance audit trail (Phase 2.5) | 2.5 |
-| `product_activation` | Per-product activation state + adverse action (Phase 4.6) | 4.6 |
+| `product_activation` | Per-product activation state machine (PENDING→CRITERIA_MET→ACTIVATED\|DECLINED) + ECOA adverse-action fields (Phase 4.6) | 4.6 |
 | `domain_*` (15 tables) | CADF domain model — stages, transitions, SLAs, personas, etc. | 1 |
 | `case_sla_tracking` | SLA elapsed tracking per case/stage | 5 |
 

@@ -189,10 +189,19 @@ async def _log_kyc_decision(state: OnboardingStateDict) -> None:
 @activity.defn(name="product_onboarding_activity")
 async def product_onboarding_activity(state: OnboardingStateDict) -> OnboardingStateDict:
     """Run the full product onboarding pipeline for one product track."""
+    import traceback as _tb
     from app.agents.product_onboarding.graph import build_product_onboarding_graph
 
-    graph = build_product_onboarding_graph()
-    return await graph.ainvoke(state)
+    try:
+        graph = build_product_onboarding_graph()
+        return await graph.ainvoke(state)
+    except Exception as _exc:
+        activity.logger.error(
+            f"product_onboarding_activity FAILED "
+            f"case={state.get('case_id')} product={state.get('_product_code')}: "
+            f"{_exc}\n{_tb.format_exc()}"
+        )
+        raise
 
 
 @activity.defn(name="sales_manager_kickoff_activity")
@@ -343,6 +352,15 @@ async def persist_stage_activity(input: dict[str, Any]) -> None:
     await socket_emitter.case_stage_changed(case_id_str, {"stage": stage, "case_id": case_id_str})
 
 
+@activity.defn(name="fraud_screening_activity")
+async def fraud_screening_activity(state: OnboardingStateDict) -> OnboardingStateDict:
+    """Run fraud screening concurrently with KYC (Phase 4.6)."""
+    from app.agents.fraud_screening.graph import build_fraud_screening_graph
+
+    graph = build_fraud_screening_graph()
+    return await graph.ainvoke(state)
+
+
 @activity.defn(name="contact_centre_summary_activity")
 async def _contact_centre_summary_activity(state: OnboardingStateDict) -> OnboardingStateDict:
     """Generate contact-centre status summary for the case."""
@@ -366,6 +384,7 @@ _ACTIVITY_LOOKUP: dict[str, Any] = {
     "notification_activity":             notification_activity,
     "escalation_alert_activity":         escalation_alert_activity,
     "completion_activity":               completion_activity,
+    "fraud_screening_activity":          fraud_screening_activity,
 }
 
 
@@ -386,6 +405,7 @@ def get_all_activities() -> list[Any]:
         completion_activity,
         persist_stage_activity,
         _contact_centre_summary_activity,
+        fraud_screening_activity,
         *get_direct_task_activities(),
     ]
 
@@ -614,7 +634,7 @@ class OnboardingWorkflow:
         return state
 
     async def _handle_kyc(self, state: OnboardingStateDict) -> OnboardingStateDict:
-        """Run KYC compliance check as a synchronous activity."""
+        """Run KYC compliance check and fraud screening concurrently (Phase 4.6)."""
         SLAHook.on_stage_entered(state.get("case_id", ""), "KYC", None)
 
         dispatch = self._dispatcher.resolve("KYC", state) if self._dispatcher else None
@@ -623,12 +643,50 @@ class OnboardingWorkflow:
             if dispatch and dispatch.activity_name in _ACTIVITY_LOOKUP
             else kyc_compliance_activity
         )
-        result = await workflow.execute_activity(
-            kyc_fn,
-            state,
-            schedule_to_close_timeout=timedelta(minutes=30),
-            retry_policy=_STANDARD_RETRY,
+        # Phase 4.6: run KYC and fraud screening in parallel Temporal activities.
+        # fraud_screening_activity is best-effort — its failure must not kill the workflow.
+        _gather_results = await asyncio.gather(
+            workflow.execute_activity(
+                kyc_fn,
+                state,
+                schedule_to_close_timeout=timedelta(minutes=30),
+                retry_policy=_STANDARD_RETRY,
+            ),
+            workflow.execute_activity(
+                fraud_screening_activity,
+                state,
+                schedule_to_close_timeout=timedelta(minutes=5),
+                retry_policy=_NO_RETRY,
+            ),
+            return_exceptions=True,
         )
+        kyc_result = _gather_results[0]
+        if isinstance(kyc_result, BaseException):
+            raise kyc_result  # KYC failure IS fatal
+
+        _fraud_raw = _gather_results[1]
+        if isinstance(_fraud_raw, BaseException):
+            # Fraud screening unavailable — default to CLEARED so KYC can proceed.
+            workflow.logger.warning(f"fraud_screening_activity failed, defaulting to CLEARED: {_fraud_raw}")
+            fraud_result: OnboardingStateDict = {
+                **state,
+                "extra": {**(state.get("extra") or {}), "fraud_screened": "CLEARED"},
+            }
+        else:
+            fraud_result = _fraud_raw
+
+        # Merge fraud result into KYC result.  KYC must spread LAST so its
+        # authoritative keys (kyc_status, kyc_risk_score, …) win over the stale
+        # copies that fraud_result carries from the shared initial state.
+        # fraud_result only adds fraud-specific keys (fraud_screened,
+        # escalation_reason); KYC does not set those, so they are preserved.
+        merged_extra = {**(fraud_result.get("extra") or {}), **(kyc_result.get("extra") or {})}
+        result = {**kyc_result, "extra": merged_extra}
+
+        # If fraud was flagged, override next_stage to ESCALATED regardless of KYC outcome
+        if merged_extra.get("fraud_screened") == "FLAGGED":
+            result = {**result, "next_stage": "ESCALATED"}
+
         _result_extra = result.get("extra") or {}
         next_stage = result.get("next_stage") or (
             "PARALLEL_PRODUCTS" if _result_extra.get("kyc_status") == "PASSED" else "ESCALATED"

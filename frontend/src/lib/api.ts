@@ -111,6 +111,21 @@ export interface ProductTrack {
   status: string
   steps_total: number
   steps_completed: number
+  // Phase 4.6: activation gate fields
+  activation_state?: 'PENDING' | 'CRITERIA_MET' | 'ACTIVATED' | 'DECLINED'
+  account_number?: string | null
+}
+
+export interface ProductActivation {
+  product_code: string
+  state: 'PENDING' | 'CRITERIA_MET' | 'ACTIVATED' | 'DECLINED'
+  criteria_met_at: string | null
+  activated_at: string | null
+  declined_at: string | null
+  decline_reason: string | null
+  account_number: string | null
+  is_adverse_action: boolean
+  adverse_action_reason: string | null
 }
 
 export interface OcrField {

@@ -55,6 +55,7 @@ class OnboardingCase(Base):
     conversation_messages: Mapped[list[Any]] = relationship("ConversationMessage", back_populates="case")
     question_sessions: Mapped[list[Any]] = relationship("OnboardingQuestionSession", back_populates="case")
     answers: Mapped[list[Any]] = relationship("OnboardingAnswer", back_populates="case")
+    product_activations: Mapped[list[Any]] = relationship("ProductActivation", back_populates="case", cascade="all, delete-orphan")
 
 
 class Product(Base):

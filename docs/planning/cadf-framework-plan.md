@@ -15,7 +15,7 @@
 - [x] **Phase 3** — Replace if/elif stage routing with config-driven StageDispatcher
 - [x] **Phase 4** — Make products, questions, and per-product agent pipelines config-driven
 - [~] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03) ⚠️ SKIPPED — implementation was reverted; do not implement, proceed directly to Phase 4.6
-- [ ] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
+- [x] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
 - [ ] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
 - [ ] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
 - [ ] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
@@ -915,9 +915,96 @@ Mark **Phase 4.5** as `[x]` in the Phase Status Tracker and commit this file.
 
 ---
 
-## Phase 4.6 — First-to-complete activation gate (FR-GL-01/02/03)
+## Phase 4.6 — First-to-complete activation gate (FR-GL-01/02/03) ✅ Done
 
-### Session start checklist
+### As-built summary (2026-06-16)
+
+**Migration 0018** (`backend/alembic/versions/0018_product_activation.py`) adds the
+`product_activation` table with per-product state machine
+(`PENDING → CRITERIA_MET → ACTIVATED | DECLINED`) and ECOA adverse-action fields.
+
+**`ProductActivation`** ORM model (`backend/app/models/activation.py`).
+`OnboardingCase` gains a `product_activations` relationship.
+
+**`ActivationGateService`** (`backend/app/services/activation/activation_gate_service.py`):
+- `evaluate(case_id, product_code, track_status)` — strong-consistency DB read of
+  `OnboardingCase.shared_context` (ADR-006), loads `domain_products.activation_criteria`
+  JSONB, delegates to `_evaluate_policy()`.
+- `_evaluate_policy(case_context, activation_criteria, track_status)` — pure Python function
+  that mirrors `policies/activation.rego`; evaluates pipeline status, KYC gate, fraud gate,
+  and optional `min_risk_level` criteria; returns `(allow, decline_reason, is_adverse_action)`.
+- On ACTIVATED: upserts `product_activation` row, provisions account number
+  (`GG-{product[:3].upper()}-{uuid[:8].upper()}`), appends `PRODUCT_ACTIVATED` to
+  `decision_log` (`is_compliance_event=True`).
+- On DECLINED: sets `is_adverse_action=True` for credit products (ECOA FR-AU-04);
+  `is_regulatory_breach=True` in `decision_log`.
+
+**`FraudScreeningAgent`** (`backend/app/agents/fraud_screening/graph.py`):
+- Single `fraud_screening` LangGraph node; simulates velocity / synthetic-identity /
+  tamper-detection scores; threshold = 0.85.
+- Sets `extra["fraud_screened"] = "FLAGGED"|"CLEARED"`.
+- On FLAGGED: sets `extra["escalation_reason"]`, `next_stage = "ESCALATED"`, writes
+  `FRAUD_FLAGGED` to `decision_log` (`is_compliance_event=True`), emits socket event.
+
+**Concurrent KYC + fraud screening** (`backend/app/workflows/onboarding_workflow.py`):
+- `fraud_screening_activity` Temporal activity added, registered in `get_all_activities()`.
+- `_handle_kyc` now runs both activities via `asyncio.gather`; merges `fraud_screened` flag
+  into KYC result's `extra` bag; if `fraud_screened == "FLAGGED"` overrides `next_stage` to
+  `"ESCALATED"` regardless of KYC outcome.
+
+**Product onboarding graph restructured** (`backend/app/agents/product_onboarding/graph.py`):
+- Graph topology: `onboard_product → activation_gate → END`
+- `_onboard_product_node` — pipeline execution (Phase 4); trace write removed.
+- `_activation_gate_node` — calls `ActivationGateService.evaluate()`; emits socket event with
+  activation result; writes direct `AgentTask` trace (Phase 0.5 guard: trace write is always in
+  the terminal node); updates `product_tracks[product_code]` with `activation_state` and
+  `account_number`.
+
+**OPA policy** (`policies/activation.rego`) — documents the activation logic; can be deployed
+to an external OPA server in production; the Python in-process evaluator mirrors it exactly.
+
+**API** (`backend/app/api/routers/cases.py`):
+- `ProductTrackOut` extended with `activation_state` (default `"PENDING"`) and
+  `account_number` fields.
+- `ProductActivationOut` Pydantic schema added.
+- `GET /cases/{id}/product-activations` — returns all `product_activation` rows for a case.
+- `get_case_summary` loads activation state via `product_activation` join and passes
+  activation map to `_build_product_track`.
+
+**Frontend** (`frontend/src`):
+- `ProductTrack` interface extended with `activation_state` and `account_number`.
+- `ProductActivation` interface added to `api.ts`.
+- `ParallelProductTracks.tsx` shows per-product activation badge (ACTIVATED/DECLINED/PENDING)
+  and "First Live" highlight on the first product to reach ACTIVATED state.
+
+**13 unit tests** in `backend/tests/unit/services/test_activation_gate.py`:
+- Pipeline incomplete / UNSUITABLE → DECLINED
+- KYC not passed / PENDING → DECLINED
+- Fraud flagged → DECLINED (not adverse_action)
+- All criteria clear → ACTIVATED
+- `min_risk_level` below / meets threshold → DECLINED / ACTIVATED
+- Credit product KYC decline → `is_adverse_action=True`
+- Non-credit decline → `is_adverse_action=False`
+- Service exposes no `delete` / `update` method (WORM)
+
+### Files changed
+- **New:** `backend/alembic/versions/0018_product_activation.py`
+- **New:** `backend/app/models/activation.py`
+- **New:** `backend/app/services/activation/__init__.py`
+- **New:** `backend/app/services/activation/activation_gate_service.py`
+- **New:** `backend/app/agents/fraud_screening/__init__.py`
+- **New:** `backend/app/agents/fraud_screening/graph.py`
+- **New:** `policies/activation.rego`
+- **New:** `backend/tests/unit/services/test_activation_gate.py`
+- **Modified:** `backend/app/models/cases.py` (`product_activations` relationship on `OnboardingCase`)
+- **Modified:** `backend/app/agents/product_onboarding/graph.py` (two-node graph, activation gate terminal)
+- **Modified:** `backend/app/workflows/onboarding_workflow.py` (`fraud_screening_activity`, concurrent KYC)
+- **Modified:** `backend/app/api/routers/cases.py` (extended schemas, product-activations endpoint)
+- **Modified:** `frontend/src/lib/api.ts` (extended `ProductTrack`, new `ProductActivation` type)
+- **Modified:** `frontend/src/features/advisor/ParallelProductTracks.tsx` (activation badges)
+- **Modified:** `docs/FRAMEWORK.md`, `docs/TRACEABILITY.md`, `docs/planning/cadf-framework-plan.md`
+
+### Session start checklist (for reference — phase is complete)
 - Run `git log --oneline -5` — Phase 4.5 commit must be present
 - Read `backend/app/agents/product_onboarding/product_onboarding_agent.py` (LangGraph graph)
 - Read the `domain_agent_capabilities` rows for `product_onboarding` — understand existing exit contracts

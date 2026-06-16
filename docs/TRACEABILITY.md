@@ -30,10 +30,10 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-AG-04 | Agents trigger compliance/identity checks via integrations | Phase 6 | ⬜ | `MCPRegistry.invoke()` grant-checked calls (ADR-007) |
 | FR-AG-05 | Detect exceptions; escalate to human queue | Existing | 🟡 | `HumanReview` model; `EscalationQueue.tsx` |
 | FR-AG-06 | Respect HITL checkpoints + authority limits | Phase 7 | ⬜ | `require_permission()` guards; `domain_permissions` rows |
-| FR-AG (fraud) | Fraud/anomaly screening; gates activation | Phase 4.6 | ⬜ | `FraudScreeningAgent` LangGraph graph; `fraud_screened` activation criterion |
-| FR-GL-01 | Detect product satisfies activation criteria | Phase 4.6 | ⬜ | `ActivationGateService`; OPA `activation.rego`; `product_activation` table |
-| FR-GL-02 | Activate first completed product independently | Phase 4.6 | ⬜ | Per-product `CRITERIA_MET → ACTIVATED` transition; account provisioning |
-| FR-GL-03 | Continue remaining products after first activation | Phase 4.6 | ⬜ | Independent Temporal child workflows; no blocking on sibling completion |
+| FR-AG (fraud) | Fraud/anomaly screening; gates activation | Phase 4.6 | ✅ | `FraudScreeningAgent` (`agents/fraud_screening/graph.py`); runs concurrent with KYC via `asyncio.gather`; `fraud_screened` gate in `_evaluate_policy` |
+| FR-GL-01 | Detect product satisfies activation criteria | Phase 4.6 | ✅ | `ActivationGateService` (`services/activation/activation_gate_service.py`); Python policy mirrors `policies/activation.rego`; `product_activation` table (migration 0018) |
+| FR-GL-02 | Activate first completed product independently | Phase 4.6 | ✅ | `_activation_gate_node` in `product_onboarding/graph.py`; per-product `CRITERIA_MET → ACTIVATED` transition; account number provisioned immediately |
+| FR-GL-03 | Continue remaining products after first activation | Phase 4.6 | ✅ | Independent Temporal child workflows (`ProductOnboardingWorkflow`); sibling workflows unblocked; `ParallelProductTracks.tsx` "First Live" badge |
 | FR-CP-01 | Client self-service portal (sign in / resume) | Existing | 🟡 | `ClientPortal` route, `OnboardingWizard`; JWT auth (Keycloak deferred) |
 | FR-CP-02 | Document upload capability | Existing | ✅ | `DocumentUploadCard`, `POST /documents/upload` |
 | FR-CP-03 | Real-time notifications | Existing | 🟡 | `NotificationAgent`, socket.io; push notifications |
@@ -42,7 +42,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-AU-01 | Immutable, hash-chained audit trail | Phase 2.5 | ✅ | `decision_log` table (migration 0016); `DecisionLogService`; SHA-256 chain; `GET /audit/verify` |
 | FR-AU-02 | Capture human override identity/reason/time | Phase 7 | ⬜ | `HUMAN_OVERRIDE` entries in `decision_log` with resolver identity |
 | FR-AU-03 | Operational/compliance reports, exportable | Phase 2.5 | ✅ | `GET /cases/{id}/audit` (paginated, hash-visible); `GET /audit/export` (CSV+JSON) |
-| FR-AU-04 | Adverse-action records on credit decline (ECOA) | Phase 4.6 | ⬜ | `product_activation.is_adverse_action`; `decision_log` regulatory entry |
+| FR-AU-04 | Adverse-action records on credit decline (ECOA) | Phase 4.6 | ✅ | `product_activation.is_adverse_action` + `adverse_action_reason`; `decision_log` entry with `is_regulatory_breach=True` |
 
 ---
 
@@ -79,11 +79,11 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | ADR | Decision | CADF Phase | Status | Artifact(s) |
 |---|---|---|---|---|
 | ADR-001 | Self-host Temporal for durable orchestration | Phase 0.5 | ✅ | `docker-compose.yml` Temporal service; `OnboardingWorkflow` |
-| ADR-002 | Criteria-driven blackboard activation (no static graph) | Phase 3, Phase 4.6 | 🟡 | `StageDispatcher` (Phase 3 ✅); `ActivationGateService` OPA evaluation (Phase 4.6 ⬜) |
+| ADR-002 | Criteria-driven blackboard activation (no static graph) | Phase 3, Phase 4.6 | ✅ | `StageDispatcher` (Phase 3); `ActivationGateService` policy evaluation (Phase 4.6) |
 | ADR-003 | Bespoke differentiators + OSS commodity | All phases | 🟡 | Monorepo + docker-compose |
 | ADR-004 | Polyglot — Python/LangGraph agents (JVM deferred) | Phase 0.5 | ✅ | LangGraph `StateGraph` per agent; ADR-009 formalizes Python-first |
 | ADR-005 | Dual-AZ active-active + DR | Phase 13 | ⬜ | Helm `values-prod.yaml`; DR runbook |
-| ADR-006 | OPA activation gate; strong-consistency reads | Phase 4.6 | ⬜ | `activation.rego`; `ActivationGateService` reads DB not cache |
+| ADR-006 | OPA activation gate; strong-consistency reads | Phase 4.6 | ✅ | `policies/activation.rego` (OPA bundle); `ActivationGateService._evaluate_policy` mirrors policy in-process; reads `OnboardingCase` from DB not LangGraph cache |
 | ADR-007 | MCP gateway sole egress | Phase 6 | ⬜ | `MCPRegistry.invoke()` grant-checking; `_simulate_*` replaced |
 | ADR-008 | Self-hosted/pluggable LLM | Existing | 🟡 | `LLMProviderFactory`; Anthropic/OpenAI/Google/local providers |
 | ADR-009 | Temporal + LangGraph adoption (Python-first) | Phase 0.5 | ✅ | `docs/specs/ADR-009_temporal_langgraph_adoption.md` |
@@ -102,8 +102,8 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 2.5 | Hash-chain audit log (FR-AU-01) | ✅ |
 | Phase 3 | Config-driven StageDispatcher | ✅ |
 | Phase 4 | Config-driven products + per-product agent pipelines | ✅ |
-| Phase 4.5 | Shared-core document taxonomy (FR-DM-01/02/03) | ⬜ |
-| Phase 4.6 | First-to-complete activation gate (FR-GL-01/02/03) | ⬜ |
+| Phase 4.5 | Shared-core document taxonomy (FR-DM-01/02/03) | ~ (skipped) |
+| Phase 4.6 | First-to-complete activation gate (FR-GL-01/02/03) | ✅ |
 | Phase 5 | Configurable SLA enforcement | ⬜ |
 | Phase 6 | Wire Skills & MCP into live execution | ⬜ |
 | Phase 7 | Configurable persona + permission model | ⬜ |

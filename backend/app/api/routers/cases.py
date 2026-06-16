@@ -71,6 +71,23 @@ class ProductTrackOut(BaseModel):
     steps_completed: int = 0
     started_at: datetime | None
     completed_at: datetime | None
+    # Phase 4.6: activation gate fields
+    activation_state: str = "PENDING"
+    account_number: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class ProductActivationOut(BaseModel):
+    product_code: str
+    state: str
+    criteria_met_at: datetime | None
+    activated_at: datetime | None
+    declined_at: datetime | None
+    decline_reason: str | None
+    account_number: str | None
+    is_adverse_action: bool
+    adverse_action_reason: str | None
 
     model_config = {"from_attributes": True}
 
@@ -206,7 +223,10 @@ def _case_products_to_tracks(case: OnboardingCase) -> list[ProductTrackOut]:
     return [ProductTrackOut.model_validate(cp) for cp in case.case_products]
 
 
-def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
+def _build_product_track(
+    cp: CaseProduct,
+    activation_map: dict[str, Any] | None = None,
+) -> ProductTrackOut:
     steps = cp.steps or []
     completed = sum(1 for s in steps if s.status in ("COMPLETE", "SKIPPED"))
     product_name = cp.product.name if cp.product else cp.product_code
@@ -218,6 +238,8 @@ def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
         progress = round(completed / len(steps) * 100)
     else:
         progress = _PRODUCT_STATUS_PROGRESS.get(cp.status, 0)
+    # Phase 4.6: include activation state from product_activation table
+    act = (activation_map or {}).get(cp.product_code, {})
     return ProductTrackOut(
         id=cp.id,
         product_code=cp.product_code,
@@ -228,6 +250,8 @@ def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
         steps_completed=completed,
         started_at=cp.started_at,
         completed_at=cp.completed_at,
+        activation_state=act.get("state", "PENDING"),
+        account_number=act.get("account_number"),
     )
 
 
@@ -506,6 +530,14 @@ async def get_case_summary(
         )
         is_institutional = inst_check.scalar_one_or_none() is not None
 
+    # Phase 4.6: load activation state for all products in one query
+    from app.models.activation import ProductActivation as _PA
+    act_result = await db.execute(
+        select(_PA).where(_PA.case_id == case_id)
+    )
+    activation_map = {r.product_code: {"state": r.state, "account_number": r.account_number}
+                      for r in act_result.scalars().all()}
+
     return CaseProgressOut(
         case_id=case.id,
         client_id=case.client_id,
@@ -518,7 +550,7 @@ async def get_case_summary(
         documents_total=total_docs,
         documents_received=received,
         documents_approved=approved,
-        products=[_build_product_track(cp) for cp in case.case_products],
+        products=[_build_product_track(cp, activation_map) for cp in case.case_products],
         kyc_status=(ctx.get("extra") or {}).get("kyc_status"),
         escalated=escalated,
         is_institutional=is_institutional,
@@ -542,6 +574,25 @@ async def get_case_account(
     if not accounts:
         raise NotFoundError("ClientAccount", str(case_id))
     return [ClientAccountOut.model_validate(a) for a in accounts]
+
+
+@router.get("/{case_id}/product-activations", response_model=list[ProductActivationOut])
+async def get_product_activations(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> list[ProductActivationOut]:
+    """Return per-product activation state for a case (Phase 4.6)."""
+    from app.models.activation import ProductActivation
+
+    case = await _get_case_or_404(case_id, db)
+    _assert_case_access(case, current_user)
+
+    result = await db.execute(
+        select(ProductActivation).where(ProductActivation.case_id == case_id)
+    )
+    rows = result.scalars().all()
+    return [ProductActivationOut.model_validate(r) for r in rows]
 
 
 @router.get("/{case_id}/questionnaire-schema", response_model=QuestionnaireSchemaOut)
