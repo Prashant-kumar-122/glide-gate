@@ -5,6 +5,7 @@
 
 > **Read this first every session.** Find the first unchecked phase — that is where to start.
 > When a phase is fully verified and committed, change `[ ]` to `[x]` and commit this file.
+> `[~]` means the phase was explicitly skipped by the team — do not implement it; treat it as done for sequencing purposes.
 
 - [x] **Phase 0** — Audit & wire dead orchestrator config
 - [x] **Phase 0.5** — Migrate orchestration to Temporal + LangGraph (ADR-001 / ADR-004)
@@ -13,7 +14,7 @@
 - [x] **Phase 2.5** — Hash-chain audit log (FR-AU-01 / BSA compliance)
 - [x] **Phase 3** — Replace if/elif stage routing with config-driven StageDispatcher
 - [x] **Phase 4** — Make products, questions, and per-product agent pipelines config-driven
-- [ ] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03)
+- [~] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03) ⚠️ SKIPPED — implementation was reverted; do not implement, proceed directly to Phase 4.6
 - [ ] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
 - [ ] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
 - [ ] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
