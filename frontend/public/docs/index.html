@@ -199,7 +199,7 @@
       <table>
         <thead><tr><th>Regulation</th><th>Requirement</th><th>Coverage</th></tr></thead>
         <tbody>
-          <tr><td>BSA / FinCEN</td><td>5-year WORM audit trail; SAR obligations</td><td><span class="badge badge-done">✅ Phase 2.5</span></td></tr>
+          <tr><td>BSA / FinCEN</td><td>5-year WORM audit trail; SAR obligations; SLA breach flagged <code>is_regulatory_breach=True</code> in <code>decision_log</code></td><td><span class="badge badge-done">✅ Phase 2.5, Phase 5</span></td></tr>
           <tr><td>CIP / CDD</td><td>Identity verification + beneficial ownership</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>OFAC</td><td>Sanctions screening via MCP gateway</td><td><span class="badge badge-planned">Phase 6</span></td></tr>
           <tr><td>GLBA</td><td>Privacy notices + data minimization</td><td><span class="badge badge-planned">Planned</span></td></tr>
@@ -239,6 +239,36 @@
         assessed — is provisioned immediately with an account number. Other products continue in
         background. The advisor panel shows per-product activation badges (ACTIVATED / DECLINED /
         PENDING) and a "First Live" highlight on the first product to activate.
+      </p>
+
+      <h3>Configurable SLA enforcement <span class="badge badge-done">✅ Phase 5</span></h3>
+      <p>
+        Each onboarding stage has a <strong>configurable SLA window</strong> stored in the
+        <code>domain_stage_slas</code> table, keyed by domain, stage, priority tier, and product.
+        A 4-step priority chain resolves the effective window:
+        <em>(stage + tier + product) → (stage + tier) → (stage + product) → (stage only)</em>;
+        the first matching enabled row wins. A row with <code>is_enabled=False</code> short-circuits
+        to <em>no SLA</em> for that combination, enabling per-product or per-tier opt-outs.
+      </p>
+      <p>
+        When a stage starts, <code>start_sla_tracking_activity</code> writes a
+        <code>case_sla_tracking</code> row and <code>_watch_sla()</code> launches as an
+        <code>asyncio.Task</code> inside the Temporal workflow. It sleeps to the
+        <strong>warning threshold</strong> (default 70% of window), fires
+        <code>send_sla_warning_activity</code>, then sleeps to the <strong>breach threshold</strong>
+        (default 90%) and fires <code>trigger_sla_breach_activity</code> — which transitions the
+        case to <code>ESCALATED</code> and writes an <code>SLA_BREACH</code> entry to
+        <code>decision_log</code> with <code>is_regulatory_breach=True</code> (BSA).
+        Warning and breach activities are idempotent — they check <code>warning_sent_at</code> /
+        <code>breach_triggered_at</code> before acting, safe for Temporal retries.
+      </p>
+      <p>
+        <strong>Clock pausing</strong> applies to stages with <code>pause_on_human_review=True</code>
+        (REVIEW, SALES_REVIEW). The SLA task is cancelled before <code>wait_condition</code>,
+        <code>paused_at</code> is recorded in the DB, and a new <code>_watch_sla</code> task
+        restarts after the human responds with accumulated elapsed seconds subtracted from the
+        remaining window. The wealth domain is seeded with 8 SLA rows across all 6 active stages
+        (migration 0019).
       </p>
 
       <h3>Document collect-once pattern <span class="badge badge-planned">Phase 4.5</span></h3>
@@ -343,7 +373,7 @@
         <li><span class="phase-num">Phase 4</span><span class="phase-title">Products, questions, per-product agent pipelines config-driven</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 4.5</span><span class="phase-title">Shared-core document taxonomy — collect once, reuse all</span><span class="badge badge-partial">~ Skipped</span></li>
         <li><span class="phase-num">Phase 4.6</span><span class="phase-title">First-to-complete activation gate + Fraud screening + OPA</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 5</span><span class="phase-title">Configurable SLA enforcement with per-stage feature flags</span><span class="badge badge-planned">⬜ Planned</span></li>
+        <li><span class="phase-num">Phase 5</span><span class="phase-title">Configurable SLA enforcement with per-stage feature flags</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 6</span><span class="phase-title">Wire Skills &amp; MCP into live agent execution</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 7</span><span class="phase-title">Configurable persona + permission model (15-scope catalog)</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 8</span><span class="phase-title">Loosen DB CHECK constraints; domain rows authoritative</span><span class="badge badge-planned">⬜ Planned</span></li>
@@ -369,6 +399,7 @@
           <tr><td>FR-AU-04 — Adverse-action records (ECOA)</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-001 — Temporal orchestration</td><td>Phase 0.5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-006 — OPA activation gate</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>OBJ-5 — SLA enforcement with audit trail</td><td>Phase 5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>NFR-03 — 99.95% availability / DR</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>NFR-10 — OTel observability</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
         </tbody>
@@ -380,10 +411,11 @@
       <table>
         <thead><tr><th>Layer</th><th>Coverage</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors, pipeline config</td><td><span class="badge badge-partial">Partial (~90 tests)</span></td></tr>
+          <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors, pipeline config</td><td><span class="badge badge-partial">Partial (~118 tests)</span></td></tr>
           <tr><td>Backend integration tests</td><td>API endpoints, DB interactions</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>Temporal workflow tests</td><td>Structure snapshot tests; crash recovery (requires live Temporal)</td><td><span class="badge badge-partial">Partial</span></td></tr>
-          <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations</td><td><span class="badge badge-planned">Phase 5</span></td></tr>
+          <tr><td>SLA unit tests</td><td>SLAMonitorService: resolve priority chain, tracking, pause/resume, idempotency</td><td><span class="badge badge-done">✅ Done (15 unit tests — Phase 5)</span></td></tr>
+          <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations with live Temporal</td><td><span class="badge badge-planned">Phase 9+</span></td></tr>
           <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-done">✅ Done (12 unit tests)</span></td></tr>
           <tr><td>Pipeline config tests</td><td>Suitability score parity (DB vs hardcoded), threshold enforcement, fallback shape</td><td><span class="badge badge-done">✅ Done (22 unit tests — Phase 4)</span></td></tr>
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block, adverse-action, credit/non-credit decline</td><td><span class="badge badge-done">✅ Done (13 unit tests — Phase 4.6)</span></td></tr>
@@ -400,8 +432,6 @@
         <li><strong>Collect-once documents</strong> — current system re-requests shared docs
           per product; FR-DM-01/02/03 deferred to Phase 4.5 (skipped in this run) or
           a future phase</li>
-        <li><strong>SLA enforcement</strong> — <code>SLAHook</code> stub installed (Phase 3);
-          Temporal Timer activation in Phase 5</li>
         <li><strong>Skills &amp; MCP wired</strong> — framework built but dormant; Phase 6
           replaces <code>_simulate_*</code> methods</li>
         <li><strong>Configurable personas</strong> — hardcoded role guards; Phase 7 introduces
