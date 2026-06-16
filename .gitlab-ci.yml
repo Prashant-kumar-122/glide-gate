@@ -19,6 +19,21 @@ stages:
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -H 18.60.103.228 >> ~/.ssh/known_hosts
 
+# ── SSH setup — feat/cadf-framework_Keycloke_SSO (temp: remove after merge to main) ──
+.ssh_setup_keycloke_sso: &ssh_setup_keycloke_sso
+  tags:
+    - ec2 arm64 ubuntu
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "feat/cadf-framework_Keycloke_SSO"'
+      when: always
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq openssh-client
+    - eval $(ssh-agent -s)
+    - chmod 600 "$EC2_SSH_KEY"
+    - ssh-add "$EC2_SSH_KEY"
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H 18.60.103.228 >> ~/.ssh/known_hosts
+
 # ── SSH setup — main ─────────────────────────────────────────────────────────
 .ssh_setup_main: &ssh_setup_main
   tags:
@@ -100,6 +115,71 @@ deploy:
         echo '✓ Deployment complete - Commit $CI_COMMIT_SHORT_SHA is live'"
 
 # ══════════════════════════════════════════════════════════════════════════════
+# feat/cadf-framework_Keycloke_SSO — full pipeline (temp: remove after merge to main)
+# ══════════════════════════════════════════════════════════════════════════════
+
+prepare-keycloke-sso:
+  stage: prepare
+  <<: *ssh_setup_keycloke_sso
+  script:
+    - echo "=========================================="
+    - echo "   [Keycloke-SSO] Pulling Latest Code on EC2"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        git fetch origin &&
+        git reset --hard origin/feat/cadf-framework_Keycloke_SSO &&
+        echo '✓ Code synced successfully'"
+
+validate-frontend-keycloke-sso:
+  stage: validate
+  <<: *ssh_setup_keycloke_sso
+  script:
+    - echo "=========================================="
+    - echo "   [Keycloke-SSO] Validating Frontend Build"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - ssh ubuntu@18.60.103.228 "
+        sudo rm -rf /home/ubuntu/office_project/glidegate/frontend/node_modules &&
+        cd /home/ubuntu/office_project/glidegate/frontend &&
+        npm install --legacy-peer-deps &&
+        npm run build &&
+        echo '✓ Frontend build validation passed'"
+
+build-keycloke-sso:
+  stage: build
+  <<: *ssh_setup_keycloke_sso
+  script:
+    - echo "=========================================="
+    - echo "   [Keycloke-SSO] Building Docker Images"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
+        docker tag glidegate_backend:latest glidegate_backend:$CI_COMMIT_SHORT_SHA &&
+        docker tag glidegate_frontend:latest glidegate_frontend:$CI_COMMIT_SHORT_SHA &&
+        docker images glidegate_backend --format '{{.Tag}}' | grep -v latest | sort -r | tail -n +4 | xargs -I {} docker rmi glidegate_backend:{} 2>/dev/null || true &&
+        docker images glidegate_frontend --format '{{.Tag}}' | grep -v latest | sort -r | tail -n +4 | xargs -I {} docker rmi glidegate_frontend:{} 2>/dev/null || true &&
+        echo '✓ Build complete'"
+
+deploy-keycloke-sso:
+  stage: deploy
+  <<: *ssh_setup_keycloke_sso
+  script:
+    - echo "=========================================="
+    - echo "   [Keycloke-SSO] Deploying to EC2"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        docker-compose -f docker-compose.prod.yml down &&
+        docker-compose -f docker-compose.prod.yml up -d &&
+        docker-compose -f docker-compose.prod.yml ps &&
+        echo '✓ Deployment complete - Commit $CI_COMMIT_SHORT_SHA is live'"
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Feature branch / MR pipeline — prepare + validate + build on runner (no deploy)
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -110,7 +190,7 @@ validate-frontend-feature:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: always
-    - if: '$CI_COMMIT_BRANCH != "COPS_Agentic_AI_Deploy" && $CI_COMMIT_BRANCH != "main"'
+    - if: '$CI_COMMIT_BRANCH != "COPS_Agentic_AI_Deploy" && $CI_COMMIT_BRANCH != "main" && $CI_COMMIT_BRANCH != "feat/cadf-framework_Keycloke_SSO"'
       when: always
   script:
     - echo "=========================================="
@@ -130,7 +210,7 @@ build-feature:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: always
-    - if: '$CI_COMMIT_BRANCH != "COPS_Agentic_AI_Deploy" && $CI_COMMIT_BRANCH != "main"'
+    - if: '$CI_COMMIT_BRANCH != "COPS_Agentic_AI_Deploy" && $CI_COMMIT_BRANCH != "main" && $CI_COMMIT_BRANCH != "feat/cadf-framework_Keycloke_SSO"'
       when: always
   before_script:
     - apt-get update -qq && apt-get install -y -qq openssh-client
