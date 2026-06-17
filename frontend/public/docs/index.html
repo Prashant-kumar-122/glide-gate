@@ -150,6 +150,7 @@
     <a class="nav-link" href="#workflows">Onboarding Flows</a>
     <div class="nav-section">Architecture</div>
     <a class="nav-link" href="#agents">Agent Architecture</a>
+    <a class="nav-link" href="#auth">Authentication &amp; RBAC</a>
     <a class="nav-link" href="#stack">Technology Stack</a>
     <a class="nav-link" href="#adrs">Architecture Decisions</a>
     <div class="nav-section">CADF Plan</div>
@@ -318,6 +319,108 @@
         (migration 0020) and overridable via <code>domain_agent_prompts</code> without redeploy.</p>
     </section>
 
+    <section id="auth">
+      <h2>Authentication &amp; RBAC <span class="badge badge-done">✅ Phase 7</span></h2>
+      <p>
+        All API endpoints are protected by <strong>JWT bearer tokens</strong> (HS256, 8-hour
+        expiry, also delivered as an <code>httpOnly</code> cookie for browser sessions).
+        Role-based access control is enforced by a <strong>configurable permission model</strong>
+        backed entirely by the <code>domain_permissions</code> database table — no role strings
+        are hardcoded in application code.
+      </p>
+
+      <h3>Permission guard</h3>
+      <p>
+        <code>require_permission("scope")</code> is a FastAPI dependency that replaces the old
+        hardcoded <code>require_role()</code> guards across all 11 router files. It queries
+        <code>domain_permissions</code> to check whether <em>any</em> of the user's persona codes
+        has the requested scope, caches the result in-process, and returns HTTP 403 otherwise.
+        A companion <code>has_permission(user, scope, db) → bool</code> helper is available for
+        inline permission checks (e.g. the institutional product gate) without raising.
+      </p>
+
+      <h3>15-scope permission catalog</h3>
+      <table>
+        <thead><tr><th>Scope</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>case:read</code></td><td>View cases and their status</td></tr>
+          <tr><td><code>case:create</code></td><td>Create new onboarding cases</td></tr>
+          <tr><td><code>case:approve</code></td><td>Approve / advance a case stage</td></tr>
+          <tr><td><code>review:read</code></td><td>View compliance and task review queues</td></tr>
+          <tr><td><code>review:approve</code></td><td>Submit a review decision</td></tr>
+          <tr><td><code>review:escalate</code></td><td>Escalate a review to a senior reviewer</td></tr>
+          <tr><td><code>sales:review</code></td><td>View sales manager review queue</td></tr>
+          <tr><td><code>sales:decide</code></td><td>Approve or reject an institutional product</td></tr>
+          <tr><td><code>compliance:read</code></td><td>View compliance checks and KYC results</td></tr>
+          <tr><td><code>compliance:decide</code></td><td>Make compliance decisions</td></tr>
+          <tr><td><code>audit:read</code></td><td>Access event log and per-case decision log</td></tr>
+          <tr><td><code>audit:export</code></td><td>Export audit data (BSA compliance role)</td></tr>
+          <tr><td><code>document:upload</code></td><td>Upload documents and update status</td></tr>
+          <tr><td><code>document:validate</code></td><td>Trigger AI document validation</td></tr>
+          <tr><td><code>admin:config</code></td><td>Access admin portal configuration</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Persona → scope matrix (wealth domain)</h3>
+      <table>
+        <thead><tr><th>Scope</th><th>client</th><th>advisor</th><th>admin</th><th>sales_manager</th><th>compliance_officer</th></tr></thead>
+        <tbody>
+          <tr><td><code>case:read</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td><code>case:create</code></td><td>—</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+          <tr><td><code>case:approve</code></td><td>—</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+          <tr><td><code>review:read</code></td><td>—</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td><code>review:approve</code></td><td>—</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td><code>review:escalate</code></td><td>—</td><td>—</td><td>✅</td><td>—</td><td>✅</td></tr>
+          <tr><td><code>sales:review</code></td><td>—</td><td>✅</td><td>✅</td><td>✅</td><td>—</td></tr>
+          <tr><td><code>sales:decide</code></td><td>—</td><td>—</td><td>✅</td><td>✅</td><td>—</td></tr>
+          <tr><td><code>compliance:read / decide</code></td><td>—</td><td>—</td><td>✅</td><td>—</td><td>✅</td></tr>
+          <tr><td><code>audit:read</code></td><td>—</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td><code>audit:export</code></td><td>—</td><td>—</td><td>✅</td><td>—</td><td>✅</td></tr>
+          <tr><td><code>document:upload / validate</code></td><td>—</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>
+          <tr><td><code>admin:config</code></td><td>—</td><td>—</td><td>✅</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Multi-role support</h3>
+      <p>
+        A user can hold <strong>multiple personas simultaneously</strong> via the
+        <code>user_personas(user_id, persona_code)</code> join table (migration 0022). The JWT
+        carries <strong><code>"roles": ["advisor", "compliance_officer"]</code></strong> (full list)
+        plus <strong><code>"role": "advisor"</code></strong> (primary persona, for backwards-compat
+        identity checks). <code>require_permission()</code> grants access if <em>any</em> of the
+        user's personas has the required scope — no code change needed when a new persona is
+        introduced for Phase 11 Retail/Deposit.
+      </p>
+      <pre>JWT payload:
+{
+  "sub": "...",
+  "email": "advisor@example.com",
+  "roles": ["advisor", "compliance_officer"],  // authoritative list
+  "role":  "advisor",                          // primary (backwards compat)
+  "name":  "Jane Smith",
+  "exp":   1750000000
+}</pre>
+
+      <h3>Institutional product gate</h3>
+      <p>
+        The <code>GET /cases/products</code> endpoint previously used a hardcoded
+        <code>role != "client"</code> check to decide whether to show institutional or retail
+        products. This is now replaced with:
+        <code>has_permission(sales:review) AND has_permission(case:create)</code> — both scopes
+        must be granted for institutional products to be shown. Sales managers received
+        <code>case:create</code> in migration 0022 to make this explicit.
+      </p>
+
+      <h3>Permission cache &amp; invalidation</h3>
+      <p>
+        Results are cached in-process as <code>(frozenset[persona_codes], scope) → bool</code>.
+        The cache is cleared on application startup and will be invalidated by the Phase 9 admin
+        portal after bulk permission edits. Negative entries (False) are safe — they cannot be
+        promoted by a user request; only a server restart or explicit <code>clear_permission_cache()</code>
+        call can change them.
+      </p>
+    </section>
+
     <section id="stack">
       <h2>Technology Stack</h2>
       <div class="card-grid">
@@ -384,7 +487,7 @@
         <li><span class="phase-num">Phase 4.6</span><span class="phase-title">First-to-complete activation gate + Fraud screening + OPA</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 5</span><span class="phase-title">Configurable SLA enforcement with per-stage feature flags</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 6</span><span class="phase-title">Wire Skills &amp; MCP into live agent execution (ADR-007)</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 7</span><span class="phase-title">Configurable persona + permission model (15-scope catalog)</span><span class="badge badge-planned">⬜ Planned</span></li>
+        <li><span class="phase-num">Phase 7</span><span class="phase-title">Configurable persona + permission model (15-scope catalog); multi-role <code>user_personas</code>; permission-based institutional gate</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 8</span><span class="phase-title">Loosen DB CHECK constraints; domain rows authoritative</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 9</span><span class="phase-title">Admin Portal (domain editor, SLA grid, agent registry)</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 10</span><span class="phase-title">Serve frontend vocabulary from domain API</span><span class="badge badge-planned">⬜ Planned</span></li>
@@ -410,6 +513,8 @@
           <tr><td>ADR-006 — OPA activation gate</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-007 — MCP gateway sole egress; grant-checked tool dispatch</td><td>Phase 6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>FR-AG-04 — Agents trigger compliance checks via integrations</td><td>Phase 6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>FR-AG-06 — HITL checkpoints + authority limits enforced by permission guard</td><td>Phase 7</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>NFR-01 — RBAC + least-privilege; <code>require_permission()</code> 15-scope catalog; <code>domain_permissions</code> DB-backed</td><td>Phase 7</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>OBJ-5 — SLA enforcement with audit trail</td><td>Phase 5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>NFR-03 — 99.95% availability / DR</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>NFR-10 — OTel observability</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
@@ -422,7 +527,7 @@
       <table>
         <thead><tr><th>Layer</th><th>Coverage</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors, pipeline config</td><td><span class="badge badge-partial">Partial (~118 tests)</span></td></tr>
+          <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors, pipeline config, permission guard</td><td><span class="badge badge-partial">Partial (153 tests)</span></td></tr>
           <tr><td>Backend integration tests</td><td>API endpoints, DB interactions</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>Temporal workflow tests</td><td>Structure snapshot tests; crash recovery (requires live Temporal)</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>SLA unit tests</td><td>SLAMonitorService: resolve priority chain, tracking, pause/resume, idempotency</td><td><span class="badge badge-done">✅ Done (15 unit tests — Phase 5)</span></td></tr>
@@ -431,6 +536,7 @@
           <tr><td>Pipeline config tests</td><td>Suitability score parity (DB vs hardcoded), threshold enforcement, fallback shape</td><td><span class="badge badge-done">✅ Done (22 unit tests — Phase 4)</span></td></tr>
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block, adverse-action, credit/non-credit decline</td><td><span class="badge badge-done">✅ Done (13 unit tests — Phase 4.6)</span></td></tr>
           <tr><td>MCP / Skills tests</td><td>ADR-007 grant-check <code>PermissionError</code>; MCP routing snapshot per tool; grant bypass for approved agents</td><td><span class="badge badge-done">✅ Done (Phase 6)</span></td></tr>
+          <tr><td>Permission guard tests</td><td><code>require_permission()</code> allow/deny; cache hit/miss; role alias; multi-role <code>IN</code>-check; <code>has_permission()</code> bool helper; legacy JWT fallback</td><td><span class="badge badge-done">✅ Done (19 unit tests — Phase 7)</span></td></tr>
           <tr><td>Frontend E2E (Playwright)</td><td>Client portal, advisor workspace, admin</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
           <tr><td>Accessibility (axe)</td><td>WCAG 2.1 AA across light/dark × breakpoints</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
         </tbody>
@@ -444,8 +550,9 @@
         <li><strong>Collect-once documents</strong> — current system re-requests shared docs
           per product; FR-DM-01/02/03 deferred to Phase 4.5 (skipped in this run) or
           a future phase</li>
-        <li><strong>Configurable personas</strong> — hardcoded role guards; Phase 7 introduces
-          <code>require_permission()</code> with admin-configurable scopes</li>
+        <li><strong>Admin portal for permission management</strong> — <code>domain_permissions</code>
+          rows can only be edited via SQL today; Phase 9 admin portal will expose a permission
+          editor and trigger <code>clear_permission_cache()</code> after bulk updates</li>
       </ul>
       <h3>Deferred features</h3>
       <ul style="padding-left:20px; color: var(--text-muted); line-height: 2;">
