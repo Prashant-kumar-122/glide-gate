@@ -420,6 +420,29 @@
         call can change them.
       </p>
 
+      <h3>Domain config API &amp; persona-driven frontend <span class="badge badge-done">✅ Phase 10</span></h3>
+      <p>
+        <code>GET /config/domain</code> returns the full active-domain configuration in a single
+        response: persona list (with <code>nav_links</code>, <code>color</code>,
+        <code>default_route</code>), stage list, and product list. The frontend
+        <code>useDomainConfig</code> hook consumes this endpoint on mount; <code>App.tsx</code>
+        replaces its static <code>_STATIC_NAV</code> and <code>ROLE_HOME</code> constants with
+        the persona data from the API. Persona nav links stored in <code>domain_personas.nav_links</code>
+        (JSONB) are seeded per-role by migrations 0026 and 0027 — advisor and sales_manager see
+        <strong>Workspace / Agent Trace / Contact Centre</strong>; admin sees
+        <strong>Agent Trace / Admin</strong>; client sees no tab bar.
+      </p>
+      <p>
+        The <strong>MultiFormWizard</strong> and <strong>OnboardingWizard</strong> product selectors
+        now read from the active domain's <code>domain_products</code> table instead of the legacy
+        <code>products</code> table. When a domain is deactivated its products immediately disappear
+        from the wizard (React Query cache is invalidated on activate/deactivate). Case creation
+        accepts domain product codes via <code>_resolve_products()</code>, which checks
+        <code>domain_products</code> first and falls back to <code>products</code> for legacy rows;
+        <code>case_products.product_id</code> is nullable (migration 0025) so domain products with
+        no legacy FK can be stored.
+      </p>
+
       <h3>Domain-authoritative stage validation <span class="badge badge-done">✅ Phase 8</span></h3>
       <p>
         <strong>Migration 0023</strong> drops three hardcoded DB CHECK constraints that encoded
@@ -520,7 +543,7 @@
         <li><span class="phase-num">Phase 7</span><span class="phase-title">Configurable persona + permission model (15-scope catalog); multi-role <code>user_personas</code>; permission-based institutional gate</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 8</span><span class="phase-title">Loosen DB CHECK constraints; domain rows authoritative</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 9</span><span class="phase-title">Admin Portal — 6-tab domain editor (stages, agents, products, SLA, SLA health, personas); 6 admin routers; domain lifecycle toolbar (Validate / Activate / Deactivate)</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 10</span><span class="phase-title">Serve frontend vocabulary from domain API</span><span class="badge badge-planned">⬜ Planned</span></li>
+        <li><span class="phase-num">Phase 10</span><span class="phase-title">Domain product pipeline: <code>GET /config/domain</code> endpoint; persona-driven nav via <code>useDomainConfig</code>; domain products accepted in case creation (<code>_resolve_products</code> + nullable FK migration 0025); single-active-domain enforcement; agent status filtering in StageDispatcher; inline edit for all admin config editors (Stages, Personas, SLA)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 11</span><span class="phase-title">Retail/Deposit acceptance proof (via admin portal only)</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 12</span><span class="phase-title">Extract framework / domain package boundary</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 13</span><span class="phase-title">Observability, IaC &amp; Operations (NFR-03/NFR-10)</span><span class="badge badge-new">⬜ New</span></li>
@@ -547,6 +570,9 @@
           <tr><td>NFR-01 — RBAC + least-privilege; <code>require_permission()</code> 15-scope catalog; <code>domain_permissions</code> DB-backed</td><td>Phase 7</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>OBJ-4 — Admin portal for all domain_* table configuration</td><td>Phase 9</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>OBJ-5 — SLA enforcement with audit trail</td><td>Phase 5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>OBJ-6 — Domain products accepted in case creation; <code>_resolve_products()</code> checks active domain first, falls back to legacy table; <code>case_products.product_id</code> nullable (migration 0025)</td><td>Phase 10</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>OBJ-7 — Frontend vocabulary driven from domain API; persona nav links and role config served by <code>GET /config/domain</code>; <code>useDomainConfig</code> hook replaces hardcoded constants in <code>App.tsx</code></td><td>Phase 10</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>OBJ-8 — Agent DEPRECATED status filtering: <code>StageDispatcher</code> now skips agents with <code>status=DEPRECATED</code>; single-active-domain enforcement on activate</td><td>Phase 10</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>NFR-03 — 99.95% availability / DR</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>NFR-10 — OTel observability</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
         </tbody>
@@ -562,16 +588,16 @@
           <tr><td>Backend integration tests</td><td>API endpoints, DB interactions</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>Temporal workflow tests</td><td>Structure snapshot tests; crash recovery (requires live Temporal)</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>SLA unit tests</td><td>SLAMonitorService: resolve priority chain, tracking, pause/resume, idempotency</td><td><span class="badge badge-done">✅ Done (15 unit tests — Phase 5)</span></td></tr>
-          <tr><td>Admin portal unit tests</td><td>Domain CRUD patterns, SLA validator (equal/inverted pcts), partial SLA update, AgentStatusUpdate, DomainValidationResult shape, activate_domain with mocked DB</td><td><span class="badge badge-done">✅ Done (20 unit tests — Phase 9)</span></td></tr>
-          <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations with live Temporal</td><td><span class="badge badge-planned">Phase 10+</span></td></tr>
+          <tr><td>Admin portal unit tests</td><td>Domain CRUD patterns, SLA validator (equal/inverted pcts), partial SLA update, AgentStatusUpdate, DomainValidationResult shape, activate_domain with mocked DB; domain product resolution (<code>_resolve_products</code>); single-active-domain enforcement</td><td><span class="badge badge-done">✅ Done (20 unit tests — Phase 9; extended Phase 10)</span></td></tr>
+          <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations with live Temporal</td><td><span class="badge badge-planned">Phase 11+</span></td></tr>
           <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-done">✅ Done (12 unit tests)</span></td></tr>
           <tr><td>Pipeline config tests</td><td>Suitability score parity (DB vs hardcoded), threshold enforcement, fallback shape</td><td><span class="badge badge-done">✅ Done (22 unit tests — Phase 4)</span></td></tr>
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block, adverse-action, credit/non-credit decline</td><td><span class="badge badge-done">✅ Done (13 unit tests — Phase 4.6)</span></td></tr>
           <tr><td>MCP / Skills tests</td><td>ADR-007 grant-check <code>PermissionError</code>; MCP routing snapshot per tool; grant bypass for approved agents</td><td><span class="badge badge-done">✅ Done (Phase 6)</span></td></tr>
           <tr><td>Permission guard tests</td><td><code>require_permission()</code> allow/deny; cache hit/miss; role alias; multi-role <code>IN</code>-check; <code>has_permission()</code> bool helper; legacy JWT fallback</td><td><span class="badge badge-done">✅ Done (19 unit tests — Phase 7)</span></td></tr>
           <tr><td>Stage validation tests</td><td><code>ContextStoreService._validate_stage()</code>: valid stage passes, invalid raises, old-enum stage absent from domain rejected, unknown domain rejected, <code>update()</code> fires / skips validation correctly</td><td><span class="badge badge-done">✅ Done (6 unit tests — Phase 8)</span></td></tr>
-          <tr><td>Frontend E2E (Playwright)</td><td>Client portal, advisor workspace, admin</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
-          <tr><td>Accessibility (axe)</td><td>WCAG 2.1 AA across light/dark × breakpoints</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
+          <tr><td>Frontend E2E (Playwright)</td><td>Client portal, advisor workspace, admin</td><td><span class="badge badge-planned">Phase 11</span></td></tr>
+          <tr><td>Accessibility (axe)</td><td>WCAG 2.1 AA across light/dark × breakpoints</td><td><span class="badge badge-planned">Phase 11</span></td></tr>
         </tbody>
       </table>
     </section>
@@ -583,15 +609,13 @@
         <li><strong>Collect-once documents</strong> — current system re-requests shared docs
           per product; FR-DM-01/02/03 deferred to Phase 4.5 (skipped in this run) or
           a future phase</li>
-        <li><strong>Agent status toggle not yet wired</strong> — <code>domain_agent_roster.status</code>
-          (APPROVED / DEPRECATED) is set by the Phase 9 admin portal toggle but the dispatch layer
-          (<code>StageDispatcher</code>) does not yet filter by status; Phase 10 will wire it</li>
-        <li><strong>Products not surfaced in client wizard</strong> — <code>GET /cases/products</code>
-          still reads the legacy <code>products</code> table; the Phase 9 admin portal writes to
-          <code>domain_products</code>; Phase 10 will replace the endpoint with the domain config API</li>
-        <li><strong>Frontend vocabulary hardcoded</strong> — stage labels, role colors, and nav links
-          in the frontend still reference wealth-specific constants; Phase 10 will drive them from
-          the domain API</li>
+        <li><strong>Retail/Deposit domain not yet configured</strong> — the admin portal and
+          domain pipeline are fully generic (Phase 10) but no Retail seed data exists yet;
+          Phase 11 will configure a second domain end-to-end through the admin portal only,
+          with no engineering changes</li>
+        <li><strong>Framework/domain package boundary not extracted</strong> — CADF framework
+          code and wealth-domain seed data are co-located; Phase 12 will separate them into
+          distinct packages so new domains can be delivered as data-only drops</li>
       </ul>
       <h3>Deferred features</h3>
       <ul style="padding-left:20px; color: var(--text-muted); line-height: 2;">
