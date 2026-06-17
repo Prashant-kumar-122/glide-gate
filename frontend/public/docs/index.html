@@ -201,7 +201,7 @@
         <tbody>
           <tr><td>BSA / FinCEN</td><td>5-year WORM audit trail; SAR obligations; SLA breach flagged <code>is_regulatory_breach=True</code> in <code>decision_log</code></td><td><span class="badge badge-done">✅ Phase 2.5, Phase 5</span></td></tr>
           <tr><td>CIP / CDD</td><td>Identity verification + beneficial ownership</td><td><span class="badge badge-partial">Partial</span></td></tr>
-          <tr><td>OFAC</td><td>Sanctions screening via MCP gateway</td><td><span class="badge badge-planned">Phase 6</span></td></tr>
+          <tr><td>OFAC</td><td>Sanctions screening via MCP gateway (<code>check_sanctions</code> tool, grant-checked per ADR-007)</td><td><span class="badge badge-done">✅ Phase 6</span></td></tr>
           <tr><td>GLBA</td><td>Privacy notices + data minimization</td><td><span class="badge badge-planned">Planned</span></td></tr>
           <tr><td>ECOA</td><td>Adverse-action notices on credit decline</td><td><span class="badge badge-done">✅ Phase 4.6</span></td></tr>
           <tr><td>SEC / FINRA</td><td>Suitability / Reg BI at account opening</td><td><span class="badge badge-partial">Partial</span></td></tr>
@@ -302,11 +302,20 @@
           <tr><td>ContactCentre</td><td>Call summary generation; status retrieval</td><td><span class="badge badge-done">Active</span></td></tr>
         </tbody>
       </table>
-      <h3>Skills (composable LLM capabilities)</h3>
+      <h3>Skills (composable LLM capabilities) <span class="badge badge-done">✅ Phase 6</span></h3>
       <p>Six composable skills — information extraction, decision reasoning, status summarisation,
-        clarification, escalation, product suitability — are built but currently dormant.
-        <strong>Phase 6</strong> wires them into agent LangGraph nodes via
-        <code>domain_agent_skills</code> bindings.</p>
+        clarification, escalation, product suitability — are wired into agent LangGraph nodes via
+        <code>domain_agent_skills</code> DB bindings. The <strong>EscalationSkill</strong> is bound
+        to the KYC agent; it enriches the checkpoint result with LLM-based reasoning but does not
+        override the deterministic <code>CheckpointRuleEngine</code> decision for routing. Skill
+        parameters are configurable per domain row without a code change.</p>
+      <h3>MCP Gateway (ADR-007) <span class="badge badge-done">✅ Phase 6</span></h3>
+      <p>All external integration calls route through <code>MCPRegistry.invoke()</code>, which
+        enforces <strong>domain_agent_tool_grants</strong> before dispatch — agents that lack a
+        grant row receive a <code>PermissionError</code> (fails closed). The KYC agent calls
+        three tools: <code>verify_identity</code>, <code>check_sanctions</code>,
+        <code>score_aml_risk</code>. Tool grants and agent system prompts are seeded per domain
+        (migration 0020) and overridable via <code>domain_agent_prompts</code> without redeploy.</p>
     </section>
 
     <section id="stack">
@@ -350,7 +359,7 @@
           <tr><td>ADR-004</td><td>Polyglot — Python/LangGraph agents (JVM core deferred)</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-005</td><td>Dual-AZ active-active + DR</td><td><span class="badge badge-planned">Phase 13</span></td></tr>
           <tr><td>ADR-006</td><td>OPA activation gate; strong-consistency reads</td><td><span class="badge badge-done">✅ Implemented (Phase 4.6)</span></td></tr>
-          <tr><td>ADR-007</td><td>MCP gateway sole egress — no direct integration calls</td><td><span class="badge badge-planned">Phase 6</span></td></tr>
+          <tr><td>ADR-007</td><td>MCP gateway sole egress — no direct integration calls; grant-checked per <code>domain_agent_tool_grants</code></td><td><span class="badge badge-done">✅ Implemented (Phase 6)</span></td></tr>
           <tr><td>ADR-008</td><td>Self-hosted / pluggable LLM</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>ADR-009</td><td>Temporal + LangGraph adoption (Python-first)</td><td><span class="badge badge-done">✅ Documented</span></td></tr>
           <tr><td>ADR-010</td><td>Single-tenant per deployment model</td><td><span class="badge badge-done">✅ Documented</span></td></tr>
@@ -374,7 +383,7 @@
         <li><span class="phase-num">Phase 4.5</span><span class="phase-title">Shared-core document taxonomy — collect once, reuse all</span><span class="badge badge-partial">~ Skipped</span></li>
         <li><span class="phase-num">Phase 4.6</span><span class="phase-title">First-to-complete activation gate + Fraud screening + OPA</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 5</span><span class="phase-title">Configurable SLA enforcement with per-stage feature flags</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 6</span><span class="phase-title">Wire Skills &amp; MCP into live agent execution</span><span class="badge badge-planned">⬜ Planned</span></li>
+        <li><span class="phase-num">Phase 6</span><span class="phase-title">Wire Skills &amp; MCP into live agent execution (ADR-007)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 7</span><span class="phase-title">Configurable persona + permission model (15-scope catalog)</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 8</span><span class="phase-title">Loosen DB CHECK constraints; domain rows authoritative</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 9</span><span class="phase-title">Admin Portal (domain editor, SLA grid, agent registry)</span><span class="badge badge-planned">⬜ Planned</span></li>
@@ -399,6 +408,8 @@
           <tr><td>FR-AU-04 — Adverse-action records (ECOA)</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-001 — Temporal orchestration</td><td>Phase 0.5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>ADR-006 — OPA activation gate</td><td>Phase 4.6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>ADR-007 — MCP gateway sole egress; grant-checked tool dispatch</td><td>Phase 6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>FR-AG-04 — Agents trigger compliance checks via integrations</td><td>Phase 6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>OBJ-5 — SLA enforcement with audit trail</td><td>Phase 5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>NFR-03 — 99.95% availability / DR</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>NFR-10 — OTel observability</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
@@ -419,6 +430,7 @@
           <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-done">✅ Done (12 unit tests)</span></td></tr>
           <tr><td>Pipeline config tests</td><td>Suitability score parity (DB vs hardcoded), threshold enforcement, fallback shape</td><td><span class="badge badge-done">✅ Done (22 unit tests — Phase 4)</span></td></tr>
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block, adverse-action, credit/non-credit decline</td><td><span class="badge badge-done">✅ Done (13 unit tests — Phase 4.6)</span></td></tr>
+          <tr><td>MCP / Skills tests</td><td>ADR-007 grant-check <code>PermissionError</code>; MCP routing snapshot per tool; grant bypass for approved agents</td><td><span class="badge badge-done">✅ Done (Phase 6)</span></td></tr>
           <tr><td>Frontend E2E (Playwright)</td><td>Client portal, advisor workspace, admin</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
           <tr><td>Accessibility (axe)</td><td>WCAG 2.1 AA across light/dark × breakpoints</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
         </tbody>
@@ -432,8 +444,6 @@
         <li><strong>Collect-once documents</strong> — current system re-requests shared docs
           per product; FR-DM-01/02/03 deferred to Phase 4.5 (skipped in this run) or
           a future phase</li>
-        <li><strong>Skills &amp; MCP wired</strong> — framework built but dormant; Phase 6
-          replaces <code>_simulate_*</code> methods</li>
         <li><strong>Configurable personas</strong> — hardcoded role guards; Phase 7 introduces
           <code>require_permission()</code> with admin-configurable scopes</li>
       </ul>
