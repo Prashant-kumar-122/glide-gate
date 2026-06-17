@@ -419,6 +419,36 @@
         promoted by a user request; only a server restart or explicit <code>clear_permission_cache()</code>
         call can change them.
       </p>
+
+      <h3>Domain-authoritative stage validation <span class="badge badge-done">✅ Phase 8</span></h3>
+      <p>
+        <strong>Migration 0023</strong> drops three hardcoded DB CHECK constraints that encoded
+        the wealth-domain vocabulary directly in PostgreSQL:
+      </p>
+      <table>
+        <thead><tr><th>Constraint dropped</th><th>Table · Column</th><th>Replaced by</th></tr></thead>
+        <tbody>
+          <tr><td><code>oc_status_chk</code></td><td><code>onboarding_cases.status</code></td><td rowspan="2"><code>ContextStoreService._validate_stage()</code> queries <code>domain_stages</code></td></tr>
+          <tr><td><code>oc_stage_chk</code></td><td><code>onboarding_cases.current_stage</code></td></tr>
+          <tr><td><code>products_type_chk</code></td><td><code>products.product_type</code></td><td><code>domain_products.product_type</code> is now the authoritative vocabulary</td></tr>
+        </tbody>
+      </table>
+      <p>
+        <code>ContextStoreService.update()</code> calls <code>_validate_stage(stage_value)</code>
+        before acquiring the per-case lock whenever a <code>"stage"</code> key is present in the
+        patches dict. The validator issues a single <code>JOIN</code> against
+        <code>domain_stages</code> for the active domain (default <code>wealth_management</code>)
+        and raises <code>ValueError</code> for any stage code not defined there.
+      </p>
+      <p>
+        The practical effect: the DB now accepts any string for <code>current_stage</code> and
+        <code>status</code>, so a new domain can introduce its own stage codes (e.g.
+        <code>DEPOSIT_REVIEW</code>) without a schema migration. Wealth-domain stages continue to
+        be enforced — but by the <code>domain_stages</code> rows, not a hardcoded enum.
+        The lifecycle constraints on <code>CaseProduct</code> / <code>CaseProductStep</code>
+        (<code>PENDING / IN_PROGRESS / COMPLETE / FAILED / SKIPPED</code>) are intentionally
+        kept as DB CHECKs — that vocabulary is not domain-configurable.
+      </p>
     </section>
 
     <section id="stack">
@@ -488,7 +518,7 @@
         <li><span class="phase-num">Phase 5</span><span class="phase-title">Configurable SLA enforcement with per-stage feature flags</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 6</span><span class="phase-title">Wire Skills &amp; MCP into live agent execution (ADR-007)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 7</span><span class="phase-title">Configurable persona + permission model (15-scope catalog); multi-role <code>user_personas</code>; permission-based institutional gate</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 8</span><span class="phase-title">Loosen DB CHECK constraints; domain rows authoritative</span><span class="badge badge-planned">⬜ Planned</span></li>
+        <li><span class="phase-num">Phase 8</span><span class="phase-title">Loosen DB CHECK constraints; domain rows authoritative</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 9</span><span class="phase-title">Admin Portal (domain editor, SLA grid, agent registry)</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 10</span><span class="phase-title">Serve frontend vocabulary from domain API</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 11</span><span class="phase-title">Retail/Deposit acceptance proof (via admin portal only)</span><span class="badge badge-planned">⬜ Planned</span></li>
@@ -527,7 +557,7 @@
       <table>
         <thead><tr><th>Layer</th><th>Coverage</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors, pipeline config, permission guard</td><td><span class="badge badge-partial">Partial (153 tests)</span></td></tr>
+          <tr><td>Backend unit tests</td><td>Agent logic, services, MCP connectors, pipeline config, permission guard</td><td><span class="badge badge-partial">Partial (159 tests)</span></td></tr>
           <tr><td>Backend integration tests</td><td>API endpoints, DB interactions</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>Temporal workflow tests</td><td>Structure snapshot tests; crash recovery (requires live Temporal)</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>SLA unit tests</td><td>SLAMonitorService: resolve priority chain, tracking, pause/resume, idempotency</td><td><span class="badge badge-done">✅ Done (15 unit tests — Phase 5)</span></td></tr>
@@ -537,6 +567,7 @@
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block, adverse-action, credit/non-credit decline</td><td><span class="badge badge-done">✅ Done (13 unit tests — Phase 4.6)</span></td></tr>
           <tr><td>MCP / Skills tests</td><td>ADR-007 grant-check <code>PermissionError</code>; MCP routing snapshot per tool; grant bypass for approved agents</td><td><span class="badge badge-done">✅ Done (Phase 6)</span></td></tr>
           <tr><td>Permission guard tests</td><td><code>require_permission()</code> allow/deny; cache hit/miss; role alias; multi-role <code>IN</code>-check; <code>has_permission()</code> bool helper; legacy JWT fallback</td><td><span class="badge badge-done">✅ Done (19 unit tests — Phase 7)</span></td></tr>
+          <tr><td>Stage validation tests</td><td><code>ContextStoreService._validate_stage()</code>: valid stage passes, invalid raises, old-enum stage absent from domain rejected, unknown domain rejected, <code>update()</code> fires / skips validation correctly</td><td><span class="badge badge-done">✅ Done (6 unit tests — Phase 8)</span></td></tr>
           <tr><td>Frontend E2E (Playwright)</td><td>Client portal, advisor workspace, admin</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
           <tr><td>Accessibility (axe)</td><td>WCAG 2.1 AA across light/dark × breakpoints</td><td><span class="badge badge-planned">Phase 10</span></td></tr>
         </tbody>
