@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.clients import Client, ClientAddress, ClientProfile
@@ -148,7 +148,7 @@ async def _get_client_or_404(client_id: UUID, db: AsyncSession) -> Client:
 async def create_client(
     body: CreateClientRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin", "sales_manager")),
+    _user: dict = Depends(require_permission("case:approve")),
 ) -> ClientSummaryOut:
     existing = await db.execute(select(Client).where(Client.email == body.email))
     if existing.scalar_one_or_none():
@@ -205,7 +205,7 @@ async def patch_client(
     client_id: UUID,
     body: PatchClientRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin", "sales_manager")),
+    _user: dict = Depends(require_permission("case:approve")),
 ) -> ClientSummaryOut:
     client = await _get_client_or_404(client_id, db)
 

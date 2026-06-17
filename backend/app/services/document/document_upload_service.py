@@ -82,19 +82,13 @@ async def _trigger_document_intelligence(
     filename: str,
     category: str,
 ) -> None:
-    """Fire-and-forget: publish CLASSIFY_DOCUMENT + EXTRACT_OCR tasks to the DIA bus queue.
-
-    Uses the orchestration service's shared event bus so the existing dispatch
-    loop picks up the task without spawning a separate agent instance.
-    """
+    """Fire-and-forget: publish CLASSIFY_DOCUMENT + EXTRACT_OCR tasks via Temporal."""
     try:
         from app.services.orchestration.agent_orchestration_service import orchestration_service
 
         if not orchestration_service.is_started:
             logger.debug("[UploadService] Orchestration service not started; skipping DIA trigger")
             return
-
-        bus = orchestration_service._bus  # noqa: SLF001
 
         classify_packet = TaskPacket(
             from_agent=AgentID.ORCHESTRATOR,
@@ -109,7 +103,7 @@ async def _trigger_document_intelligence(
                 "raw_text": "",
             },
         )
-        await bus.publish(classify_packet)
+        await orchestration_service.publish_task(classify_packet)
 
         ocr_packet = TaskPacket(
             from_agent=AgentID.ORCHESTRATOR,
@@ -124,7 +118,7 @@ async def _trigger_document_intelligence(
                 "category": category,
             },
         )
-        await bus.publish(ocr_packet)
+        await orchestration_service.publish_task(ocr_packet)
 
         logger.info(
             f"[UploadService] DIA tasks queued for document={document_id} "

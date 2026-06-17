@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.base.a2a_types import AgentID, OnboardingStage, TaskPacket, TaskType
 from app.models.clients import Client
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.api.error_handlers import NotFoundError, UnprocessableError
 from app.config import settings
 from app.database import get_db
@@ -424,7 +424,7 @@ async def get_document(
 async def trigger_validation(
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin")),
+    _user: dict = Depends(require_permission("document:validate")),
 ) -> ValidateAcceptedOut:
     doc = await _get_doc_or_404(document_id, db)
     if doc.status == "RECEIVED":
@@ -449,7 +449,7 @@ async def update_document_status(
     document_id: UUID,
     body: UpdateDocumentStatusRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("Advisor", "Admin")),
+    _user: dict = Depends(require_permission("document:upload")),
 ) -> DocumentOut:
     if body.status not in DOCUMENT_STATUSES:
         raise UnprocessableError(

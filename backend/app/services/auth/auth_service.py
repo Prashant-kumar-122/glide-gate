@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.clients import Client
-from app.models.users import User
+from app.models.users import User, UserPersona
 
 
 def hash_password(plain: str) -> str:
@@ -24,10 +24,12 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(user: User) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    roles = user.roles  # list[str] from personas relationship (must be loaded)
     payload = {
         "sub": str(user.id),
         "email": user.email,
-        "role": user.role,
+        "roles": roles,
+        "role": roles[0] if roles else "client",  # primary role for backwards compat
         "name": user.full_name,
         "exp": expire,
     }
@@ -54,10 +56,12 @@ class AuthService:
             first_name=first_name,
             last_name=last_name,
             password_hash=hash_password(password),
-            role="client",
         )
         db.add(user)
         await db.flush()
+
+        # Assign default "client" persona
+        db.add(UserPersona(user_id=user.id, persona_code="client"))
 
         # Mirror into clients table — client_id == user.id so cases can be
         # looked up directly by the authenticated user's sub claim.
@@ -70,8 +74,9 @@ class AuthService:
                 last_name=last_name,
             )
             db.add(client)
-            await db.flush()
 
+        await db.flush()
+        await db.refresh(user, ["personas"])
         token = create_access_token(user)
         return token, user
 
@@ -88,6 +93,7 @@ class AuthService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is inactive",
             )
+        await db.refresh(user, ["personas"])
         token = create_access_token(user)
         return token, user
 

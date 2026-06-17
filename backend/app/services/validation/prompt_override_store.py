@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-"""Shared store for admin validation prompt overrides.
+"""Shared store for admin validation prompt overrides and domain agent prompts.
+
+Validation prompt overrides (Phase 0) use a keyed in-memory dict loaded from
+the admin_config table.  Agent system prompts (Phase 6) are stored in the
+domain_agent_prompts table and accessed via DomainPromptStore.
+get_agent_prompt() is the unified public API for all agent system prompt lookups.
+
 
 Architecture: write-through cache.
 - _prompt_overrides is the L1 in-memory cache (synchronous reads — zero latency).
@@ -93,3 +99,19 @@ async def _delete_one(category: str) -> None:
         admin_config_repository,
     )
     await admin_config_repository.delete_key(NAMESPACE_VALIDATION_PROMPTS, category)
+
+
+# ── Domain-scoped agent system prompts (Phase 6) ─────────────────────────────
+
+async def get_agent_prompt(
+    domain_code: str,
+    agent_id: str,
+    prompt_role: str,
+) -> str | None:
+    """Return the domain-configured system prompt for an agent role, or None.
+
+    None signals the caller to fall back to the hardcoded _SYSTEM constant.
+    Keyed by (domain_code, agent_id, prompt_role) against domain_agent_prompts.
+    """
+    from app.services.prompts.domain_prompt_store import domain_prompt_store
+    return await domain_prompt_store.get(domain_code, agent_id, prompt_role)

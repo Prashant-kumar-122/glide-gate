@@ -1,26 +1,44 @@
 {
   "agent_id": "orchestrator",
-  "version": "1.0.0",
-  "description": "Central workflow controller — owns the onboarding FSM and routes tasks between all 8 agents",
+  "version": "1.1.0",
+  "description": "Central workflow controller — owns the onboarding FSM and routes tasks between all 9 agents",
   "fsm": {
     "initial_stage": "INTAKE",
-    "stages": ["INTAKE", "KYC", "PARALLEL_PRODUCTS", "REVIEW", "COMPLETE", "ESCALATED"],
+    "stages": [
+      "INTAKE",
+      "REVIEW",
+      "SALES_REVIEW",
+      "KYC",
+      "PARALLEL_PRODUCTS",
+      "COMPLETE",
+      "ESCALATED"
+    ],
+    "terminal_stages": ["COMPLETE", "ESCALATED"],
+    "human_pending_stages": ["REVIEW", "SALES_REVIEW"],
     "transitions": {
-      "INTAKE": ["KYC"],
+      "INTAKE": ["REVIEW"],
+      "REVIEW": ["SALES_REVIEW", "KYC", "COMPLETE", "ESCALATED"],
+      "SALES_REVIEW": ["KYC", "REVIEW"],
       "KYC": ["PARALLEL_PRODUCTS", "ESCALATED"],
       "PARALLEL_PRODUCTS": ["REVIEW", "COMPLETE", "ESCALATED"],
-      "REVIEW": ["COMPLETE", "ESCALATED", "KYC"],
       "COMPLETE": [],
       "ESCALATED": ["REVIEW", "KYC", "COMPLETE"]
     }
   },
   "task_routing": {
     "INTAKE": "customer_service",
+    "REVIEW": "collaboration",
+    "SALES_REVIEW": "sales_manager",
     "KYC": "kyc_compliance",
     "PARALLEL_PRODUCTS": "product_onboarding",
-    "REVIEW": "collaboration",
     "COMPLETE": "notification",
     "ESCALATED": "notification"
+  },
+  "resume_routing": {
+    "INTAKE": {"agent_id": "customer_service", "task_type": "collect_client_data"},
+    "SALES_REVIEW": {"agent_id": "sales_manager", "task_type": "sales_manager_review"},
+    "KYC": {"agent_id": "kyc_compliance", "task_type": "run_kyc_check"},
+    "PARALLEL_PRODUCTS": {"agent_id": "product_onboarding", "task_type": "onboard_product"}
   },
   "thresholds": {
     "kyc_risk_auto_escalate": 0.8,

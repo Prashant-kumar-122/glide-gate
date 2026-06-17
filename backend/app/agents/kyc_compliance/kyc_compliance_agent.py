@@ -147,12 +147,6 @@ class KYCComplianceAgent(BaseAgent):
         from app.database import AsyncSessionLocal
         from app.models.cases import OnboardingCase
 
-        if self._bus is None:
-            self.logger.warning(
-                f"No event bus; cannot signal KYC outcome for case={task.case_id}"
-            )
-            return
-
         if checkpoint.should_escalate:
             await self.send_task(TaskPacket(
                 from_agent=self.agent_id,

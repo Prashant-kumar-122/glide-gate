@@ -9,7 +9,7 @@ from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Produ
 from app.models.documents import Document
 from app.models.kyc_reviews import HumanReview, KYCCheck
 from app.models.sales_reviews import SalesManagerReview
-from app.models.agents import Agent, AgentTask, EventLog, MCPToolCall
+from app.models.agents import Agent, AgentTask, DecisionLog, EventLog, MCPToolCall
 from app.models.communications import (
     CaseSummary,
     CollaborationComment,
@@ -18,6 +18,7 @@ from app.models.communications import (
     ConversationMessage,
     Notification,
 )
+from app.models.activation import ProductActivation
 from app.models.tasks import WorkspaceTask
 from app.models.questionnaire import (
     OnboardingAnswer,
@@ -53,6 +54,7 @@ __all__ = [
     # agents
     "Agent",
     "AgentTask",
+    "DecisionLog",
     "EventLog",
     "MCPToolCall",
     # communications
@@ -64,6 +66,8 @@ __all__ = [
     "ConversationMessage",
     # workspace tasks
     "WorkspaceTask",
+    # activation gate
+    "ProductActivation",
     # questionnaire
     "OnboardingQuestionnaire",
     "OnboardingQuestion",

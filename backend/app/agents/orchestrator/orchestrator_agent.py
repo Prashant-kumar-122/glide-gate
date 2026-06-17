@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -19,6 +21,24 @@ from app.agents.orchestrator.workflow_state_machine import (
     InvalidTransitionError,
     WorkflowStateMachine,
 )
+
+_ORCHESTRATOR_CONFIG_PATH = (
+    Path(__file__).resolve().parents[4] / "configs" / "agents" / "orchestrator.config.json"
+)
+
+
+def _load_resume_routing() -> dict[OnboardingStage, tuple[AgentID, TaskType]]:
+    """Load resume routing from orchestrator.config.json at the project root."""
+    with _ORCHESTRATOR_CONFIG_PATH.open() as f:
+        config = json.load(f)
+    raw: dict[str, dict[str, str]] = config["resume_routing"]
+    return {
+        OnboardingStage(stage): (AgentID(spec["agent_id"]), TaskType(spec["task_type"]))
+        for stage, spec in raw.items()
+    }
+
+
+_RESUME_ROUTING: dict[OnboardingStage, tuple[AgentID, TaskType]] = _load_resume_routing()
 
 
 async def _persist_case_stage(
@@ -199,13 +219,7 @@ class OrchestratorAgent(BaseAgent):
         fsm = self._get_or_create_fsm(case_id)
         fsm.restore(persisted_stage)
 
-        _resume_routing: dict[OnboardingStage, tuple[AgentID, TaskType]] = {
-            OnboardingStage.INTAKE: (AgentID.CUSTOMER_SERVICE, TaskType.COLLECT_CLIENT_DATA),
-            OnboardingStage.SALES_REVIEW: (AgentID.SALES_MANAGER, TaskType.SALES_MANAGER_REVIEW),
-            OnboardingStage.KYC: (AgentID.KYC_COMPLIANCE, TaskType.RUN_KYC_CHECK),
-            OnboardingStage.PARALLEL_PRODUCTS: (AgentID.PRODUCT_ONBOARDING, TaskType.ONBOARD_PRODUCT),
-        }
-        routing = _resume_routing.get(persisted_stage)
+        routing = _RESUME_ROUTING.get(persisted_stage)
         if routing:
             target_agent, task_type = routing
             await self.send_task(

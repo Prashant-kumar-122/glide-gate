@@ -133,9 +133,15 @@ async def on_startup() -> None:
     from app.services.compliance.checkpoint_rule_repository import (
         load_from_db as load_checkpoint_rules,
     )
+    from app.services.prompts.domain_prompt_store import domain_prompt_store
+    from app.mcp.mcp_connector import _grant_cache
+    from app.api.dependencies.permission_guard import clear_permission_cache
     await load_prompt_overrides()
     await load_llm_config()
     await load_checkpoint_rules()
+    domain_prompt_store.clear()   # warm cache from DB on next request
+    _grant_cache.clear()          # warm grant cache from DB on next invoke
+    clear_permission_cache()      # warm permission cache from DB on next request
     await orchestration_service.start()
 
 

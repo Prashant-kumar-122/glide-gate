@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from app.agents.base.a2a_types import OnboardingStage, OnboardingState
+from app.agents.base.a2a_types import OnboardingStage, OnboardingState, WealthExtension
 from app.agents.skills.base_skill import BaseSkill
 from app.services.llm import LLMMessage, LLMRequest, controls_applier, llm_fallback_chain
 
@@ -53,12 +53,13 @@ class StatusSummarisationSkill(BaseSkill):
         completion_percent = _STAGE_PROGRESS.get(stage, 0)
         docs_total = len(state.documents_required)
         docs_received = len(state.documents_received)
+        kyc_status = WealthExtension.from_state(state).kyc_status
 
         base: dict[str, Any] = {
             "stage": stage,
             "stage_label": stage_label,
             "completion_percent": completion_percent,
-            "kyc_status": state.kyc_status,
+            "kyc_status": kyc_status,
             "documents_received": docs_received,
             "documents_total": docs_total,
             "selected_products": state.selected_products,
@@ -68,7 +69,7 @@ class StatusSummarisationSkill(BaseSkill):
         if not use_llm:
             base["summary"] = (
                 f"Onboarding is at the '{stage_label}' stage ({completion_percent}% complete). "
-                f"{docs_received}/{docs_total} documents received. KYC: {state.kyc_status}."
+                f"{docs_received}/{docs_total} documents received. KYC: {kyc_status}."
             )
             base["key_points"] = []
             base["recommended_actions"] = []
@@ -78,7 +79,7 @@ class StatusSummarisationSkill(BaseSkill):
             {
                 "stage": stage_label,
                 "progress": f"{completion_percent}%",
-                "kyc_status": state.kyc_status,
+                "kyc_status": kyc_status,
                 "documents": f"{docs_received}/{docs_total} received",
                 "products": state.selected_products,
                 "escalated": base["escalated"],

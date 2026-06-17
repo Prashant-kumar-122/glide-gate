@@ -14,7 +14,7 @@ from sqlalchemy import func, select
 from app.api.dependencies.auth import get_current_user
 from app.config import settings
 from app.database import get_db
-from app.models.users import User
+from app.models.users import User, UserPersona
 from app.services.auth.auth_service import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -110,7 +110,8 @@ class UserOut(BaseModel):
     email: str
     first_name: str
     last_name: str
-    role: str
+    roles: list[str]
+    role: str  # primary persona, kept for API backwards compat
 
     model_config = {"from_attributes": True}
 
@@ -202,7 +203,10 @@ async def list_advisors(
     db: AsyncSession = Depends(get_db),
 ) -> list[UserOut]:
     result = await db.execute(
-        select(User).where(User.role == "advisor", User.is_active.is_(True)).order_by(User.first_name)
+        select(User)
+        .join(UserPersona, User.id == UserPersona.user_id)
+        .where(UserPersona.persona_code == "advisor", User.is_active.is_(True))
+        .order_by(User.first_name)
     )
     return [UserOut.model_validate(u) for u in result.scalars().all()]
 

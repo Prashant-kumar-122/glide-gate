@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -18,7 +18,7 @@ class EvidencePacket(BaseModel):
     packet_id: UUID = Field(default_factory=uuid4)
     case_id: UUID
     client_id: UUID
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     verification_result: dict[str, Any]
     risk_score: dict[str, Any]
     profile_summary: dict[str, Any]

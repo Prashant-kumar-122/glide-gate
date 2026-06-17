@@ -75,6 +75,22 @@ class AuditEventType(StrEnum):
     LLM_CONFIG_UPDATED = "LLM_CONFIG_UPDATED"
     VALIDATION_PROMPT_UPDATED = "VALIDATION_PROMPT_UPDATED"
     VALIDATION_PROMPT_RESET = "VALIDATION_PROMPT_RESET"
+    CONFIG_CHANGE = "CONFIG_CHANGE"
+
+    # ── SLA (Phase 5) ─────────────────────────────────────────────────────────
+    SLA_WARNING = "SLA_WARNING"
+    SLA_BREACH = "SLA_BREACH"
+
+    # ── Product activation / decline (Phase 4.6) ─────────────────────────────
+    PRODUCT_ACTIVATED = "PRODUCT_ACTIVATED"
+    PRODUCT_DECLINED = "PRODUCT_DECLINED"
+
+    # ── Fraud screening (Phase 4.6) ───────────────────────────────────────────
+    FRAUD_FLAGGED = "FRAUD_FLAGGED"
+    FRAUD_CLEARED = "FRAUD_CLEARED"
+
+    # ── Document scope (Phase 4.5) ────────────────────────────────────────────
+    DOCUMENT_SCOPE_ASSIGNED = "DOCUMENT_SCOPE_ASSIGNED"
 
 
 class AuditEventCategory(StrEnum):

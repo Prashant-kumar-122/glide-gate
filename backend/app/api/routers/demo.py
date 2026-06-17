@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.config import settings
 from app.services.demo.demo_mode_service import demo_mode_service
 
@@ -42,7 +42,7 @@ async def get_demo_status(
 @router.post(
     "/cases/{case_id}/reset",
     summary="Reset demo state for a case (turn counter + KYC scenario)",
-    dependencies=[Depends(_require_demo_mode), Depends(require_role("admin", "advisor"))],
+    dependencies=[Depends(_require_demo_mode), Depends(require_permission("case:create"))],
 )
 async def reset_case_demo(
     case_id: UUID,
@@ -62,7 +62,7 @@ class SetKYCScenarioRequest(BaseModel):
 @router.post(
     "/cases/{case_id}/kyc-scenario",
     summary="Set the KYC scenario for a case (passing | high_risk)",
-    dependencies=[Depends(_require_demo_mode), Depends(require_role("admin", "advisor"))],
+    dependencies=[Depends(_require_demo_mode), Depends(require_permission("case:create"))],
 )
 async def set_kyc_scenario(
     case_id: UUID,

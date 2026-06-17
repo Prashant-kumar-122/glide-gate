@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import text
 
 from app.agents.base.a2a_types import OnboardingState, OnboardingStage
 from app.database import AsyncSessionLocal
@@ -47,6 +48,30 @@ class ContextStoreService:
         async with AsyncSessionLocal() as session:
             await StateRepository.persist(session, case_id, state)
             await session.commit()
+
+    async def _validate_stage(
+        self, stage_value: str, domain_code: str = "wealth_management"
+    ) -> None:
+        """Validate stage_value against domain_stages rows for the given domain.
+
+        Replaces the dropped oc_stage_chk / oc_status_chk DB CHECK constraints.
+        Raises ValueError for any stage code not defined in domain_stages.
+        """
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                text(
+                    "SELECT COUNT(*) FROM domain_stages ds "
+                    "JOIN domains d ON d.id = ds.domain_id "
+                    "WHERE d.domain_code = :domain_code "
+                    "  AND ds.stage_code = :stage_code"
+                ),
+                {"domain_code": domain_code, "stage_code": stage_value},
+            )
+            if (result.scalar() or 0) == 0:
+                raise ValueError(
+                    f"Invalid stage {stage_value!r}: not defined in domain_stages "
+                    f"for domain {domain_code!r}"
+                )
 
     # ── Public API ──────────────────────────────────────────────────────────
 
@@ -105,6 +130,9 @@ class ContextStoreService:
         Returns:
             The updated OnboardingState (version incremented).
         """
+        if "stage" in patches:
+            await self._validate_stage(patches["stage"])
+
         async with self.lock(case_id):
             current = await self.get(case_id)
 

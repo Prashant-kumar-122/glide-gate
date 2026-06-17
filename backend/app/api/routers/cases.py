@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.agents.base.a2a_types import AgentID, OnboardingStage, TaskPacket, TaskType
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import has_permission, require_permission
 from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
@@ -71,6 +71,23 @@ class ProductTrackOut(BaseModel):
     steps_completed: int = 0
     started_at: datetime | None
     completed_at: datetime | None
+    # Phase 4.6: activation gate fields
+    activation_state: str = "PENDING"
+    account_number: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class ProductActivationOut(BaseModel):
+    product_code: str
+    state: str
+    criteria_met_at: datetime | None
+    activated_at: datetime | None
+    declined_at: datetime | None
+    decline_reason: str | None
+    account_number: str | None
+    is_adverse_action: bool
+    adverse_action_reason: str | None
 
     model_config = {"from_attributes": True}
 
@@ -206,7 +223,10 @@ def _case_products_to_tracks(case: OnboardingCase) -> list[ProductTrackOut]:
     return [ProductTrackOut.model_validate(cp) for cp in case.case_products]
 
 
-def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
+def _build_product_track(
+    cp: CaseProduct,
+    activation_map: dict[str, Any] | None = None,
+) -> ProductTrackOut:
     steps = cp.steps or []
     completed = sum(1 for s in steps if s.status in ("COMPLETE", "SKIPPED"))
     product_name = cp.product.name if cp.product else cp.product_code
@@ -218,6 +238,8 @@ def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
         progress = round(completed / len(steps) * 100)
     else:
         progress = _PRODUCT_STATUS_PROGRESS.get(cp.status, 0)
+    # Phase 4.6: include activation state from product_activation table
+    act = (activation_map or {}).get(cp.product_code, {})
     return ProductTrackOut(
         id=cp.id,
         product_code=cp.product_code,
@@ -228,6 +250,8 @@ def _build_product_track(cp: CaseProduct) -> ProductTrackOut:
         steps_completed=completed,
         started_at=cp.started_at,
         completed_at=cp.completed_at,
+        activation_state=act.get("state", "PENDING"),
+        account_number=act.get("account_number"),
     )
 
 
@@ -239,7 +263,12 @@ async def list_products(
     current_user: dict = Depends(get_current_user),
 ) -> list[ProductOut]:
     query = select(Product).where(Product.is_active.is_(True))
-    product_type = "retail" if current_user.get("role") == "client" else "institutional"
+    # Show institutional products only when the user can both manage sales reviews
+    # and create cases — this replaces the old hardcoded `role != "client"` check.
+    can_see_institutional = await has_permission(
+        current_user, "sales:review", db
+    ) and await has_permission(current_user, "case:create", db)
+    product_type = "institutional" if can_see_institutional else "retail"
     query = query.where(Product.product_type == product_type)
     query = query.order_by(Product.name)
     result = await db.execute(query)
@@ -506,6 +535,14 @@ async def get_case_summary(
         )
         is_institutional = inst_check.scalar_one_or_none() is not None
 
+    # Phase 4.6: load activation state for all products in one query
+    from app.models.activation import ProductActivation as _PA
+    act_result = await db.execute(
+        select(_PA).where(_PA.case_id == case_id)
+    )
+    activation_map = {r.product_code: {"state": r.state, "account_number": r.account_number}
+                      for r in act_result.scalars().all()}
+
     return CaseProgressOut(
         case_id=case.id,
         client_id=case.client_id,
@@ -518,8 +555,8 @@ async def get_case_summary(
         documents_total=total_docs,
         documents_received=received,
         documents_approved=approved,
-        products=[_build_product_track(cp) for cp in case.case_products],
-        kyc_status=ctx.get("kyc_status"),
+        products=[_build_product_track(cp, activation_map) for cp in case.case_products],
+        kyc_status=(ctx.get("extra") or {}).get("kyc_status"),
         escalated=escalated,
         is_institutional=is_institutional,
     )
@@ -542,6 +579,25 @@ async def get_case_account(
     if not accounts:
         raise NotFoundError("ClientAccount", str(case_id))
     return [ClientAccountOut.model_validate(a) for a in accounts]
+
+
+@router.get("/{case_id}/product-activations", response_model=list[ProductActivationOut])
+async def get_product_activations(
+    case_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+) -> list[ProductActivationOut]:
+    """Return per-product activation state for a case (Phase 4.6)."""
+    from app.models.activation import ProductActivation
+
+    case = await _get_case_or_404(case_id, db)
+    _assert_case_access(case, current_user)
+
+    result = await db.execute(
+        select(ProductActivation).where(ProductActivation.case_id == case_id)
+    )
+    rows = result.scalars().all()
+    return [ProductActivationOut.model_validate(r) for r in rows]
 
 
 @router.get("/{case_id}/questionnaire-schema", response_model=QuestionnaireSchemaOut)
@@ -782,7 +838,7 @@ async def patch_case_percentage(
     case_id: UUID,
     body: PatchPercentageRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("case:read")),
 ) -> PatchPercentageResponse:
     await _get_case_or_404(case_id, db)
     await db.execute(
@@ -809,7 +865,7 @@ async def patch_case_status(
     case_id: UUID,
     body: PatchStatusRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("case:read")),
 ) -> PatchStatusResponse:
     await _get_case_or_404(case_id, db)
     values: dict = {"status": body.status}
@@ -834,7 +890,7 @@ class SubmitIntakeResponse(BaseModel):
 async def submit_intake(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
+    current_user: dict = Depends(require_permission("case:read")),
 ) -> SubmitIntakeResponse:
     """Client submits their completed application (forms + documents).
 
@@ -906,6 +962,11 @@ async def submit_intake(
             "priority": "NORMAL",
         })
 
+    # Advance the Temporal OnboardingWorkflow from INTAKE → REVIEW.
+    asyncio.create_task(
+        orchestration_service.signal_stage_advance(case_id, "REVIEW")
+    )
+
     return SubmitIntakeResponse(case_id=case_id, status=next_stage, current_stage=next_stage)
 
 
@@ -949,7 +1010,7 @@ class AdvisorApproveResponse(BaseModel):
 async def advisor_approve_case(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role("advisor", "admin")),
+    current_user: dict = Depends(require_permission("case:create")),
 ) -> AdvisorApproveResponse:
     """Advisor advances the case out of the Advisor Review (REVIEW) stage.
 
@@ -1021,6 +1082,10 @@ async def advisor_approve_case(
                 selected_products=selected,
             )
         )
+        # Advance the Temporal OnboardingWorkflow from REVIEW → SALES_REVIEW.
+        asyncio.create_task(
+            orchestration_service.signal_stage_advance(case_id, "SALES_REVIEW")
+        )
         message = "All documents approved — case advanced to Sales Review."
     else:
         # Retail: REVIEW → KYC
@@ -1064,7 +1129,7 @@ async def advisor_approve_case(
 async def resume_case(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("case:approve")),
 ) -> ResumeResponse:
     case = await _get_case_or_404(case_id, db)
     asyncio.create_task(journey_resumption_service.resume_case(case_id=case.id))

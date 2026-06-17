@@ -92,7 +92,10 @@ class HumanReviewService:
         case = result.scalar_one_or_none()
         if case is not None:
             ctx = case.shared_context or {}
-            ctx["human_review_id"] = str(review.id)
+            _extra = dict(ctx.get("extra") or {})
+            _extra["human_review_id"] = str(review.id)
+            _extra["escalation_reason"] = escalation_reason
+            ctx["extra"] = _extra
             ctx["current_stage"] = "ESCALATED"
             case.shared_context = ctx
             case.current_stage = "ESCALATED"
@@ -104,10 +107,12 @@ class HumanReviewService:
         try:
             state = await context_store.get(case_id)
             if state is not None:
-                await context_store.update(
-                    case_id,
-                    {"human_review_id": review.id, "escalation_reason": escalation_reason},
-                )
+                merged_extra = {
+                    **state.extra,
+                    "human_review_id": str(review.id),
+                    "escalation_reason": escalation_reason,
+                }
+                await context_store.update(case_id, {"extra": merged_extra})
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"[HumanReviewService] context update failed: {exc}")
 

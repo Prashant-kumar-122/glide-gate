@@ -22,10 +22,6 @@ from app.database import Base
 
 class OnboardingCase(Base):
     __tablename__ = "onboarding_cases"
-    __table_args__ = (
-        CheckConstraint("status IN ('INTAKE','SALES_REVIEW','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')", name="oc_status_chk"),
-        CheckConstraint("current_stage IN ('INTAKE','SALES_REVIEW','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')", name="oc_stage_chk"),
-    )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
@@ -34,6 +30,7 @@ class OnboardingCase(Base):
     selected_products: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     shared_context: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     assigned_advisor_id: Mapped[UUID | None] = mapped_column(index=True)
+    priority_tier: Mapped[str] = mapped_column(String(50), nullable=False, default="standard")
     sla_deadline: Mapped[datetime | None] = mapped_column()
     completed_at: Mapped[datetime | None] = mapped_column()
     extra_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
@@ -54,13 +51,13 @@ class OnboardingCase(Base):
     conversation_messages: Mapped[list[Any]] = relationship("ConversationMessage", back_populates="case")
     question_sessions: Mapped[list[Any]] = relationship("OnboardingQuestionSession", back_populates="case")
     answers: Mapped[list[Any]] = relationship("OnboardingAnswer", back_populates="case")
+    product_activations: Mapped[list[Any]] = relationship("ProductActivation", back_populates="case", cascade="all, delete-orphan")
 
 
 class Product(Base):
     __tablename__ = "products"
     __table_args__ = (
         UniqueConstraint("product_code", name="products_code_uq"),
-        CheckConstraint("product_type IN ('retail', 'institutional')", name="products_type_chk"),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)

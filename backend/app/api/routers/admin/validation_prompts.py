@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.api.error_handlers import NotFoundError
 from app.services.validation.prompt_override_store import (
     get_prompt_override,
@@ -52,7 +52,7 @@ class ValidationPromptUpdate(BaseModel):
 
 @router.get("", response_model=list[ValidationPromptOut])
 async def list_validation_prompts(
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> list[ValidationPromptOut]:
     results = []
     for cat in sorted(VALID_CATEGORIES):
@@ -71,7 +71,7 @@ async def list_validation_prompts(
 @router.get("/{category}", response_model=ValidationPromptOut)
 async def get_validation_prompt(
     category: str,
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> ValidationPromptOut:
     if category not in VALID_CATEGORIES:
         raise NotFoundError("ValidationPrompt", category)
@@ -90,7 +90,7 @@ async def get_validation_prompt(
 async def update_validation_prompt(
     category: str,
     body: ValidationPromptUpdate,
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> ValidationPromptOut:
     if category not in VALID_CATEGORIES:
         raise NotFoundError("ValidationPrompt", category)
@@ -106,7 +106,7 @@ async def update_validation_prompt(
 @router.delete("/{category}", response_model=ValidationPromptOut)
 async def reset_validation_prompt(
     category: str,
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> ValidationPromptOut:
     if category not in VALID_CATEGORIES:
         raise NotFoundError("ValidationPrompt", category)
