@@ -519,7 +519,7 @@
         <li><span class="phase-num">Phase 6</span><span class="phase-title">Wire Skills &amp; MCP into live agent execution (ADR-007)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 7</span><span class="phase-title">Configurable persona + permission model (15-scope catalog); multi-role <code>user_personas</code>; permission-based institutional gate</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 8</span><span class="phase-title">Loosen DB CHECK constraints; domain rows authoritative</span><span class="badge badge-done">✅ Done</span></li>
-        <li><span class="phase-num">Phase 9</span><span class="phase-title">Admin Portal (domain editor, SLA grid, agent registry)</span><span class="badge badge-planned">⬜ Planned</span></li>
+        <li><span class="phase-num">Phase 9</span><span class="phase-title">Admin Portal — 6-tab domain editor (stages, agents, products, SLA, SLA health, personas); 6 admin routers; domain lifecycle toolbar (Validate / Activate / Deactivate)</span><span class="badge badge-done">✅ Done</span></li>
         <li><span class="phase-num">Phase 10</span><span class="phase-title">Serve frontend vocabulary from domain API</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 11</span><span class="phase-title">Retail/Deposit acceptance proof (via admin portal only)</span><span class="badge badge-planned">⬜ Planned</span></li>
         <li><span class="phase-num">Phase 12</span><span class="phase-title">Extract framework / domain package boundary</span><span class="badge badge-planned">⬜ Planned</span></li>
@@ -545,6 +545,7 @@
           <tr><td>FR-AG-04 — Agents trigger compliance checks via integrations</td><td>Phase 6</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>FR-AG-06 — HITL checkpoints + authority limits enforced by permission guard</td><td>Phase 7</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>NFR-01 — RBAC + least-privilege; <code>require_permission()</code> 15-scope catalog; <code>domain_permissions</code> DB-backed</td><td>Phase 7</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
+          <tr><td>OBJ-4 — Admin portal for all domain_* table configuration</td><td>Phase 9</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>OBJ-5 — SLA enforcement with audit trail</td><td>Phase 5</td><td><span class="badge badge-done">✅ Implemented</span></td></tr>
           <tr><td>NFR-03 — 99.95% availability / DR</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
           <tr><td>NFR-10 — OTel observability</td><td>Phase 13</td><td><span class="badge badge-new">Gap — new phase</span></td></tr>
@@ -561,7 +562,8 @@
           <tr><td>Backend integration tests</td><td>API endpoints, DB interactions</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>Temporal workflow tests</td><td>Structure snapshot tests; crash recovery (requires live Temporal)</td><td><span class="badge badge-partial">Partial</span></td></tr>
           <tr><td>SLA unit tests</td><td>SLAMonitorService: resolve priority chain, tracking, pause/resume, idempotency</td><td><span class="badge badge-done">✅ Done (15 unit tests — Phase 5)</span></td></tr>
-          <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations with live Temporal</td><td><span class="badge badge-planned">Phase 9+</span></td></tr>
+          <tr><td>Admin portal unit tests</td><td>Domain CRUD patterns, SLA validator (equal/inverted pcts), partial SLA update, AgentStatusUpdate, DomainValidationResult shape, activate_domain with mocked DB</td><td><span class="badge badge-done">✅ Done (20 unit tests — Phase 9)</span></td></tr>
+          <tr><td>SLA integration tests</td><td>Warning/breach/pause/flag combinations with live Temporal</td><td><span class="badge badge-planned">Phase 10+</span></td></tr>
           <tr><td>Audit chain tests</td><td>Chain validity, tamper detection, WORM enforcement</td><td><span class="badge badge-done">✅ Done (12 unit tests)</span></td></tr>
           <tr><td>Pipeline config tests</td><td>Suitability score parity (DB vs hardcoded), threshold enforcement, fallback shape</td><td><span class="badge badge-done">✅ Done (22 unit tests — Phase 4)</span></td></tr>
           <tr><td>Activation gate tests</td><td>OPA policy, first-to-complete, fraud block, adverse-action, credit/non-credit decline</td><td><span class="badge badge-done">✅ Done (13 unit tests — Phase 4.6)</span></td></tr>
@@ -581,13 +583,19 @@
         <li><strong>Collect-once documents</strong> — current system re-requests shared docs
           per product; FR-DM-01/02/03 deferred to Phase 4.5 (skipped in this run) or
           a future phase</li>
-        <li><strong>Admin portal for permission management</strong> — <code>domain_permissions</code>
-          rows can only be edited via SQL today; Phase 9 admin portal will expose a permission
-          editor and trigger <code>clear_permission_cache()</code> after bulk updates</li>
+        <li><strong>Agent status toggle not yet wired</strong> — <code>domain_agent_roster.status</code>
+          (APPROVED / DEPRECATED) is set by the Phase 9 admin portal toggle but the dispatch layer
+          (<code>StageDispatcher</code>) does not yet filter by status; Phase 10 will wire it</li>
+        <li><strong>Products not surfaced in client wizard</strong> — <code>GET /cases/products</code>
+          still reads the legacy <code>products</code> table; the Phase 9 admin portal writes to
+          <code>domain_products</code>; Phase 10 will replace the endpoint with the domain config API</li>
+        <li><strong>Frontend vocabulary hardcoded</strong> — stage labels, role colors, and nav links
+          in the frontend still reference wealth-specific constants; Phase 10 will drive them from
+          the domain API</li>
       </ul>
       <h3>Deferred features</h3>
       <ul style="padding-left:20px; color: var(--text-muted); line-height: 2;">
-        <li>E-signature &amp; consent capture (FR-CP-06) — Phase 9+</li>
+        <li>E-signature &amp; consent capture (FR-CP-06) — Phase 10+</li>
         <li>Keycloak OIDC authentication — can be added in Phase 7 alongside permission model</li>
         <li>JVM/Spring Boot core (ADR-004) — deferred until polyglot adds value (ADR-009)</li>
         <li>Kafka/event streaming — asyncio queues → Temporal Signals in Phase 0.5; Kafka if

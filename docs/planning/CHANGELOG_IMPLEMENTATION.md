@@ -1078,3 +1078,198 @@ Both endpoints use `get_current_user` dependency; role is mapped to canonical `T
 
 ### [ ] STEP-40 — Final Polish, CHANGELOG Completion & Submission Readiness
 **BRD:** Section 11.2 | **Depends:** All prior steps
+
+---
+
+## CADF Framework Conversion
+
+> This section documents the conversion from the original BRD implementation to the Client
+> Agentic Development Framework (CADF) — a generic, admin-configurable onboarding platform.
+> All work was committed to `feat/cadf-framework`. See `docs/planning/cadf-framework-plan.md`
+> for the full conversion plan and rationale.
+
+---
+
+### [DONE] STEP-C0 — Audit & Wire Orchestrator FSM Config
+**Date:** 2026-06-11 | **Depends:** STEP-36D
+
+**Summary:** Corrected stale `orchestrator.config.json` to match the live FSM (added missing SALES_REVIEW stage and its transition edges); `workflow_state_machine.py` and `orchestrator_agent.py` now load transitions from the JSON config rather than hardcoded dicts.
+
+**Artifacts produced:**
+- `configs/agents/orchestrator.config.json` ✓ — corrected with SALES_REVIEW transitions
+- `backend/app/agents/orchestrator/workflow_state_machine.py` ✓ — loads `_TRANSITIONS` from config
+- `backend/app/agents/orchestrator/orchestrator_agent.py` ✓ — loads `_resume_routing` from config
+
+---
+
+### [DONE] STEP-C0.5 — Migrate Orchestration to Temporal + LangGraph (ADR-001 / ADR-004)
+**Date:** 2026-06-11 | **Depends:** STEP-C0
+
+**Summary:** Replaced asyncio `BaseAgent`/`AgentEventBus` execution substrate with Temporal Workflows (durable orchestration) and LangGraph StateGraphs (per-agent execution). All 8 agents converted to LangGraph nodes. Temporal worker registered via `agent_orchestration_service.py`. `docker-compose.yml` gains a Temporal service. ADR-009 and ADR-010 written. Several follow-up bug fixes (Temporal signal handling, KYC flow, agent trace visibility) committed in subsequent patch commits.
+
+**Artifacts produced:**
+- `backend/app/workflows/onboarding_workflow.py` ✓ — Temporal Workflow driving the FSM
+- `backend/app/workflows/activities.py` ✓ — Temporal Activity wrappers per agent handler
+- `backend/app/agents/*/graph.py` ✓ — LangGraph StateGraph per agent (8 files)
+- `docker-compose.yml` ✓ — Temporal `auto-setup` service added
+- `docs/specs/ADR-009_temporal_langgraph_adoption.md` ✓
+- `docs/specs/ADR-010_single_tenant_deployment.md` ✓
+- `backend/pyproject.toml` ✓ — `temporalio`, `langgraph`, `langchain-core` added
+
+---
+
+### [DONE] STEP-C1 — Domain Definition Tables & ORM Models
+**Date:** 2026-06-12 | **Depends:** STEP-C0.5
+
+**Summary:** Designed and implemented the DB-backed `DomainDefinition` model — 14 new domain tables covering the domain registry, stages, transitions, agent roster, prompts, skills, tool grants, products, pipeline steps, SLA windows, personas, permissions, and user-persona mapping. `DomainDefinitionLoader` assembles the full domain graph from DB on demand.
+
+**Artifacts produced:**
+- `backend/alembic/versions/0017_domain_tables.py` ✓ — 14 new `domain_*` tables
+- `backend/app/models/domain.py` ✓ — SQLAlchemy ORM for all 14 domain tables
+- `backend/app/domain/domain_definition.py` ✓ — `DomainDefinition`, `DomainDefinitionLoader`, `DomainValidationError`
+- `db/seeds/09_domain_wealth.py` ✓ — wealth_management domain seed data
+
+---
+
+### [DONE] STEP-C2 — Split OnboardingState into Typed Core + Extension Bag
+**Date:** 2026-06-15 | **Depends:** STEP-C1
+
+**Summary:** Refactored `OnboardingState` to separate domain-agnostic core fields (`case_id`, `stage`, `selected_products`, `version`) from wealth-specific extension fields moved into an `extra: dict` bag. LangGraph StateGraph updated to use the split schema. `ContextStoreService` migrated accordingly.
+
+**Artifacts produced:**
+- `backend/app/agents/base/a2a_types.py` ✓ — `OnboardingState` refactored; wealth-specific fields moved to `extra`
+- `backend/app/services/context_store/onboarding_state_schema.py` ✓ — updated Pydantic models
+- `backend/app/services/context_store/context_store_service.py` ✓ — migrated to typed core
+
+---
+
+### [DONE] STEP-C2.5 — Hash-Chain Audit Log (FR-AU-01 / BSA Compliance)
+**Date:** 2026-06-15 | **Depends:** STEP-C2
+
+**Summary:** Replaced plain `event_logs` audit entries with an append-only hash-chained `decision_log` table. Each entry stores a SHA-256 hash of the previous entry — tamper-evident, BSA-compliant. `DecisionLogService.verify_chain()` detects any post-hoc modification. `GET /audit/decision-log` paginated endpoint with CSV export.
+
+**Artifacts produced:**
+- `backend/alembic/versions/0019_decision_log.py` ✓ — `decision_log` table with `prev_hash` column
+- `backend/app/models/audit.py` ✓ — `DecisionLog` ORM model
+- `backend/app/services/audit/decision_log_service.py` ✓ — `append()`, `verify_chain()`, `decision_log_service` singleton
+- `backend/app/services/audit/audit_event_types.py` ✓ — `AuditEventType` StrEnum
+- `backend/app/api/routers/audit.py` ✓ — paginated log + chain verify + CSV export endpoints
+
+---
+
+### [DONE] STEP-C3 — Config-Driven StageDispatcher
+**Date:** 2026-06-15 | **Depends:** STEP-C1, STEP-C2 | **BRD:** ADR-002
+
+**Summary:** Replaced the 150-line `if/elif` stage-routing chain in `orchestrator_agent.py` with a `StageDispatcher` that reads `task_routing` and `stages` entries from `DomainDefinition`. Stage transitions are now fully DB-driven with no code changes needed for new domains.
+
+**Artifacts produced:**
+- `backend/app/domain/stage_dispatcher.py` ✓ — `StageDispatcher`, `StageActionSpec`
+- `backend/app/agents/orchestrator/orchestrator_agent.py` ✓ — `if/elif` chain replaced with `StageDispatcher.dispatch()`
+- `backend/tests/unit/domain/test_stage_dispatcher.py` ✓
+
+---
+
+### [DONE] STEP-C4 — Config-Driven Products, Questions & Agent Pipelines
+**Date:** 2026-06-15 | **Depends:** STEP-C3 | **BRD:** FR-WF-01, FR-WF-02
+
+**Summary:** Made products, per-product onboarding questions, and per-product agent pipeline composition fully DB-driven. `ProductOnboardingAgent` reads pipeline steps from `domain_product_pipeline` rows; `DataCollectionOrchestrator` loads questions filtered by `domain_id` + `product_id` FK.
+
+**Artifacts produced:**
+- `backend/app/agents/product_onboarding/product_onboarding_agent.py` ✓ — reads pipeline from domain config
+- `backend/app/agents/customer_service/data_collection_orchestrator.py` ✓ — questions loaded by domain + product FK
+- `backend/alembic/versions/0020_domain_products.py` ✓ — `domain_products`, `domain_product_pipeline` tables
+
+---
+
+### [DONE] STEP-C4.6 — First-to-Complete Activation Gate (FR-GL-01/02/03)
+**Date:** 2026-06-16 | **Depends:** STEP-C4 | **BRD:** FR-GL-01, FR-GL-02, FR-GL-03, ADR-002, ADR-006
+
+**Summary:** Implemented criteria-driven activation gate: each product track evaluates its activation criteria independently; the first product to satisfy all criteria activates without waiting for siblings. Adverse-action records captured (FR-AU-04). Includes bug fixes for validation edge cases discovered during testing.
+
+**Artifacts produced:**
+- `backend/app/services/activation/activation_gate_service.py` ✓ — criteria evaluator + activation gate
+- `backend/app/agents/product_onboarding/product_onboarding_agent.py` ✓ — calls gate on track completion
+- `backend/alembic/versions/0021_activation_gate.py` ✓ — `product_activation_criteria` table
+- `docs/specs/ADR-006_opa_activation_gate.md` ✓
+
+---
+
+### [DONE] STEP-C5 — Configurable SLA Enforcement
+**Date:** 2026-06-16 | **Depends:** STEP-C3, STEP-C4
+
+**Summary:** Replaced dead `OnboardingCase.sla_deadline` field with per-stage / per-product / per-priority-tier SLA windows in `domain_stage_slas`. `SLAMonitorService` runs as a Temporal scheduled activity: evaluates elapsed time vs. window percentage thresholds, emits `SEND_SLA_WARNING` and `SEND_ESCALATION_ALERT` task types. Human-review stages automatically pause the SLA clock.
+
+**Artifacts produced:**
+- `backend/alembic/versions/0022_sla_tables.py` ✓ — `domain_stage_slas`, `case_sla_tracking` tables
+- `backend/app/models/sla.py` ✓ — `DomainStageSLA`, `CaseSlaTracking` ORM models
+- `backend/app/services/sla/sla_monitor_service.py` ✓ — `SLAMonitorService`, `resolve_sla()`, `get_net_elapsed_seconds()`
+- `backend/app/services/sla/sla_tick_activity.py` ✓ — Temporal activity for periodic SLA ticks
+
+---
+
+### [DONE] STEP-C6 — Wire Skills & MCP into Live Agent Execution
+**Date:** 2026-06-17 | **Depends:** STEP-C3, STEP-C5 | **BRD:** ADR-007
+
+**Summary:** Activated the dormant Skills framework and MCP gateway. Each domain's `domain_agent_skills` and `domain_agent_tool_grants` rows control which skills and MCP tools each agent may invoke. `MCPRegistry.invoke()` enforces grant-checking before any tool call. Also fixed a REVIEW→KYC stage-advance regression introduced in Phase 3.
+
+**Artifacts produced:**
+- `backend/app/agents/base/agent_mixin.py` ✓ — `SkillMixin`, `MCPMixin` injected into LangGraph nodes
+- `backend/app/mcp/mcp_connector.py` ✓ — `invoke()` grant-check added
+- `backend/alembic/versions/0023_skill_tool_grants.py` ✓ — `domain_agent_skills`, `domain_agent_tool_grants` tables
+- `db/seeds/09_domain_wealth.py` ✓ — skill + tool-grant seed rows added
+
+---
+
+### [DONE] STEP-C7 — Configurable Persona + Permission Model
+**Date:** 2026-06-17 | **Depends:** STEP-C6 | **BRD:** FR-AG-05
+
+**Summary:** Replaced hardcoded `users.role` CHECK constraint with `domain_personas` + `domain_permissions` + `user_personas` join table. `require_permission(scope)` FastAPI dependency replaces `require_role()`. Permission cache cleared on admin mutation. Multi-role support: one user can hold multiple personas simultaneously. Frontend `TeamRole`/`ROLE_COLORS` now driven by persona data.
+
+**Artifacts produced:**
+- `backend/alembic/versions/0024_personas.py` ✓ — `domain_personas`, `domain_permissions`, `user_personas` tables; `domain_agent_roster.status` column
+- `backend/app/models/domain.py` ✓ — `DomainPersona`, `DomainPermission`, `UserPersona` ORM models added
+- `backend/app/api/dependencies/permission_guard.py` ✓ — `require_permission()`, `clear_permission_cache()`
+- `frontend/src/hooks/usePersonas.ts` ✓ — TanStack Query hooks for persona/permission data
+
+---
+
+### [DONE] STEP-C8 — Loosen DB CHECK Constraints
+**Date:** 2026-06-17 | **Depends:** STEP-C7
+
+**Summary:** Removed all wealth-management-specific DB CHECK constraints (`oc_status_chk`, `oc_stage_chk`, `product_type` ENUM) so that domain reference rows become the single authoritative source for valid vocabulary. Existing wealth values preserved via seed data. Added `domain_code` FK on `onboarding_cases` for future multi-domain routing.
+
+**Artifacts produced:**
+- `backend/alembic/versions/0025_loosen_constraints.py` ✓ — drops CHECK constraints; adds `onboarding_cases.domain_code` FK
+- `backend/app/models/cases.py` ✓ — `OnboardingCase.domain_code` column added
+- `docs/FRAMEWORK.md` ✓ — Data Model section updated
+
+---
+
+### [DONE] STEP-C9 — Admin Portal for Domain Configuration
+**Date:** 2026-06-17 | **Depends:** STEP-C8 | **BRD:** CADF Phase 9, OBJ-4
+
+**Summary:** Built the full admin portal UI covering all `domain_*` tables. Backend: 6 new `admin/*` FastAPI routers (domains, stages, agents, products, SLA, personas) providing complete CRUD + lifecycle operations. Frontend: `DomainPortal` container with a domain selector strip, lifecycle toolbar (Validate / Activate / Deactivate), and a 6-tab editor (Stages, Agents, Products, SLA, SLA Health, Personas). Fixed 13 DELETE endpoints across 6 routers for FastAPI 0.99+ 204-response compatibility. Fixed `DomainDefinitionLoader` instance-method call pattern in `validate_domain` / `activate_domain`.
+
+**Artifacts produced:**
+- `backend/app/api/routers/admin/domains.py` ✓ — domain CRUD + validate/activate/deactivate lifecycle
+- `backend/app/api/routers/admin/stages.py` ✓ — stage + transition + task-routing CRUD
+- `backend/app/api/routers/admin/agents.py` ✓ — agent roster + prompts + skills + tool-grant CRUD
+- `backend/app/api/routers/admin/products.py` ✓ — domain products + pipeline-step CRUD + reorder
+- `backend/app/api/routers/admin/sla.py` ✓ — SLA window CRUD + SLA health dashboard endpoint
+- `backend/app/api/routers/admin/personas.py` ✓ — persona + permission CRUD + known-scopes list
+- `frontend/src/features/admin/DomainPortal.tsx` ✓ — domain selector, lifecycle toolbar, tab routing
+- `frontend/src/features/admin/StagesEditor.tsx` ✓ — stages + transitions + task-routing editor
+- `frontend/src/features/admin/AgentsEditor.tsx` ✓ — agent roster + prompt + skill + tool-grant editor
+- `frontend/src/features/admin/ProductsEditor.tsx` ✓ — domain products + pipeline-step editor
+- `frontend/src/features/admin/SLAEditor.tsx` ✓ — SLA window editor per stage/product/priority
+- `frontend/src/features/admin/SLAHealthDashboard.tsx` ✓ — live SLA health view with % elapsed
+- `frontend/src/features/admin/PersonasEditor.tsx` ✓ — persona + permission checkbox editor
+- `frontend/src/routes/AdminConfig.tsx` ✓ — Domain Portal added as default first tab
+- `frontend/src/hooks/useDomainAdmin.ts` ✓ — TanStack Query hooks for all admin domain APIs
+- `backend/tests/unit/api/test_admin_domains.py` ✓ — 20 unit tests (pure-Python, no DB)
+- `docs/FRAMEWORK.md` ✓ — admin portal components + API router table expanded
+- `docs/TRACEABILITY.md` ✓ — Phase 9 and OBJ-4 rows marked ✅
+
+**Bugs fixed in this step:**
+- FastAPI 0.99+ assertion `Status code 204 must not have a response body` — 13 DELETE endpoints across 6 routers changed from `-> None:` to `-> Response:` + `return Response(status_code=204)`
+- `DomainDefinitionLoader.load` is an instance method, not a classmethod — `validate_domain` and `activate_domain` fixed to `loader = DomainDefinitionLoader(db); await loader.load(str(domain_id))`
