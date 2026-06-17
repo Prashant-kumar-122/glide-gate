@@ -539,7 +539,12 @@ Update `docs/FRAMEWORK.md` §Data Model for any structural change.
 | clients | `/clients` | Client profile CRUD |
 | audit | `/audit` | `GET /audit/logs` (EventLog), `GET /audit/verify` (chain integrity), `GET /cases/{id}/audit` (decision log), `GET /audit/export` (BSA CSV/JSON) |
 | domain_config | `/api/config/domain` | Domain vocabulary (Phase 10) |
-| admin/* | `/admin/` | Admin portal CRUD (Phase 9) |
+| admin/domains | `/admin/domains` | Domain CRUD + draft/validate/activate lifecycle; every mutation appends `CONFIG_CHANGE` to decision_log |
+| admin/stages | `/admin/domains/{id}/stages` | Stage + transition graph CRUD; task routing rules |
+| admin/agents | `/admin/domains/{id}/agents` | Agent roster, capabilities, prompts, skill bindings, MCP tool grants; `PATCH …/status` toggles APPROVED↔DEPRECATED without redeploy |
+| admin/products | `/admin/domains/{id}/products` | Product catalog + per-product pipeline step CRUD |
+| admin/sla | `/admin/domains/{id}/slas` | SLA grid CRUD; rejects `warning_pct≥escalation_pct`; raises 422 on disable of regulated stages; `GET /admin/sla-health` dashboard |
+| admin/personas | `/admin/domains/{id}/personas` | Persona CRUD + permission scope add/remove; calls `clear_permission_cache()` after each change |
 
 ### Adding an endpoint
 
@@ -716,6 +721,16 @@ domain (default `wealth_management`) and raises `ValueError` for any stage code 
 there.  The DB no longer enforces the old wealth-specific enum — new domains can add their
 own stage codes without a migration.
 
+### Agent roster status toggle (Phase 9 — implemented)
+
+**Migration 0024** adds a `status` column to `domain_agent_roster`:
+
+| Column | Type | Default | Semantics |
+|---|---|---|---|
+| `status` | `VARCHAR(20) NOT NULL` | `APPROVED` | `APPROVED` = dispatched by StageDispatcher; `DEPRECATED` = silently skipped |
+
+The `PATCH /admin/domains/{id}/agents/{agent_id}/status` endpoint toggles between `APPROVED` and `DEPRECATED`.  No code change or redeploy is required to disable an agent.
+
 ### Keycloak OIDC (planned — not in current CADF phases)
 The reference project implements full Keycloak OIDC + RBAC. This is not in the current phase
 plan but can be added as a Phase 7+ sub-task when Keycloak is introduced to docker-compose.
@@ -736,6 +751,22 @@ plan but can be added as a Phase 7+ sub-task when Keycloak is introduced to dock
 | `features/compliance-review/` | embedded in advisor | compliance |
 | `features/contact-centre/` | `/contact` | contact_centre |
 | `features/notifications/` | overlay | all |
+
+### Admin Portal components (Phase 9 — implemented)
+
+All components live in `frontend/src/features/admin/` and are wired into `routes/AdminConfig.tsx` as the first (default) tab ("Domain Portal"):
+
+| Component | Purpose |
+|---|---|
+| `DomainPortal.tsx` | Container: domain selector strip, lifecycle toolbar (Validate/Activate/Deactivate), per-domain tab navigation |
+| `StagesEditor.tsx` | Stage CRUD, transition CRUD, task routing CRUD |
+| `AgentsEditor.tsx` | Agent roster; expandable rows with prompt/skill/tool-grant editors; APPROVED↔DEPRECATED toggle |
+| `ProductsEditor.tsx` | Product CRUD with JSON field editors; per-product pipeline step editor |
+| `SLAEditor.tsx` | SLA grid CRUD; warns on regulated stages; enforces `warning_pct < escalation_pct` |
+| `SLAHealthDashboard.tsx` | Active-case SLA status with progress bars; auto-refreshes every 30 s |
+| `PersonasEditor.tsx` | Persona CRUD; per-persona permission scope checkbox grid; invalidates server permission cache |
+
+All screens use design-token classes only (no hardcoded px/hex), support dark mode, and render mobile-card + desktop-table layouts.
 
 ### After Phase 10: `useDomainConfig()` hook
 

@@ -106,6 +106,7 @@ class DomainAgentRoster(Base):
     domain_id: Mapped[UUID] = mapped_column(ForeignKey("domains.id", ondelete="CASCADE"), nullable=False)
     agent_id: Mapped[str] = mapped_column(String(100), nullable=False)
     agent_class: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="APPROVED")
 
     domain: Mapped[Domain] = relationship("Domain", back_populates="agent_roster")
 

@@ -28,7 +28,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-AG-02 | Autonomous document collection and validation | Existing | 🟡 | `DocumentIntelligenceAgent`, `CustomerServiceAgent` |
 | FR-AG-03 | Agents validate data, reconcile shared data | Phase 4.5 | ⬜ | Shared-core doc reuse across product tracks |
 | FR-AG-04 | Agents trigger compliance/identity checks via integrations | Phase 6 | ✅ | `MCPRegistry.invoke()` grant-checked calls (ADR-007); KYC agent calls `verify_identity`, `check_sanctions`, `score_aml_risk` via `mcp_registry`; grant rows in `domain_agent_tool_grants` (migration 0020) |
-| FR-AG-05 | Detect exceptions; escalate to human queue | Existing | 🟡 | `HumanReview` model; `EscalationQueue.tsx` |
+| FR-AG-05 | Detect exceptions; escalate to human queue | Existing, Phase 9 | 🟡 | `HumanReview` model; `EscalationQueue.tsx`; admin portal exposes SLA regulated-stage guards that trigger escalation |
 | FR-AG-06 | Respect HITL checkpoints + authority limits | Phase 7 | ✅ | `require_permission()` guards across all routers; `domain_permissions` rows per persona; 15-scope catalog (see `docs/specs/permission-model-security-review.md`) |
 | FR-AG (fraud) | Fraud/anomaly screening; gates activation | Phase 4.6 | ✅ | `FraudScreeningAgent` (`agents/fraud_screening/graph.py`); runs concurrent with KYC via `asyncio.gather`; `fraud_screened` gate in `_evaluate_policy` |
 | FR-GL-01 | Detect product satisfies activation criteria | Phase 4.6 | ✅ | `ActivationGateService` (`services/activation/activation_gate_service.py`); Python policy mirrors `policies/activation.rego`; `product_activation` table (migration 0018) |
@@ -68,7 +68,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | OBJ-1 | Time to first live product | Phase 4.6 | ✅ |
 | OBJ-2 | True parallel onboarding (all products concurrent) | Phase 0.5, Phase 4 | 🟡 |
 | OBJ-3 | Zero duplicate document requests | Phase 4.5 | ⬜ |
-| OBJ-4 | Admin-configurable domain (no engineer redeploy) | Phase 9 | ⬜ |
+| OBJ-4 | Admin-configurable domain (no engineer redeploy) | Phase 9 | ✅ | All `domain_*` tables editable via admin portal; `DomainDefinitionLoader.load()` validates; activate/deactivate lifecycle; agent enable/disable toggle |
 | OBJ-5 | SLA enforcement with audit trail | Phase 5, Phase 2.5 | ✅ | `SLAMonitorService`; `case_sla_tracking` (migration 0019); Temporal `_watch_sla` timer; `SLA_WARNING`/`SLA_BREACH` in `decision_log` (`is_regulatory_breach=True` on breach) |
 | OBJ-6 | Explainable, tamper-evident audit trail | Phase 2.5 | ✅ | `decision_log` hash chain + `GET /audit/verify` tamper detection |
 
@@ -108,7 +108,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 6 | Wire Skills & MCP into live execution | ✅ |
 | Phase 7 | Configurable persona + permission model | ✅ |
 | Phase 8 | Loosen DB CHECK constraints | ✅ |
-| Phase 9 | Admin Portal | ⬜ |
+| Phase 9 | Admin Portal | ✅ |
 | Phase 10 | Serve frontend vocabulary from domain API | ⬜ |
 | Phase 11 | Retail/Deposit acceptance proof | ⬜ |
 | Phase 12 | Extract framework/domain package boundary | ⬜ |

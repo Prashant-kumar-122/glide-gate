@@ -20,7 +20,7 @@
 - [x] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
 - [x] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
 - [x] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
-- [ ] **Phase 9** — Build the Admin Portal
+- [x] **Phase 9** — Build the Admin Portal
 - [ ] **Phase 10** — Serve frontend vocabulary from the domain API
 - [ ] **Phase 11** — Stand up Retail/Deposit through the admin portal (acceptance proof)
 - [ ] **Phase 12** — Extract the framework/domain package boundary
