@@ -27,7 +27,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-AG-01 | Agents autonomously progress the workflow | Phase 0.5 | ✅ | `OnboardingWorkflow` Temporal FSM + LangGraph `StateGraph` per agent |
 | FR-AG-02 | Autonomous document collection and validation | Existing | 🟡 | `DocumentIntelligenceAgent`, `CustomerServiceAgent` |
 | FR-AG-03 | Agents validate data, reconcile shared data | Phase 4.5 | ⬜ | Shared-core doc reuse across product tracks |
-| FR-AG-04 | Agents trigger compliance/identity checks via integrations | Phase 6 | ⬜ | `MCPRegistry.invoke()` grant-checked calls (ADR-007) |
+| FR-AG-04 | Agents trigger compliance/identity checks via integrations | Phase 6 | ✅ | `MCPRegistry.invoke()` grant-checked calls (ADR-007); KYC agent calls `verify_identity`, `check_sanctions`, `score_aml_risk` via `mcp_registry`; grant rows in `domain_agent_tool_grants` (migration 0020) |
 | FR-AG-05 | Detect exceptions; escalate to human queue | Existing | 🟡 | `HumanReview` model; `EscalationQueue.tsx` |
 | FR-AG-06 | Respect HITL checkpoints + authority limits | Phase 7 | ⬜ | `require_permission()` guards; `domain_permissions` rows |
 | FR-AG (fraud) | Fraud/anomaly screening; gates activation | Phase 4.6 | ✅ | `FraudScreeningAgent` (`agents/fraud_screening/graph.py`); runs concurrent with KYC via `asyncio.gather`; `fraud_screened` gate in `_evaluate_policy` |
@@ -54,7 +54,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | NFR-02 | Crash recovery and workflow resumption | Phase 0.5 | ✅ | Temporal durable workflows; `OnboardingWorkflow` resumes from last activity checkpoint |
 | NFR-03 | 99.95% availability; RTO ≤ 15 min; RPO ≈ 0 | Phase 13 | ⬜ | Helm dual-AZ topology; DR runbook |
 | NFR-06 | Decisions explainable/reproducible from logs | Phase 2.5 | ✅ | `decision_log` captures inputs/rationale/agent version per decision; `GET /audit/verify` confirms chain integrity |
-| NFR-07 | Idempotent, retryable integration calls | Phase 6 | ⬜ | `MCPRegistry` idempotency key + bounded retries (Temporal retry policy) |
+| NFR-07 | Idempotent, retryable integration calls | Phase 6 | 🟡 | `MCPRegistry.invoke()` routes through connector simulators; Temporal activity retries provide bounded retry at the workflow level |
 | NFR-08 | US residency + BSA 5-yr retention | Phase 2.5, Phase 13 | 🟡 | `decision_log` WORM semantics enforced at app layer (`DecisionLogService` has no update/delete); `is_regulatory_breach` field; DB-role REVOKE documented in migration 0016; retention policy in Phase 13 |
 | NFR-09 | WCAG 2.1 AA accessibility | Phase 10 | ⬜ | Playwright + axe checks on all frontend screens |
 | NFR-10 | Centralized OTel/Prometheus/Grafana/Loki/Tempo | Phase 13 | ⬜ | OTel SDK; `docker-compose.observability.yml`; Helm subchart |
@@ -84,7 +84,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | ADR-004 | Polyglot — Python/LangGraph agents (JVM deferred) | Phase 0.5 | ✅ | LangGraph `StateGraph` per agent; ADR-009 formalizes Python-first |
 | ADR-005 | Dual-AZ active-active + DR | Phase 13 | ⬜ | Helm `values-prod.yaml`; DR runbook |
 | ADR-006 | OPA activation gate; strong-consistency reads | Phase 4.6 | ✅ | `policies/activation.rego` (OPA bundle); `ActivationGateService._evaluate_policy` mirrors policy in-process; reads `OnboardingCase` from DB not LangGraph cache |
-| ADR-007 | MCP gateway sole egress | Phase 6 | ⬜ | `MCPRegistry.invoke()` grant-checking; `_simulate_*` replaced |
+| ADR-007 | MCP gateway sole egress | Phase 6 | ✅ | `MCPRegistry.invoke()` grant-checks `domain_agent_tool_grants` before dispatch; fails closed on ungrant; `_simulate_identity_verification()` replaced by three `mcp_registry.invoke()` calls in `kyc_compliance/graph.py` |
 | ADR-008 | Self-hosted/pluggable LLM | Existing | 🟡 | `LLMProviderFactory`; Anthropic/OpenAI/Google/local providers |
 | ADR-009 | Temporal + LangGraph adoption (Python-first) | Phase 0.5 | ✅ | `docs/specs/ADR-009_temporal_langgraph_adoption.md` |
 | ADR-010 | Single-tenant per deployment | Phase 0.5 | ✅ | `docs/specs/ADR-010_single_tenant_deployment.md` |
@@ -105,7 +105,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 4.5 | Shared-core document taxonomy (FR-DM-01/02/03) | ~ (skipped) |
 | Phase 4.6 | First-to-complete activation gate (FR-GL-01/02/03) | ✅ |
 | Phase 5 | Configurable SLA enforcement | ✅ |
-| Phase 6 | Wire Skills & MCP into live execution | ⬜ |
+| Phase 6 | Wire Skills & MCP into live execution | ✅ |
 | Phase 7 | Configurable persona + permission model | ⬜ |
 | Phase 8 | Loosen DB CHECK constraints | ⬜ |
 | Phase 9 | Admin Portal | ⬜ |

@@ -17,7 +17,7 @@
 - [~] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03) ⚠️ SKIPPED — implementation was reverted; do not implement, proceed directly to Phase 4.6
 - [x] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
 - [x] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
-- [ ] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
+- [x] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
 - [ ] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
 - [ ] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
 - [ ] **Phase 9** — Build the Admin Portal
@@ -1331,36 +1331,50 @@ Mark **Phase 5** as `[x]` in the Phase Status Tracker and commit this file.
 - Read `backend/app/mcp/mcp_connector.py` (MCPRegistry — the gateway to route through)
 - Read `backend/app/services/validation/prompt_override_store.py`
 
-### What to build
+### As-built summary
 
-**Skills:** Replace each agent graph node's inline reasoning/extraction logic with `skill.invoke(...)` calls, bindings read from `domain_agent_skills` rows. No agent knows at code time which skill it calls — the binding is data.
+**Migration — `backend/alembic/versions/0020_skills_prompts_tool_grants_seed.py`**
+Seeds Phase 6 data for the `wealth_management` domain:
+- `domain_agent_tool_grants`: `kyc_compliance` granted `verify_identity`, `check_sanctions`, `score_aml_risk` on `identity_verification`; `document_intelligence` granted all four `document_management` tools.
+- `domain_agent_skills`: `kyc_compliance → escalation` skill binding with `escalation_threshold: 0.7`.
+- `domain_agent_prompts`: `kyc_compliance` escalation-assessment system prompt.
+All rows use `ON CONFLICT … DO NOTHING` for idempotency.
 
-**MCP:** Replace `_simulate_identity_verification()` and all `_simulate_*` methods with
-`mcp_registry.invoke(tool, ...)`. Add grant-checking to `MCPRegistry.invoke()`: look up
-`domain_agent_tool_grants` — if the calling agent is not granted the tool, raise a loud error
-and fail closed (not just log). This enforces ADR-007.
+**MCP grant-checking — `backend/app/mcp/mcp_connector.py`**
+- Added `async _check_tool_grant(domain_code, agent_id, connector_id, tool_name)`: lazily queries `domain_agent_tool_grants` via DB; raises `PermissionError` when domain is seeded but no grant row exists (fail-closed, ADR-007); logs a warning and allows through when domain is not yet seeded (migration-order safety); bypasses for `agent_id == "unknown"` (legacy callers).
+- Module-level `_grant_cache: dict[tuple[str,str,str,str], bool]` keyed by `(domain, agent, connector, tool)`; cleared on app startup.
+- `MCPRegistry.invoke()` accepts `domain_code` param (defaults to `"wealth_management"`) and calls `_check_tool_grant` before dispatch.
 
-**Prompts:** Extend `prompt_override_store` from validation-prompt scope to all agent system
-prompts, keyed by `(domain_id, agent_id, prompt_role)`.
+**KYC MCP routing — `backend/app/agents/kyc_compliance/graph.py`**
+- `_simulate_identity_verification()` removed; replaced by three sequential `mcp_registry.invoke()` calls: `verify_identity`, `check_sanctions`, `score_aml_risk`.
+- Output translated back to the legacy `verification` dict shape via `build_verification_dict()` so `RiskScorer` and `CheckpointRuleEngine` are unchanged.
+- `EscalationSkill` wired via `skill_dispatcher.get_binding("kyc_compliance", "escalation")`; result stored as advisory metadata in `extra["kyc_escalation_enrichment"]` — never overrides the deterministic `kyc_status` routing.
 
-**Files modified:** all agent LangGraph graphs with `_simulate_*` calls, `prompt_override_store.py`,
-`mcp/mcp_connector.py`
+**Verification translation — `backend/app/agents/kyc_compliance/verification_translation.py`** (new)
+- Pure-Python module (no langgraph dependency) containing `build_verification_dict()` and `parse_income()`.
+- `build_verification_dict()` maps three MCP tool outputs to the `verification` dict fields expected by `RiskScorer`/`CheckpointRuleEngine`: `document_authentic`, `document_valid`, `sanctions_match`, `pep_match`, `aml_risk_level` (`VERY_HIGH` normalised to `HIGH`), `aml_risk_factors`, `name_match_confidence`.
 
-### Verification
-Snapshot agent decisions before/after — routing through `mcp_registry` and `skill.invoke()`
-must produce equivalent outputs. An agent calling an ungranted MCP tool must raise an error.
-Existing suite green.
+**SkillDispatcher — `backend/app/services/skills/skill_dispatcher.py`** (new)
+- `get_binding(agent_id, skill_id, domain_code)` queries `domain_agent_skills` and returns `bound_parameters` or `None`.
+- `invoke_skill(skill_id, agent_id, domain_code, **runtime_kwargs)` merges DB-bound params + runtime kwargs (runtime wins) and delegates to the skill singleton.
+- Module-level `skill_dispatcher = SkillDispatcher()` singleton.
 
-### Session end — commit template
-```
-feat(cadf-phase-6): wire Skills and MCP gateway into live agent execution
+**DomainPromptStore — `backend/app/services/prompts/domain_prompt_store.py`** (new)
+- `get(domain_code, agent_id, prompt_role) -> str | None` queries `domain_agent_prompts`; lazy `_cache` avoids repeat DB hits; returns `None` to signal callers to fall back to hardcoded defaults.
+- `invalidate()` and `clear()` for cache management.
+- `prompt_override_store.get_agent_prompt()` delegates here, extending the existing store to all agent prompts (not just validation).
 
-- Agents now call skill.invoke() with bindings from domain_agent_skills rows
-- _simulate_* methods replaced by mcp_registry.invoke() with grant-checking
-- MCPRegistry.invoke() fails closed on ungranted tools (ADR-007 enforced)
-- prompt_override_store generalized to all agent prompts, domain-scoped
-```
-Mark **Phase 6** as `[x]` in the Phase Status Tracker and commit this file.
+**App startup — `backend/app/main.py`**
+- `domain_prompt_store.clear()` and `_grant_cache.clear()` added to startup hook, ensuring no stale cache state across hot-reloads.
+
+**Tests — `backend/tests/unit/agents/test_kyc_mcp_routing.py`** (new, 16 tests)
+- `_build_verification_dict()`: passed shape, sanctions hit, expired document, VERY_HIGH normalisation, PEP from client data.
+- `RiskScorer` + `CheckpointRuleEngine` accept MCP-translated dicts without modification.
+- `_parse_income()`: range string, numeric, unknown input.
+- `MCPRegistry` grant-checking: unknown-agent bypass, `PermissionError` on domain-exists-no-grant, allow-through when domain not found, allow-through when grant exists.
+- Result: **134 passed, 7 skipped, 0 failed** across full unit suite.
+
+**Docs updated:** `docs/FRAMEWORK.md` (§7 SkillDispatcher usage, §8 MCP grant-checking, §8a DomainPromptStore), `docs/TRACEABILITY.md` (FR-AG-04 ✅, ADR-007 ✅, Phase 6 ✅).
 
 ---
 

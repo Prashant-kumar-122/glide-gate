@@ -565,13 +565,24 @@ timing and `EventLog` persistence. Singletons live in `agents/skills/__init__.py
 | escalation | `EscalationSkill` | Determine escalation triggers |
 | product_suitability | `ProductSuitabilitySkill` | Assess product suitability |
 
-After Phase 6, agents call skills via `domain_agent_skills` bindings — no hardcoded skill
-references in agent code.
+Agents call skills via `domain_agent_skills` DB rows — no hardcoded skill references in agent
+code.  `SkillDispatcher` (`services/skills/skill_dispatcher.py`) is the single dispatch point:
+
+```python
+# Look up binding and invoke — binding determines which parameters are merged
+result = await skill_dispatcher.invoke_skill(
+    "escalation", agent_id="kyc_compliance",
+    risk_score=0.62, risk_band="HIGH", kyc_flags=[...]
+)
+```
+
+`SkillDispatcher.get_binding(agent_id, skill_id)` reads `domain_agent_skills` and returns the
+`bound_parameters` JSONB (merged with runtime kwargs; runtime wins on conflict).
 
 ### Adding a skill
 
 1. Create `backend/app/agents/skills/{name}_skill.py` extending `BaseSkill`
-2. Add singleton to `agents/skills/__init__.py`
+2. Add singleton to `agents/skills/__init__.py` and register in `SkillDispatcher._registry()`
 3. Add `domain_agent_skills` rows binding the skill to agents that should use it
 4. Update `docs/FRAMEWORK.md` §Skills
 
@@ -580,23 +591,56 @@ references in agent code.
 ## 8. MCP Gateway
 
 The MCP gateway (`mcp/mcp_connector.py`) is the sole egress for external integration calls
-(ADR-007). After Phase 6, no agent calls external services directly.
+(ADR-007, Phase 6).  No agent calls external services directly.
+
+### Grant-checking (ADR-007)
+
+`MCPRegistry.invoke()` performs a grant check before every call:
+
+```python
+await mcp_registry.invoke(
+    "identity_verification", "verify_identity", {...},
+    agent_id="kyc_compliance",      # checked against domain_agent_tool_grants
+    domain_code="wealth_management",
+)
+```
+
+- Raises `PermissionError` (fail closed) if the domain is seeded but has no matching grant row.
+- Allows through with a warning if the domain row is not found (migration-order safety).
+- Bypasses check when `agent_id == "unknown"` (legacy / non-tracked callers).
+- Per-process `_grant_cache` avoids repeated DB round-trips; cleared on application startup.
 
 ### Registered connectors
 
 | Connector | `connector_name` | Tools |
 |---|---|---|
-| Identity Verification | `identity_verification` | `verify_identity`, `screen_ofac` |
-| Document Management | `document_management` | `store_document`, `retrieve_document` |
-| Credit Bureau (Phase 4.6) | `credit_bureau` | `pull_credit_report`, `assess_affordability` |
-| OPA Policy (Phase 4.6) | `opa_policy` | `evaluate_activation` |
+| Identity Verification | `identity_verification` | `verify_identity`, `check_sanctions`, `score_aml_risk` |
+| Document Management | `document_management` | `upload_document`, `retrieve_document`, `get_document_status`, `extract_ocr` |
 
 ### Adding an MCP connector
 
-1. Create `backend/app/mcp/connectors/{name}_connector.py` extending `MCPConnector`
-2. Register in `main.py` `mcp_registry.register(YourConnector())`
+1. Create `backend/app/mcp/connectors/{name}/connector.py` extending `MCPConnector`
+2. Register in `mcp/__init__.py`: `mcp_registry.register(your_connector)`
 3. Add `domain_agent_tool_grants` rows for each agent that needs access
-4. Update `docs/FRAMEWORK.md` §MCP Gateway and Tech Architecture Appendix B
+4. Update `docs/FRAMEWORK.md` §MCP Gateway
+
+---
+
+## 8a. Domain Agent Prompts
+
+System prompts for agent skills are stored in `domain_agent_prompts` (one row per
+`(domain_id, agent_id, prompt_role)`).  `DomainPromptStore` (`services/prompts/`) reads and caches
+them:
+
+```python
+from app.services.validation.prompt_override_store import get_agent_prompt
+
+prompt = await get_agent_prompt("wealth_management", "kyc_compliance", "escalation_assessment")
+system = prompt or _SYSTEM  # fall back to hardcoded constant
+```
+
+The admin portal (Phase 9) can override prompts per domain without a redeploy.  Calling
+`domain_prompt_store.clear()` (wired to the startup hook) invalidates the cache.
 
 ---
 
