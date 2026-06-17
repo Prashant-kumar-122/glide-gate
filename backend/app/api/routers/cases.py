@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy import func, select, update as sa_update
@@ -18,6 +20,7 @@ from app.api.dependencies.permission_guard import has_permission, require_permis
 from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
+from app.models.domain import Domain, DomainProduct
 from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.models.clients import Client
 from app.models.users import User
@@ -29,6 +32,39 @@ from app.services.orchestration.journey_resumption_service import journey_resump
 from app.websocket.socket_emitter import socket_emitter
 
 router = APIRouter(prefix="/cases", tags=["cases"])
+
+
+async def _resolve_products(
+    db: AsyncSession, codes: list[str]
+) -> tuple[list[tuple[UUID | None, str]], list[str]]:
+    """Validate product codes and return (product_id_or_none, product_code) pairs.
+
+    Checks the active domain's domain_products first; falls back to the legacy
+    products table for codes not found there. product_id is None for domain products.
+    """
+    found: dict[str, UUID | None] = {}
+
+    domain = await db.scalar(select(Domain).where(Domain.is_active.is_(True)).limit(1))
+    if domain is not None:
+        domain_rows = (await db.scalars(
+            select(DomainProduct)
+            .where(DomainProduct.domain_id == domain.id)
+            .where(DomainProduct.product_code.in_(codes))
+        )).all()
+        for r in domain_rows:
+            found[r.product_code] = None  # no FK into legacy products table
+
+    remaining = [c for c in codes if c not in found]
+    if remaining:
+        legacy_rows = (await db.scalars(
+            select(Product).where(Product.product_code.in_(remaining))
+        )).all()
+        for p in legacy_rows:
+            found[p.product_code] = p.id
+
+    resolved = [(found[c], c) for c in codes if c in found]
+    unknown = sorted(c for c in codes if c not in found)
+    return resolved, unknown
 
 
 # ── Request / Response models ─────────────────────────────────────────────────
@@ -262,15 +298,43 @@ async def list_products(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> list[ProductOut]:
-    query = select(Product).where(Product.is_active.is_(True))
     # Show institutional products only when the user can both manage sales reviews
     # and create cases — this replaces the old hardcoded `role != "client"` check.
     can_see_institutional = await has_permission(
         current_user, "sales:review", db
     ) and await has_permission(current_user, "case:create", db)
     product_type = "institutional" if can_see_institutional else "retail"
-    query = query.where(Product.product_type == product_type)
-    query = query.order_by(Product.name)
+
+    # Read from domain_products (Phase 10: replaces legacy products table).
+    # Fall back to the legacy products table when no active domain exists so
+    # that deployments that have not run the Phase 1 seed still work.
+    domain = await db.scalar(select(Domain).where(Domain.is_active.is_(True)).limit(1))
+    if domain is not None:
+        rows = (await db.scalars(
+            select(DomainProduct)
+            .where(DomainProduct.domain_id == domain.id)
+            .where(DomainProduct.is_active.is_(True))
+            .where(DomainProduct.product_type == product_type)
+            .order_by(DomainProduct.display_name)
+        )).all()
+        return [
+            ProductOut(
+                id=p.id,
+                product_code=p.product_code,
+                name=p.display_name,
+                description=p.description,
+                product_type=p.product_type,
+            )
+            for p in rows
+        ]
+
+    # Legacy fallback
+    query = (
+        select(Product)
+        .where(Product.is_active.is_(True))
+        .where(Product.product_type == product_type)
+        .order_by(Product.name)
+    )
     result = await db.execute(query)
     return [ProductOut.model_validate(p) for p in result.scalars().all()]
 
@@ -331,15 +395,10 @@ async def initiate_case(
     if not body.selected_products:
         raise ConflictError("At least one product must be selected")
 
-    # Validate products exist
-    product_rows = await db.execute(
-        select(Product).where(Product.product_code.in_(body.selected_products))
-    )
-    products = product_rows.scalars().all()
-    found_codes = {p.product_code for p in products}
-    unknown = set(body.selected_products) - found_codes
+    # Validate products exist (domain_products takes precedence over legacy products)
+    resolved_products, unknown = await _resolve_products(db, body.selected_products)
     if unknown:
-        raise ConflictError(f"Unknown product codes: {sorted(unknown)}")
+        raise ConflictError(f"Unknown product codes: {unknown}")
 
     effective_case_name = body.case_name or body.legal_entity_name
     if effective_case_name:
@@ -371,13 +430,12 @@ async def initiate_case(
     db.add(case)
     await db.flush()
 
-    for product in products:
-        cp = CaseProduct(
+    for product_id, product_code in resolved_products:
+        db.add(CaseProduct(
             case_id=case.id,
-            product_id=product.id,
-            product_code=product.product_code,
-        )
-        db.add(cp)
+            product_id=product_id,
+            product_code=product_code,
+        ))
 
     await db.commit()
 
@@ -600,6 +658,53 @@ async def get_product_activations(
     return [ProductActivationOut.model_validate(r) for r in rows]
 
 
+@router.get("/{case_id}/events")
+async def case_events_stream(
+    case_id: UUID,
+    current_user: dict = Depends(get_current_user),
+) -> StreamingResponse:
+    """SSE stream of live product activation state changes for a case (Phase 10).
+
+    Emits an `activation_update` event whenever any product's activation state
+    changes.  A heartbeat comment is sent every 2 s so proxies/browsers do not
+    close idle connections.  Retains socket.io for all other real-time features.
+
+    Event format::
+
+        data: {"type": "activation_update", "activations": {"equity_fund": {"state": "ACTIVATED", "account_number": "GG-EQU-…"}}}
+    """
+    from app.database import AsyncSessionLocal
+    from app.models.activation import ProductActivation
+
+    async def _generate():
+        last_states: dict[str, Any] = {}
+        try:
+            while True:
+                async with AsyncSessionLocal() as session:
+                    rows = (await session.scalars(
+                        select(ProductActivation).where(ProductActivation.case_id == case_id)
+                    )).all()
+                states = {
+                    r.product_code: {"state": r.state, "account_number": r.account_number}
+                    for r in rows
+                }
+                if states != last_states:
+                    last_states = states
+                    payload = json.dumps({"type": "activation_update", "activations": states})
+                    yield f"data: {payload}\n\n"
+                # Keep-alive heartbeat (prevents proxy/browser timeout)
+                yield ": heartbeat\n\n"
+                await asyncio.sleep(2)
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.get("/{case_id}/questionnaire-schema", response_model=QuestionnaireSchemaOut)
 async def get_questionnaire_schema(
     case_id: UUID,
@@ -788,14 +893,9 @@ async def patch_case_products(
     if not body.selected_products:
         raise ConflictError("At least one product must be selected")
 
-    product_rows = await db.execute(
-        select(Product).where(Product.product_code.in_(body.selected_products))
-    )
-    products = product_rows.scalars().all()
-    found_codes = {p.product_code for p in products}
-    unknown = set(body.selected_products) - found_codes
+    resolved_products, unknown = await _resolve_products(db, body.selected_products)
     if unknown:
-        raise ConflictError(f"Unknown product codes: {sorted(unknown)}")
+        raise ConflictError(f"Unknown product codes: {unknown}")
 
     new_codes = set(body.selected_products)
     old_codes = set(case.selected_products)
@@ -807,12 +907,12 @@ async def patch_case_products(
 
     # Add CaseProduct rows for newly selected products
     existing_codes = {cp.product_code for cp in case.case_products if cp.product_code in new_codes}
-    for product in products:
-        if product.product_code not in existing_codes and product.product_code not in old_codes:
+    for product_id, product_code in resolved_products:
+        if product_code not in existing_codes and product_code not in old_codes:
             db.add(CaseProduct(
                 case_id=case.id,
-                product_id=product.id,
-                product_code=product.product_code,
+                product_id=product_id,
+                product_code=product_code,
             ))
 
     await db.execute(

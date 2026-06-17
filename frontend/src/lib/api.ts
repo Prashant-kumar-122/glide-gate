@@ -360,6 +360,11 @@ export interface ProductOut {
   description: string | null
 }
 
+// ── Domain config types (Phase 10) ────────────────────────────────────────────
+// Canonical types live in useDomainConfig.ts; re-exported here for consumers
+// that import API types from this module.
+export type { DomainConfigOut, StageConfig, PersonaConfig, ProductConfig } from '@/hooks/useDomainConfig'
+
 export interface AdvisorOut {
   id: string
   email: string

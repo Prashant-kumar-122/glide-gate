@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Loader2, ArrowRight } from 'lucide-react'
+import { Plus, Trash2, Loader2, ArrowRight, Pencil, Check, X } from 'lucide-react'
 import {
   useStages,
   useCreateStage,
@@ -14,6 +14,99 @@ import {
 
 interface Props {
   domainId: string
+}
+
+function StageRow({
+  s,
+  routing,
+  updateStage,
+  deleteStage,
+}: {
+  s: StageOut
+  routing?: { target_agent: string; task_type: string }
+  updateStage: ReturnType<typeof useUpdateStage>
+  deleteStage: ReturnType<typeof useDeleteStage>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(s.display_name)
+
+  function save() {
+    if (!draft.trim() || draft === s.display_name) { setEditing(false); return }
+    updateStage.mutate({ id: s.id, display_name: draft.trim() }, {
+      onSuccess: () => setEditing(false),
+    })
+  }
+
+  return (
+    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+      <td className="px-4 py-2.5 font-mono font-medium text-gray-800 dark:text-gray-100">
+        {s.stage_code}
+      </td>
+      <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">
+        {editing ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
+              className="w-full border border-primary bg-white px-2 py-0.5 text-xs outline-none dark:bg-gray-800 dark:text-gray-200"
+            />
+            <button onClick={save} disabled={updateStage.isPending} className="text-emerald-600 hover:text-emerald-700 disabled:opacity-40">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={() => { setDraft(s.display_name); setEditing(false) }} className="text-gray-400 hover:text-gray-600">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 group">
+            <span>{s.display_name}</span>
+            <button
+              onClick={() => { setDraft(s.display_name); setEditing(true) }}
+              className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-gray-500 transition-opacity"
+              aria-label="Edit display name"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </td>
+      <td className="px-4 py-2.5">
+        <input
+          type="checkbox"
+          checked={s.is_terminal}
+          onChange={(e) => updateStage.mutate({ id: s.id, is_terminal: e.target.checked })}
+          className="h-3.5 w-3.5 accent-blue-600"
+        />
+      </td>
+      <td className="px-4 py-2.5">
+        <input
+          type="checkbox"
+          checked={s.is_human_pending}
+          onChange={(e) => updateStage.mutate({ id: s.id, is_human_pending: e.target.checked })}
+          className="h-3.5 w-3.5 accent-blue-600"
+        />
+      </td>
+      <td className="px-4 py-2.5 text-[10px] text-gray-400">
+        {routing ? (
+          <span>{routing.target_agent} / {routing.task_type}</span>
+        ) : (
+          <span className="text-amber-500">No routing</span>
+        )}
+      </td>
+      <td className="px-4 py-2.5">
+        <button
+          onClick={() => deleteStage.mutate(s.id)}
+          disabled={deleteStage.isPending}
+          className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 dark:hover:bg-red-950"
+          aria-label="Delete stage"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </td>
+    </tr>
+  )
 }
 
 export default function StagesEditor({ domainId }: Props) {
@@ -62,7 +155,7 @@ export default function StagesEditor({ domainId }: Props) {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Stages</h3>
-            <p className="mt-0.5 text-xs text-gray-500">FSM nodes — define the onboarding lifecycle states.</p>
+            <p className="mt-0.5 text-xs text-gray-500">FSM nodes — define the onboarding lifecycle states. Hover a name to edit it.</p>
           </div>
         </div>
 
@@ -85,50 +178,15 @@ export default function StagesEditor({ domainId }: Props) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {(stages ?? []).map((s) => {
-                      const routing = (taskRouting ?? []).find((r) => r.stage_code === s.stage_code)
-                      return (
-                        <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                          <td className="px-4 py-2.5 font-mono font-medium text-gray-800 dark:text-gray-100">
-                            {s.stage_code}
-                          </td>
-                          <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{s.display_name}</td>
-                          <td className="px-4 py-2.5">
-                            <input
-                              type="checkbox"
-                              checked={s.is_terminal}
-                              onChange={(e) => updateStage.mutate({ id: s.id, is_terminal: e.target.checked })}
-                              className="h-3.5 w-3.5 accent-blue-600"
-                            />
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <input
-                              type="checkbox"
-                              checked={s.is_human_pending}
-                              onChange={(e) => updateStage.mutate({ id: s.id, is_human_pending: e.target.checked })}
-                              className="h-3.5 w-3.5 accent-blue-600"
-                            />
-                          </td>
-                          <td className="px-4 py-2.5 text-[10px] text-gray-400">
-                            {routing ? (
-                              <span>{routing.target_agent} / {routing.task_type}</span>
-                            ) : (
-                              <span className="text-amber-500">No routing</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <button
-                              onClick={() => deleteStage.mutate(s.id)}
-                              disabled={deleteStage.isPending}
-                              className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 dark:hover:bg-red-950"
-                              aria-label="Delete stage"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      )
-                    })}
+                    {(stages ?? []).map((s) => (
+                      <StageRow
+                        key={s.id}
+                        s={s}
+                        routing={(taskRouting ?? []).find((r) => r.stage_code === s.stage_code)}
+                        updateStage={updateStage}
+                        deleteStage={deleteStage}
+                      />
+                    ))}
                     {(stages ?? []).length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-4 py-8 text-center text-xs text-gray-400">

@@ -170,18 +170,21 @@ export default function ProductsEditor({ domainId }: Props) {
   const deleteProduct = useDeleteProduct(domainId)
 
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ product_code: '', display_name: '', product_type: 'retail' })
+  const [form, setForm] = useState({ product_code: '', display_name: '', description: '', product_type: 'retail' })
   const [expanded, setExpanded] = useState<string | null>(null)
   const [editingProduct, setEditingProduct] = useState<ProductOut | null>(null)
 
   function handleAdd() {
     if (!form.product_code.trim() || !form.display_name.trim()) return
-    createProduct.mutate(form, {
-      onSuccess: () => {
-        setForm({ product_code: '', display_name: '', product_type: 'retail' })
-        setShowAdd(false)
+    createProduct.mutate(
+      { ...form, description: form.description.trim() || null },
+      {
+        onSuccess: () => {
+          setForm({ product_code: '', display_name: '', description: '', product_type: 'retail' })
+          setShowAdd(false)
+        },
       },
-    })
+    )
   }
 
   return (
@@ -250,6 +253,16 @@ export default function ProductsEditor({ domainId }: Props) {
                   <div className="border-t border-gray-100 px-4 py-4 dark:border-gray-700">
                     {editingProduct?.id === p.id ? (
                       <div className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Description</label>
+                          <textarea
+                            value={editingProduct.description ?? ''}
+                            onChange={(e) => setEditingProduct((ep) => ep ? { ...ep, description: e.target.value } : null)}
+                            rows={2}
+                            placeholder="Short description shown to clients in the product selector"
+                            className="w-full border border-gray-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                          />
+                        </div>
                         <JsonEditor
                           label="Suitability Criteria"
                           value={editingProduct.suitability_criteria}
@@ -277,6 +290,7 @@ export default function ProductsEditor({ domainId }: Props) {
                             onClick={() => {
                               updateProduct.mutate({
                                 id: p.id,
+                                description: editingProduct.description,
                                 suitability_criteria: editingProduct.suitability_criteria,
                                 activation_criteria: editingProduct.activation_criteria,
                                 required_documents: editingProduct.required_documents,
@@ -342,6 +356,16 @@ export default function ProductsEditor({ domainId }: Props) {
                 className="w-full border border-gray-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
               />
             </div>
+          </div>
+          <div className="mt-3 space-y-1">
+            <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Description</label>
+            <input
+              type="text"
+              value={form.description}
+              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              placeholder="Short description shown to clients in the product selector"
+              className="w-full border border-gray-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            />
           </div>
           {createProduct.isError && (
             <p className="mt-2 text-[11px] text-red-600 dark:text-red-400">Failed to create product.</p>

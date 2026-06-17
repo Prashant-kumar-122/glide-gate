@@ -238,6 +238,7 @@ class DomainProduct(Base):
     domain_id: Mapped[UUID] = mapped_column(ForeignKey("domains.id", ondelete="CASCADE"), nullable=False)
     product_code: Mapped[str] = mapped_column(String(50), nullable=False)
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text(), nullable=True)
     product_type: Mapped[str] = mapped_column(String(50), nullable=False, default="retail")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     suitability_criteria: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)

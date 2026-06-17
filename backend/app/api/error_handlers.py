@@ -5,10 +5,11 @@ from fastapi.responses import JSONResponse
 
 
 class NotFoundError(Exception):
-    def __init__(self, entity: str, entity_id: str) -> None:
+    def __init__(self, entity: str, entity_id: str = "") -> None:
         self.entity = entity
         self.entity_id = entity_id
-        super().__init__(f"{entity} '{entity_id}' not found")
+        msg = f"{entity} '{entity_id}' not found" if entity_id else entity
+        super().__init__(msg)
 
 
 class ConflictError(Exception):

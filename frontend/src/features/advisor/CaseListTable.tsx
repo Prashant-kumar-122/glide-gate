@@ -8,30 +8,8 @@ import type { CaseOut } from '@/lib/api'
 import { useWorkspaceStore } from '@/store/workspaceStore'
 import { useAuthStore } from '@/store/authStore'
 import InstitutionalCaseModal from './InstitutionalCaseModal'
-
-// ── Stage config ──────────────────────────────────────────────────────────────
-
-const STAGE_LABELS: Record<string, string> = {
-  INTAKE:            'Intake',
-  KYC:               'KYC',
-  PARALLEL_PRODUCTS: 'Products',
-  REVIEW:            'Advisor Review',
-  SALES_REVIEW:      'Sales Review',
-  COMPLETE:          'Live',
-  ESCALATED:         'Escalated',
-}
-
-const STAGE_STYLES: Record<string, { badge: string; dot: string; optionDot: string }> = {
-  INTAKE:            { badge: 'text-gray-400',    dot: 'bg-gray-500',   optionDot: 'bg-gray-400' },
-  KYC:               { badge: 'text-blue-400',    dot: 'bg-blue-500',   optionDot: 'bg-blue-400' },
-  PARALLEL_PRODUCTS: { badge: 'text-violet-400',  dot: 'bg-violet-500', optionDot: 'bg-violet-400' },
-  REVIEW:            { badge: 'text-amber-400',   dot: 'bg-amber-500',  optionDot: 'bg-amber-400' },
-  SALES_REVIEW:      { badge: 'text-amber-400',   dot: 'bg-amber-500',  optionDot: 'bg-amber-400' },
-  COMPLETE:          { badge: 'text-green-400',   dot: 'bg-green-500',  optionDot: 'bg-green-400' },
-  ESCALATED:         { badge: 'text-red-400',     dot: 'bg-red-500',    optionDot: 'bg-red-400' },
-}
-
-const ALL_STAGES = ['INTAKE', 'REVIEW', 'SALES_REVIEW', 'KYC', 'PARALLEL_PRODUCTS', 'COMPLETE', 'ESCALATED']
+import { useDomainConfig } from '@/hooks/useDomainConfig'
+import type { StageConfig } from '@/hooks/useDomainConfig'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -65,13 +43,15 @@ function ProductsCell({ value }: ICellRendererParams<CaseOut, string[]>) {
   )
 }
 
-function StageCell({ value }: ICellRendererParams<CaseOut, string>) {
+function StageCell({ value, context }: ICellRendererParams<CaseOut, string>) {
   if (!value) return null
-  const style = STAGE_STYLES[value] ?? { badge: 'text-gray-400', dot: 'bg-gray-500', optionDot: 'bg-gray-400' }
+  const stageByCode: Record<string, StageConfig> = context?.stageByCode ?? {}
+  const stage = stageByCode[value]
+  const style = stage?.style ?? { badge: 'text-gray-400', dot: 'bg-gray-500', optionDot: 'bg-gray-400' }
   return (
     <span className={['inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide', style.badge].join(' ')}>
       <span className={['h-1.5 w-1.5 rounded-full', style.dot].join(' ')} />
-      {STAGE_LABELS[value] ?? value}
+      {stage?.label ?? value}
     </span>
   )
 }
@@ -98,9 +78,11 @@ function NoCasesOverlay() {
 interface StageDropdownProps {
   value: string
   onChange: (v: string) => void
+  stageByCode: Record<string, StageConfig>
+  allStageCodes: string[]
 }
 
-function StageDropdown({ value, onChange }: StageDropdownProps) {
+function StageDropdown({ value, onChange, stageByCode, allStageCodes }: StageDropdownProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -112,8 +94,9 @@ function StageDropdown({ value, onChange }: StageDropdownProps) {
     return () => document.removeEventListener('mousedown', onOutside)
   }, [])
 
-  const selectedLabel = value ? STAGE_LABELS[value] : 'All Stages'
-  const selectedDot   = value ? STAGE_STYLES[value]?.dot : null
+  const selectedStage = value ? stageByCode[value] : null
+  const selectedLabel = selectedStage?.label ?? (value || 'All Stages')
+  const selectedDot   = selectedStage?.style?.dot ?? null
 
   return (
     <div ref={ref} className="relative">
@@ -149,8 +132,8 @@ function StageDropdown({ value, onChange }: StageDropdownProps) {
             {!value && <Check className="h-3 w-3 text-primary" />}
           </button>
           <div className="mx-2 border-t border-gray-100 dark:border-gray-800" />
-          {ALL_STAGES.map((s) => {
-            const style  = STAGE_STYLES[s]
+          {allStageCodes.map((s) => {
+            const stage  = stageByCode[s]
             const active = value === s
             return (
               <button
@@ -162,8 +145,8 @@ function StageDropdown({ value, onChange }: StageDropdownProps) {
                 ].join(' ')}
               >
                 <span className="flex items-center gap-2">
-                  <span className={['h-1.5 w-1.5 rounded-full', style.optionDot].join(' ')} />
-                  {STAGE_LABELS[s]}
+                  <span className={['h-1.5 w-1.5 rounded-full', stage?.style?.optionDot ?? 'bg-gray-400'].join(' ')} />
+                  {stage?.label ?? s}
                 </span>
                 {active && <Check className="h-3 w-3 text-primary" />}
               </button>
@@ -181,6 +164,7 @@ export default function CaseListTable() {
   const { data: cases, isLoading, isError } = useCases()
   const { openCaseTab } = useWorkspaceStore()
   const { user } = useAuthStore()
+  const { stageByCode, allStageCodes } = useDomainConfig()
 
   const [search,        setSearch]        = useState('')
   const [stageFilter,   setStageFilter]   = useState('')
@@ -238,7 +222,7 @@ export default function CaseListTable() {
       minWidth: 140,
       cellRenderer: StageCell,
       filter: 'agTextColumnFilter',
-      filterValueGetter: (p) => STAGE_LABELS[p.data?.current_stage ?? ''] ?? p.data?.current_stage,
+      filterValueGetter: (p) => stageByCode[p.data?.current_stage ?? '']?.label ?? p.data?.current_stage,
     },
     {
       headerName: 'Assigned To',
@@ -271,9 +255,9 @@ export default function CaseListTable() {
       cellRenderer: ViewCell,
       cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end' } as CellStyle,
     },
-  ], [])
+  ], [stageByCode])
 
-  const context    = useMemo(() => ({ openCaseTab }), [openCaseTab])
+  const context    = useMemo(() => ({ openCaseTab, stageByCode }), [openCaseTab, stageByCode])
   const totalCount = cases?.length ?? 0
 
   const onGridReady     = useCallback((e: GridReadyEvent) => { setFilteredCount(e.api.getDisplayedRowCount()) }, [])
@@ -305,7 +289,12 @@ export default function CaseListTable() {
             )}
           </div>
 
-          <StageDropdown value={stageFilter} onChange={setStageFilter} />
+          <StageDropdown
+            value={stageFilter}
+            onChange={setStageFilter}
+            stageByCode={stageByCode}
+            allStageCodes={allStageCodes}
+          />
 
           {user?.role === 'sales_manager' && (
             <button

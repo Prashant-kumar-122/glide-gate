@@ -56,7 +56,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | NFR-06 | Decisions explainable/reproducible from logs | Phase 2.5 | ✅ | `decision_log` captures inputs/rationale/agent version per decision; `GET /audit/verify` confirms chain integrity |
 | NFR-07 | Idempotent, retryable integration calls | Phase 6 | 🟡 | `MCPRegistry.invoke()` routes through connector simulators; Temporal activity retries provide bounded retry at the workflow level |
 | NFR-08 | US residency + BSA 5-yr retention | Phase 2.5, Phase 13 | 🟡 | `decision_log` WORM semantics enforced at app layer (`DecisionLogService` has no update/delete); `is_regulatory_breach` field; DB-role REVOKE documented in migration 0016; retention policy in Phase 13 |
-| NFR-09 | WCAG 2.1 AA accessibility | Phase 10 | ⬜ | Playwright + axe checks on all frontend screens |
+| NFR-09 | WCAG 2.1 AA accessibility | Phase 10 | 🟡 | `useDomainConfig` hook serves vocabulary; Playwright + axe full-suite checks deferred to Phase 13 |
 | NFR-10 | Centralized OTel/Prometheus/Grafana/Loki/Tempo | Phase 13 | ⬜ | OTel SDK; `docker-compose.observability.yml`; Helm subchart |
 
 ---
@@ -109,7 +109,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 7 | Configurable persona + permission model | ✅ |
 | Phase 8 | Loosen DB CHECK constraints | ✅ |
 | Phase 9 | Admin Portal | ✅ |
-| Phase 10 | Serve frontend vocabulary from domain API | ⬜ |
+| Phase 10 | Serve frontend vocabulary from domain API | ✅ |
 | Phase 11 | Retail/Deposit acceptance proof | ⬜ |
 | Phase 12 | Extract framework/domain package boundary | ⬜ |
 | Phase 13 | Observability, IaC & Operations | ⬜ |

@@ -531,14 +531,14 @@ Update `docs/FRAMEWORK.md` §Data Model for any structural change.
 
 | Router | Prefix | Key endpoints |
 |---|---|---|
-| cases | `/cases` | CRUD, stage workflow, product selection |
+| cases | `/cases` | CRUD, stage workflow, product selection; `GET /cases/products` reads from `domain_products` (Phase 10); `GET /cases/{id}/events` SSE for live product activation state (Phase 10) |
 | conversations | `/conversations` | Chat, call summary |
 | documents | `/documents` | Upload, validate, versioning |
 | reviews | `/reviews` | KYC/compliance review workflow |
 | sales_reviews | `/sales-reviews` | Sales manager approval |
 | clients | `/clients` | Client profile CRUD |
 | audit | `/audit` | `GET /audit/logs` (EventLog), `GET /audit/verify` (chain integrity), `GET /cases/{id}/audit` (decision log), `GET /audit/export` (BSA CSV/JSON) |
-| domain_config | `/api/config/domain` | Domain vocabulary (Phase 10) |
+| domain_config | `/api/config/domain` | `GET /config/domain` — no-auth endpoint returning stage labels/colors/styles, persona display config, and active product catalog for the current domain; consumed by `useDomainConfig()` hook (Phase 10) |
 | admin/domains | `/admin/domains` | Domain CRUD + draft/validate/activate lifecycle; every mutation appends `CONFIG_CHANGE` to decision_log |
 | admin/stages | `/admin/domains/{id}/stages` | Stage + transition graph CRUD; task routing rules |
 | admin/agents | `/admin/domains/{id}/agents` | Agent roster, capabilities, prompts, skill bindings, MCP tool grants; `PATCH …/status` toggles APPROVED↔DEPRECATED without redeploy |
@@ -768,12 +768,23 @@ All components live in `frontend/src/features/admin/` and are wired into `routes
 
 All screens use design-token classes only (no hardcoded px/hex), support dark mode, and render mobile-card + desktop-table layouts.
 
-### After Phase 10: `useDomainConfig()` hook
+### Phase 10: `useDomainConfig()` hook
 
-All stage labels, persona colors, nav links, and document scope labels are served from
-`GET /api/config/domain` and consumed via `useDomainConfig()`. Hardcoded vocab constants
-(`STAGE_LABELS`, `ROLE_COLORS`, etc.) are replaced. Static wealth-domain fallback provided
-during rollout.
+Stage labels, persona colors/routes/nav-links, and the active product catalog are served from
+`GET /api/config/domain` and consumed via `useDomainConfig()` (`frontend/src/hooks/useDomainConfig.ts`).
+
+**Derived lookups:**
+- `stageByCode` — `Record<string, StageConfig>` with `label`, `color`, `style`, `is_terminal`, `is_human_pending`
+- `personaByCode` — `Record<string, PersonaConfig>` with `label`, `color`, `default_route`, `nav_links`
+- `allStageCodes` — ordered stage code array from the domain
+- `roleHome` — `persona_code → default_route` map (replaces hardcoded `ROLE_HOME`)
+- `navLinks` — derived from persona `nav_links`, deduplicated by `href` (replaces hardcoded `NAV_LINKS`)
+
+Static wealth-domain fallback values are embedded as `placeholderData` so the UI renders
+before the first network response. `CaseListTable.tsx`, `App.tsx`, and `ParallelProductTracks.tsx`
+have been migrated; remaining consumers can migrate incrementally.
+
+**SSE product activation:** `GET /api/cases/{id}/events` streams `{type: "activation_update", activations: {...}}` events every 2 s. `ParallelProductTracks.tsx` subscribes via `EventSource` and merges live activation state over the polled REST response, providing sub-2s activation updates without WebSocket overhead.
 
 ### Adding a frontend screen
 

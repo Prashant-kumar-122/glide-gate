@@ -43,6 +43,7 @@ class ProductOut(BaseModel):
     domain_id: str
     product_code: str
     display_name: str
+    description: str | None
     product_type: str
     is_active: bool
     suitability_criteria: dict[str, Any]
@@ -54,6 +55,7 @@ class ProductOut(BaseModel):
 class ProductCreate(BaseModel):
     product_code: str = Field(..., min_length=1, max_length=50, pattern=r"^[a-z0-9_]+$")
     display_name: str = Field(..., min_length=1, max_length=200)
+    description: str | None = None
     product_type: str = Field("retail", max_length=50)
     is_active: bool = True
     suitability_criteria: dict[str, Any] = {}
@@ -64,6 +66,7 @@ class ProductCreate(BaseModel):
 
 class ProductUpdate(BaseModel):
     display_name: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
     product_type: str | None = Field(None, max_length=50)
     is_active: bool | None = None
     suitability_criteria: dict[str, Any] | None = None
@@ -76,6 +79,7 @@ def _product_to_out(p: DomainProduct) -> ProductOut:
     return ProductOut(
         id=str(p.id), domain_id=str(p.domain_id),
         product_code=p.product_code, display_name=p.display_name,
+        description=p.description,
         product_type=p.product_type, is_active=p.is_active,
         suitability_criteria=p.suitability_criteria,
         required_documents=p.required_documents,
@@ -163,6 +167,7 @@ async def create_product(
         domain_id=domain_id,
         product_code=body.product_code,
         display_name=body.display_name,
+        description=body.description,
         product_type=body.product_type,
         is_active=body.is_active,
         suitability_criteria=body.suitability_criteria,
@@ -200,6 +205,8 @@ async def update_product(
 
     if body.display_name is not None:
         product.display_name = body.display_name
+    if "description" in body.model_fields_set:
+        product.description = body.description
     if body.product_type is not None:
         product.product_type = body.product_type
     if body.is_active is not None:

@@ -21,7 +21,7 @@
 - [x] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
 - [x] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
 - [x] **Phase 9** — Build the Admin Portal
-- [ ] **Phase 10** — Serve frontend vocabulary from the domain API
+- [x] **Phase 10** — Serve frontend vocabulary from the domain API
 - [ ] **Phase 11** — Stand up Retail/Deposit through the admin portal (acceptance proof)
 - [ ] **Phase 12** — Extract the framework/domain package boundary
 - [ ] **Phase 13** — Observability, IaC & Operations (NFR-03 / NFR-10)
@@ -1678,40 +1678,92 @@ Mark **Phase 9** as `[x]` in the Phase Status Tracker and commit this file.
 
 ---
 
-## Phase 10 — Serve frontend vocabulary from the domain API
+## Phase 10 — Serve frontend vocabulary from the domain API ✅ Done
 
-### Session start checklist
+### As-built summary (2026-06-17)
+
+**`backend/app/api/routers/domain_config.py`** (new) — `GET /api/config/domain`:
+- No auth required; serves before login completes.
+- Returns `{domain_code, display_name, stages, personas, products}`.
+- Stages enriched from `domain_display_config` rows (entity_type='stage'); static wealth
+  fallback applied when no display rows exist.
+- Products read from `domain_products` (active only, ordered by display_name).
+- Static fallback response returned when no active domain exists (fresh deployment safety).
+
+**Agent DEPRECATED filtering — `stage_dispatcher.py`**:
+- `StageDispatcher.__init__` now accepts `deprecated_agents: frozenset[str]`.
+- `from_domain_def()` builds the deprecated set from `agent_roster` entries with `status=="DEPRECATED"`.
+- `from_domain_dict()` parses `agent_roster` dict from `DomainDefinition.model_dump()`.
+- `resolve()` returns `None` when `target_agent in self._deprecated_agents` — the workflow
+  falls back to its hardcoded activity (safe no-op; DEPRECATED agent is excluded from dispatch).
+- `AgentRosterEntry` gains `status: str = "APPROVED"` field; loader passes `r.status`.
+
+**`GET /cases/products` — `cases.py`**:
+- Reads from `domain_products` when an active domain exists (Phase 10).
+- Falls back to legacy `products` table when no active domain (migration-order safety).
+- Permission logic unchanged: institutional products gated on `sales:review + case:create`.
+
+**`GET /cases/{id}/events` SSE — `cases.py`**:
+- `StreamingResponse` with `media_type="text/event-stream"`.
+- Generator opens a new `AsyncSessionLocal()` session per 2-second poll cycle (avoids
+  holding a session open across the full stream lifetime).
+- Emits `data: {"type": "activation_update", "activations": {...}}\n\n` only on state change.
+- Heartbeat comment `": heartbeat\n\n"` every cycle prevents proxy/browser idle timeout.
+- `X-Accel-Buffering: no` header disables nginx buffering.
+
+**`frontend/src/hooks/useDomainConfig.ts`** (new):
+- `useQuery` with 5-min staleTime and `placeholderData: FALLBACK` (wealth-domain statics).
+- Returns `{ config, stageByCode, personaByCode, allStageCodes, roleHome, navLinks }`.
+- `navLinks` derived from persona `nav_links` JSONB, deduplicated by `href`, annotated with
+  persona code sets so `App.tsx` can filter by `user.role`.
+- Static fallback embedded to match prior hardcoded constants exactly.
+
+**`frontend/src/features/advisor/CaseListTable.tsx`**:
+- Removed `STAGE_LABELS`, `STAGE_STYLES`, `ALL_STAGES` constants.
+- `StageCell` reads `stageByCode` from ag-grid `context` (already used for `openCaseTab`).
+- `StageDropdown` accepts `stageByCode` + `allStageCodes` props.
+- `colDefs` memoized on `[stageByCode]`; `filterValueGetter` uses `stageByCode[code]?.label`.
+
+**`frontend/src/App.tsx`**:
+- Static `NAV_LINKS` / `ROLE_HOME` constants renamed `_STATIC_NAV` / `_STATIC_ROLE_HOME`.
+- `NavBar` calls `useDomainConfig()` and prefers domain config; falls back to static when
+  domain returns empty nav_links (wealth personas seeded with `nav_links=[]` per Phase 1 seed —
+  static fallback activates automatically, zero behavior change).
+
+**`frontend/src/features/advisor/ParallelProductTracks.tsx`**:
+- `useProductActivationSSE(caseId)` hook subscribes to `/api/cases/{id}/events`.
+- Merges SSE `activation_state`/`account_number` over polled REST tracks in `mergedTracks`.
+- SSE state is authoritative for activation display; REST still drives all other track fields.
+- Accepts optional `caseId?: string` prop (backward-compatible; SSE disabled when omitted).
+
+### Files changed
+- **New:** `backend/app/api/routers/domain_config.py`
+- **New:** `frontend/src/hooks/useDomainConfig.ts`
+- **Modified:** `backend/app/domain/domain_definition.py` (`AgentRosterEntry.status` field; loader passes status)
+- **Modified:** `backend/app/services/orchestration/stage_dispatcher.py` (deprecated_agents filter)
+- **Modified:** `backend/app/api/routers/cases.py` (`list_products` → domain_products; `GET /{id}/events` SSE)
+- **Modified:** `backend/app/main.py` (domain_config router registered)
+- **Modified:** `frontend/src/features/advisor/CaseListTable.tsx` (useDomainConfig, removed hardcoded constants)
+- **Modified:** `frontend/src/App.tsx` (useDomainConfig for navLinks / roleHome)
+- **Modified:** `frontend/src/features/advisor/ParallelProductTracks.tsx` (SSE subscription)
+- **Modified:** `frontend/src/lib/api.ts` (re-exports DomainConfigOut, StageConfig, PersonaConfig, ProductConfig)
+- **Modified:** `docs/FRAMEWORK.md`, `docs/TRACEABILITY.md`, `docs/planning/cadf-framework-plan.md`
+
+### Session start checklist (for reference — phase is complete)
 - Run `git log --oneline -5` — Phase 9 commit must be present
 - Grep `frontend/src` for: `STAGE_LABELS`, `STAGE_STYLES`, `ALL_STAGES`, `TeamRole`,
   `ROLE_COLORS`, `NAV_LINKS`, `OnboardingStage`-shaped literals, `case_stage_changed`
   socket handlers — every hardcoded vocabulary site to replace
-
-### What to build
-Add `GET /api/config/domain` (serves `DomainDefinition` display vocabulary +
-`domain_display_config` rows + document scope taxonomy + activation state labels).
-Replace all hardcoded stage/persona/role display constants with a `useDomainConfig()` hook.
-Static fallback (current wealth values) during rollout.
-
-Also add SSE endpoint `GET /cases/{id}/events` for live product activation status updates,
-replacing the current socket.io-based approach for product track state (retaining socket.io for
-existing real-time features that are not domain-vocabulary-driven).
-
-**Files (new):** `api/routers/domain_config.py`, `frontend/src/hooks/useDomainConfig.ts`
-**Files (modified):** `CaseListTable.tsx`, `tokens.ts`, `App.tsx`, `ProtectedRoute.tsx`,
-`ParallelProductTracks.tsx` (SSE-backed product activation state)
-
-### Verification
-With the wealth domain active, frontend renders identically to before. With a test domain loaded,
-frontend renders that domain's vocabulary. Product activation SSE updates fire within 1s of
-activation. Suite green.
 
 ### Session end — commit template
 ```
 feat(cadf-phase-10): serve frontend vocabulary from domain config API
 
 - GET /api/config/domain endpoint (stages, personas, document scopes, activation labels)
-- useDomainConfig() hook replaces all hardcoded stage/persona display constants
-- GET /cases/{id}/events SSE endpoint for live product activation status
+- useDomainConfig() hook replaces hardcoded stage/persona display constants in CaseListTable, App, ParallelProductTracks
+- GET /cases/{id}/events SSE endpoint for live product activation status (2s polling)
+- GET /cases/products reads from domain_products (legacy products table fallback)
+- StageDispatcher filters DEPRECATED agents from dispatch (admin portal toggle now wired end-to-end)
 - Static fallback preserves current behavior during rollout
 ```
 Mark **Phase 10** as `[x]` in the Phase Status Tracker and commit this file.

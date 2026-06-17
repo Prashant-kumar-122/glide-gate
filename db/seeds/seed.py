@@ -63,6 +63,7 @@ _ALL_TABLES = [
     "client_addresses",
     "client_profiles",
     "clients",
+    "user_personas",
     "users",
     "products",
     "agents",

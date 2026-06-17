@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.permission_guard import require_permission
@@ -33,7 +33,7 @@ class DomainOut(BaseModel):
 class DomainCreate(BaseModel):
     domain_code: str = Field(..., min_length=1, max_length=50, pattern=r"^[a-z0-9_]+$")
     display_name: str = Field(..., min_length=1, max_length=200)
-    is_active: bool = True
+    is_active: bool = False
 
 
 class DomainUpdate(BaseModel):
@@ -210,7 +210,13 @@ async def activate_domain(
         await loader.load(str(domain_id))
     except DomainValidationError as exc:
         raise UnprocessableError(f"Domain validation failed: {exc}") from exc
+    except Exception as exc:
+        raise UnprocessableError(f"Domain cannot be activated: {exc}") from exc
 
+    # Enforce single active domain — deactivate all others first
+    await db.execute(
+        update(Domain).where(Domain.id != domain_id).values(is_active=False)
+    )
     domain.is_active = True
     await db.flush()
     await db.refresh(domain)

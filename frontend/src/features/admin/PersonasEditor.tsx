@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Plus, Trash2, Loader2, ChevronDown, ChevronRight, Shield } from 'lucide-react'
+import { Plus, Trash2, Loader2, ChevronDown, ChevronRight, Shield, Pencil, Check, X } from 'lucide-react'
 import {
   usePersonas,
   useCreatePersona,
+  useUpdatePersona,
   useDeletePersona,
   usePermissions,
   useAddPermission,
@@ -34,7 +35,7 @@ function PermissionsPanel({ domainId, personaCode }: { domainId: string; persona
   if (isLoading) return <div className="py-3 text-center"><Loader2 className="mx-auto h-4 w-4 animate-spin text-gray-400" /></div>
 
   return (
-    <div className="border-t border-gray-100 px-4 py-4 dark:border-gray-700">
+    <div>
       <h5 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Permission Scopes</h5>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
         {ALL_SCOPES.map((scope) => {
@@ -52,19 +53,154 @@ function PermissionsPanel({ domainId, personaCode }: { domainId: string; persona
               <input
                 type="checkbox"
                 checked={granted}
-                onChange={() => {
-                  if (granted) {
-                    removePerm.mutate(scope)
-                  } else {
-                    addPerm.mutate(scope)
-                  }
-                }}
+                onChange={() => { if (granted) removePerm.mutate(scope); else addPerm.mutate(scope) }}
                 className="h-3 w-3 accent-blue-600"
               />
               <span className="font-mono">{scope}</span>
             </label>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+type NavLink = { label: string; href: string }
+
+function PersonaEditPanel({
+  persona,
+  domainId,
+  onClose,
+}: {
+  persona: PersonaOut
+  domainId: string
+  onClose: () => void
+}) {
+  const updatePersona = useUpdatePersona(domainId)
+  const [draft, setDraft] = useState({
+    display_label: persona.display_label,
+    color: persona.color,
+    default_route: persona.default_route,
+  })
+  const [navLinks, setNavLinks] = useState<NavLink[]>(
+    (persona.nav_links as NavLink[]) ?? []
+  )
+
+  function addNavLink() {
+    setNavLinks((links) => [...links, { label: '', href: '' }])
+  }
+
+  function updateNavLink(i: number, field: keyof NavLink, value: string) {
+    setNavLinks((links) => links.map((l, idx) => idx === i ? { ...l, [field]: value } : l))
+  }
+
+  function removeNavLink(i: number) {
+    setNavLinks((links) => links.filter((_, idx) => idx !== i))
+  }
+
+  function save() {
+    updatePersona.mutate(
+      {
+        id: persona.id,
+        display_label: draft.display_label,
+        color: draft.color,
+        default_route: draft.default_route,
+        nav_links: navLinks.filter((l) => l.href.trim()),
+      },
+      { onSuccess: onClose },
+    )
+  }
+
+  return (
+    <div className="space-y-4 border-t border-gray-100 px-4 py-4 dark:border-gray-700">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Display Label</label>
+          <input
+            type="text"
+            value={draft.display_label}
+            onChange={(e) => setDraft((d) => ({ ...d, display_label: e.target.value }))}
+            className="w-full border border-gray-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Default Route</label>
+          <input
+            type="text"
+            value={draft.default_route}
+            onChange={(e) => setDraft((d) => ({ ...d, default_route: e.target.value }))}
+            placeholder="/dashboard"
+            className="w-full border border-gray-200 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Color</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={draft.color}
+              onChange={(e) => setDraft((d) => ({ ...d, color: e.target.value }))}
+              className="h-8 w-12 cursor-pointer border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+            />
+            <span className="font-mono text-xs text-gray-500">{draft.color}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav links */}
+      <div className="space-y-2">
+        <label className="text-[10px] font-medium text-gray-600 dark:text-gray-400">Nav Links</label>
+        <div className="space-y-1.5">
+          {navLinks.map((link, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={link.label}
+                onChange={(e) => updateNavLink(i, 'label', e.target.value)}
+                placeholder="Label"
+                className="w-28 border border-gray-200 bg-white px-2 py-1 text-[11px] outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              />
+              <input
+                type="text"
+                value={link.href}
+                onChange={(e) => updateNavLink(i, 'href', e.target.value)}
+                placeholder="/path"
+                className="flex-1 border border-gray-200 bg-white px-2 py-1 font-mono text-[11px] outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              />
+              <button
+                onClick={() => removeNavLink(i)}
+                className="text-gray-300 hover:text-red-500"
+                aria-label="Remove nav link"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={addNavLink}
+          className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 dark:text-blue-400"
+        >
+          <Plus className="h-3 w-3" /> Add link
+        </button>
+      </div>
+
+      <div className="border-t border-gray-100 pt-3 dark:border-gray-700">
+        <PermissionsPanel domainId={domainId} personaCode={persona.persona_code} />
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={save}
+          disabled={updatePersona.isPending}
+          className="flex items-center gap-1.5 bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+        >
+          {updatePersona.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          Save
+        </button>
+        <button onClick={onClose} className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700">
+          Cancel
+        </button>
       </div>
     </div>
   )
@@ -84,6 +220,7 @@ export default function PersonasEditor({ domainId }: Props) {
     nav_links: [] as unknown[],
   })
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
 
   function handleAdd() {
     if (!form.persona_code.trim() || !form.display_label.trim()) return
@@ -100,7 +237,7 @@ export default function PersonasEditor({ domainId }: Props) {
       <div>
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Personas &amp; Permissions</h3>
         <p className="mt-0.5 text-xs text-gray-500">
-          Define role personas and assign permission scopes. Changes invalidate the server-side permission cache immediately.
+          Define role personas, nav links, and permission scopes. Changes take effect immediately.
         </p>
       </div>
 
@@ -119,10 +256,13 @@ export default function PersonasEditor({ domainId }: Props) {
                 <div className="flex items-center justify-between px-4 py-3">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <button
-                      onClick={() => setExpanded((e) => (e === p.persona_code ? null : p.persona_code))}
+                      onClick={() => {
+                        if (editing === p.persona_code) { setEditing(null); return }
+                        setExpanded((e) => e === p.persona_code ? null : p.persona_code)
+                      }}
                       className="shrink-0 text-gray-400 hover:text-gray-600"
                     >
-                      {expanded === p.persona_code
+                      {expanded === p.persona_code || editing === p.persona_code
                         ? <ChevronDown className="h-4 w-4" />
                         : <ChevronRight className="h-4 w-4" />
                       }
@@ -138,6 +278,21 @@ export default function PersonasEditor({ domainId }: Props) {
                     </div>
                   </div>
                   <div className="ml-3 flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setExpanded(null)
+                        setEditing((e) => e === p.persona_code ? null : p.persona_code)
+                      }}
+                      className={[
+                        'rounded p-1 transition-colors',
+                        editing === p.persona_code
+                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400'
+                          : 'text-gray-300 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700',
+                      ].join(' ')}
+                      aria-label="Edit persona"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                     <Shield className="h-4 w-4 text-gray-300" />
                     <button
                       onClick={() => deletePersona.mutate(p.id)}
@@ -149,8 +304,19 @@ export default function PersonasEditor({ domainId }: Props) {
                     </button>
                   </div>
                 </div>
-                {expanded === p.persona_code && (
-                  <PermissionsPanel domainId={domainId} personaCode={p.persona_code} />
+
+                {editing === p.persona_code && (
+                  <PersonaEditPanel
+                    persona={p}
+                    domainId={domainId}
+                    onClose={() => setEditing(null)}
+                  />
+                )}
+
+                {expanded === p.persona_code && editing !== p.persona_code && (
+                  <div className="border-t border-gray-100 px-4 py-4 dark:border-gray-700">
+                    <PermissionsPanel domainId={domainId} personaCode={p.persona_code} />
+                  </div>
                 )}
               </div>
             ))}

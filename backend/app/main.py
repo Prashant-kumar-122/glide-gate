@@ -22,6 +22,7 @@ from app.api.routers import collaboration
 from app.api.routers import sales_reviews
 from app.api.routers import tasks
 from app.api.routers import push
+from app.api.routers import domain_config
 from app.websocket.socket_server import sio  # noqa: F401
 from app.services.orchestration.agent_orchestration_service import orchestration_service
 
@@ -119,6 +120,7 @@ app.include_router(collaboration.router, prefix=_prefix)
 app.include_router(sales_reviews.router, prefix=_prefix)
 app.include_router(tasks.router, prefix=_prefix)
 app.include_router(push.router, prefix=_prefix)
+app.include_router(domain_config.router, prefix=_prefix)
 
 # Socket.IO ASGI mount
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)

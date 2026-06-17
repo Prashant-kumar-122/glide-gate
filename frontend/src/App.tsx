@@ -24,30 +24,41 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate'
 import { useAuthInit } from '@/hooks/useAuth'
 import { usePushRefresh } from '@/hooks/usePushRefresh'
+import { useDomainConfig } from '@/hooks/useDomainConfig'
 
-const NAV_LINKS: { to: string; label: string; roles: string[] }[] = [
+// Static fallback nav links — used before domain config loads or when personas
+// have no nav_links seeded.  These match the current wealth-domain configuration.
+const _STATIC_NAV: { to: string; label: string; roles: string[] }[] = [
   { to: '/',               label: 'Workspace',      roles: ['advisor', 'sales_manager'] },
   { to: '/contact-centre', label: 'Contact Centre', roles: ['advisor', 'sales_manager'] },
   { to: '/agent-trace',    label: 'Agent Trace',    roles: ['advisor', 'sales_manager', 'admin'] },
   { to: '/admin',          label: 'Admin',          roles: ['admin'] },
 ]
 
+// Static fallback home routes — used before domain config loads.
+const _STATIC_ROLE_HOME: Record<string, string> = {
+  client:        '/client',
+  advisor:       '/',
+  sales_manager: '/',
+  admin:         '/admin',
+}
+
 function NavBar() {
   const { user, isAuthenticated } = useAuthStore()
   const { theme, toggleTheme } = useThemeStore()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
+  const { navLinks: domainNavLinks, roleHome: domainRoleHome } = useDomainConfig()
 
-  const ROLE_HOME: Record<string, string> = {
-    client:        '/client',
-    advisor:       '/',
-    sales_manager: '/',
-    admin:         '/admin',
-  }
-  const homeRoute = user ? (ROLE_HOME[user.role] ?? '/login') : '/login'
+  // Prefer domain config nav links; fall back to static when domain has no seeded nav_links
+  const navLinks = domainNavLinks.length ? domainNavLinks : _STATIC_NAV
+  // Prefer domain config home routes; fall back to static for unknown personas
+  const roleHome = Object.keys(domainRoleHome).length ? domainRoleHome : _STATIC_ROLE_HOME
+
+  const homeRoute = user ? (roleHome[user.role] ?? '/login') : '/login'
 
   const visibleLinks = isAuthenticated && user
-    ? NAV_LINKS.filter((l) => l.roles.includes(user.role))
+    ? navLinks.filter((l) => l.roles.includes(user.role))
     : []
 
   return (

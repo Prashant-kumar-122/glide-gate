@@ -13,7 +13,7 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.users import User
+from app.models.users import User, UserPersona
 from app.services.auth.auth_service import hash_password
 
 ADMIN_USER_ID         = UUID("b0000000-0001-0001-0001-000000000001")
@@ -73,9 +73,9 @@ async def seed(session: AsyncSession) -> None:
             first_name=u["first_name"],
             last_name=u["last_name"],
             password_hash=hash_password(u["password"]),
-            role=u["role"],
         )
         session.add(user)
+        session.add(UserPersona(user_id=u["id"], persona_code=u["role"]))
         print(f"  seed  {u['email']}  [{u['role']}]")
 
     await session.commit()

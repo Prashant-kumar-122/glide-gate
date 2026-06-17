@@ -85,6 +85,7 @@ export interface ProductOut {
   domain_id: string
   product_code: string
   display_name: string
+  description: string | null
   product_type: string
   is_active: boolean
   suitability_criteria: Record<string, unknown>
@@ -202,7 +203,10 @@ export function useActivateDomain() {
   return useMutation({
     mutationFn: (id: string) =>
       api.post(`/admin/domains/${id}/activate`).then((r) => r.data as DomainOut),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'domains'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      qc.invalidateQueries({ queryKey: ['products'] })
+    },
   })
 }
 
@@ -211,7 +215,10 @@ export function useDeactivateDomain() {
   return useMutation({
     mutationFn: (id: string) =>
       api.post(`/admin/domains/${id}/deactivate`).then((r) => r.data as DomainOut),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'domains'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'domains'] })
+      qc.invalidateQueries({ queryKey: ['products'] })
+    },
   })
 }
 

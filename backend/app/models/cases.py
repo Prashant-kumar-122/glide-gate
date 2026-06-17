@@ -84,7 +84,7 @@ class CaseProduct(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     case_id: Mapped[UUID] = mapped_column(ForeignKey("onboarding_cases.id"), nullable=False, index=True)
-    product_id: Mapped[UUID] = mapped_column(ForeignKey("products.id"), nullable=False, index=True)
+    product_id: Mapped[UUID | None] = mapped_column(ForeignKey("products.id"), nullable=True, index=True)
     product_code: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="PENDING")
     suitability_outcome: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
@@ -96,7 +96,7 @@ class CaseProduct(Base):
     updated_at: Mapped[datetime] = mapped_column(nullable=False, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     case: Mapped[OnboardingCase] = relationship("OnboardingCase", back_populates="case_products")
-    product: Mapped[Product] = relationship("Product", back_populates="case_products")
+    product: Mapped[Product | None] = relationship("Product", back_populates="case_products")
     steps: Mapped[list[CaseProductStep]] = relationship("CaseProductStep", back_populates="case_product", cascade="all, delete-orphan")
 
 

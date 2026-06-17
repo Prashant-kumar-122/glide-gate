@@ -49,6 +49,7 @@ class StageActionSpec(BaseModel):
 class AgentRosterEntry(BaseModel):
     agent_id: str
     agent_class: str
+    status: str = "APPROVED"  # APPROVED | DEPRECATED
 
 
 class AgentCapabilitySpec(BaseModel):
@@ -280,7 +281,7 @@ class DomainDefinitionLoader:
             select(DomainAgentRoster).where(DomainAgentRoster.domain_id == domain_id)
         )).all()
         agent_roster: dict[str, AgentRosterEntry] = {
-            r.agent_id: AgentRosterEntry(agent_id=r.agent_id, agent_class=r.agent_class)
+            r.agent_id: AgentRosterEntry(agent_id=r.agent_id, agent_class=r.agent_class, status=r.status)
             for r in roster_rows
         }
 

@@ -70,14 +70,27 @@ function ValidationBanner({ result }: { result: DomainValidationResult }) {
 function DomainEditor({ domain }: { domain: DomainOut }) {
   const [activeTab, setActiveTab] = useState<DomainTabId>('stages')
   const [validation, setValidation] = useState<DomainValidationResult | null>(null)
+  const [activateError, setActivateError] = useState<string | null>(null)
   const validateDomain = useValidateDomain()
   const activateDomain = useActivateDomain()
   const deactivateDomain = useDeactivateDomain()
 
   function handleValidate() {
     setValidation(null)
+    setActivateError(null)
     validateDomain.mutate(domain.id, {
       onSuccess: (result) => setValidation(result),
+    })
+  }
+
+  function handleActivate() {
+    setActivateError(null)
+    activateDomain.mutate(domain.id, {
+      onError: (err: unknown) => {
+        const detail =
+          (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        setActivateError(detail ?? 'Activation failed — run Validate to see errors.')
+      },
     })
   }
 
@@ -114,7 +127,7 @@ function DomainEditor({ domain }: { domain: DomainOut }) {
               </button>
             ) : (
               <button
-                onClick={() => activateDomain.mutate(domain.id)}
+                onClick={handleActivate}
                 disabled={activateDomain.isPending}
                 className="flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
               >
@@ -130,6 +143,12 @@ function DomainEditor({ domain }: { domain: DomainOut }) {
         {validation && (
           <div className="mt-2">
             <ValidationBanner result={validation} />
+          </div>
+        )}
+        {activateError && (
+          <div className="mt-2 flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{activateError}</span>
           </div>
         )}
       </div>
