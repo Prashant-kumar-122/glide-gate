@@ -111,6 +111,27 @@ services:
       - glide_gate_network
     restart: unless-stopped
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    container_name: glide_gate_keycloak
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${DB_USER:-postgres}
+      KC_DB_PASSWORD: ${DB_PASSWORD:-Root}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_PORT: 8180
+    ports:
+      - "8180:8180"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - glide_gate_network
+    restart: unless-stopped
+
 networks:
   glide_gate_network:
     driver: bridge
