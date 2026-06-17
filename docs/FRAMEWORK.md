@@ -700,6 +700,22 @@ Tables loaded: `domain_stages`, `domain_transitions`, `domain_task_routing`,
 - `clear_permission_cache()` called on startup; Phase 9 admin portal will call it after
   bulk permission updates
 
+### Stage / product-type validation (Phase 8 — implemented)
+
+**Migration 0023** drops three hardcoded DB CHECK constraints:
+
+| Constraint | Table | Replaced by |
+|---|---|---|
+| `oc_status_chk` | `onboarding_cases.status` | App-layer: `ContextStoreService._validate_stage()` |
+| `oc_stage_chk` | `onboarding_cases.current_stage` | App-layer: `ContextStoreService._validate_stage()` |
+| `products_type_chk` | `products.product_type` | `domain_products.product_type` is now the authoritative vocabulary |
+
+`ContextStoreService.update()` calls `_validate_stage(stage_value)` whenever a `stage`
+key is present in the patches dict.  The validator queries `domain_stages` for the active
+domain (default `wealth_management`) and raises `ValueError` for any stage code not defined
+there.  The DB no longer enforces the old wealth-specific enum — new domains can add their
+own stage codes without a migration.
+
 ### Keycloak OIDC (planned — not in current CADF phases)
 The reference project implements full Keycloak OIDC + RBAC. This is not in the current phase
 plan but can be added as a Phase 7+ sub-task when Keycloak is introduced to docker-compose.

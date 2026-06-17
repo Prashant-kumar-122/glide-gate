@@ -22,10 +22,6 @@ from app.database import Base
 
 class OnboardingCase(Base):
     __tablename__ = "onboarding_cases"
-    __table_args__ = (
-        CheckConstraint("status IN ('INTAKE','SALES_REVIEW','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')", name="oc_status_chk"),
-        CheckConstraint("current_stage IN ('INTAKE','SALES_REVIEW','KYC','PARALLEL_PRODUCTS','REVIEW','COMPLETE','ESCALATED')", name="oc_stage_chk"),
-    )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
@@ -62,7 +58,6 @@ class Product(Base):
     __tablename__ = "products"
     __table_args__ = (
         UniqueConstraint("product_code", name="products_code_uq"),
-        CheckConstraint("product_type IN ('retail', 'institutional')", name="products_type_chk"),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)

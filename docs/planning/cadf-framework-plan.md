@@ -19,7 +19,7 @@
 - [x] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
 - [x] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
 - [x] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
-- [ ] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
+- [x] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
 - [ ] **Phase 9** — Build the Admin Portal
 - [ ] **Phase 10** — Serve frontend vocabulary from the domain API
 - [ ] **Phase 11** — Stand up Retail/Deposit through the admin portal (acceptance proof)
@@ -1550,7 +1550,46 @@ Mark **Phase 7** as `[x]` in the Phase Status Tracker and commit this file.
 
 ---
 
-## Phase 8 — Loosen DB CHECK constraints; make domain reference rows authoritative
+## Phase 8 — Loosen DB CHECK constraints; make domain reference rows authoritative ✅ Done
+
+### As-built summary (2026-06-17)
+
+**Migration 0023** (`backend/alembic/versions/0023_loosen_check_constraints.py`) drops three
+hardcoded DB CHECK constraints that encoded the wealth-domain stage/product-type vocabulary:
+
+| Constraint | Table | Column |
+|---|---|---|
+| `oc_status_chk` | `onboarding_cases` | `status` |
+| `oc_stage_chk` | `onboarding_cases` | `current_stage` |
+| `products_type_chk` | `products` | `product_type` |
+
+**`ContextStoreService`** (`backend/app/services/context_store/context_store_service.py`):
+- `_validate_stage(stage_value, domain_code="wealth_management")` — queries `domain_stages`
+  via a direct SQL join; raises `ValueError` for any stage code not present in the domain's
+  `domain_stages` rows.
+- `update()` — calls `_validate_stage(patches["stage"])` before acquiring the per-case lock
+  whenever `"stage"` is in the patches dict.
+
+**`models/cases.py`**: removed `oc_status_chk` and `oc_stage_chk` from
+`OnboardingCase.__table_args__`; removed `products_type_chk` from `Product.__table_args__`.
+`cp_status_chk` and `cps_status_chk` on `CaseProduct`/`CaseProductStep` are NOT dropped —
+they guard a fixed five-value lifecycle enum (`PENDING/IN_PROGRESS/COMPLETE/FAILED/SKIPPED`)
+that is not domain-configurable.
+
+**6 unit tests** in `backend/tests/unit/services/test_stage_validation.py`:
+- Valid stage code → passes silently
+- Stage absent from domain_stages → ValueError
+- Old-enum stage absent from domain → still rejected (proves DB removal didn't widen acceptance)
+- Unknown domain code → ValueError
+- `update()` with `stage` in patches → validation fires
+- `update()` without `stage` key → validation NOT called (no spurious DB hit)
+
+### Files changed
+- **New:** `backend/alembic/versions/0023_loosen_check_constraints.py`
+- **New:** `backend/tests/unit/services/test_stage_validation.py`
+- **Modified:** `backend/app/models/cases.py` (dropped three `CheckConstraint` entries)
+- **Modified:** `backend/app/services/context_store/context_store_service.py` (`_validate_stage`, `update()` guard)
+- **Modified:** `docs/FRAMEWORK.md`, `docs/TRACEABILITY.md`, `docs/planning/cadf-framework-plan.md`
 
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 7 commit must be present

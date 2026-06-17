@@ -107,7 +107,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 5 | Configurable SLA enforcement | ✅ |
 | Phase 6 | Wire Skills & MCP into live execution | ✅ |
 | Phase 7 | Configurable persona + permission model | ✅ |
-| Phase 8 | Loosen DB CHECK constraints | ⬜ |
+| Phase 8 | Loosen DB CHECK constraints | ✅ |
 | Phase 9 | Admin Portal | ⬜ |
 | Phase 10 | Serve frontend vocabulary from domain API | ⬜ |
 | Phase 11 | Retail/Deposit acceptance proof | ⬜ |
