@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.agents.base.a2a_types import AgentID, OnboardingStage, TaskPacket, TaskType
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import has_permission, require_permission
 from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
@@ -263,7 +263,12 @@ async def list_products(
     current_user: dict = Depends(get_current_user),
 ) -> list[ProductOut]:
     query = select(Product).where(Product.is_active.is_(True))
-    product_type = "retail" if current_user.get("role") == "client" else "institutional"
+    # Show institutional products only when the user can both manage sales reviews
+    # and create cases — this replaces the old hardcoded `role != "client"` check.
+    can_see_institutional = await has_permission(
+        current_user, "sales:review", db
+    ) and await has_permission(current_user, "case:create", db)
+    product_type = "institutional" if can_see_institutional else "retail"
     query = query.where(Product.product_type == product_type)
     query = query.order_by(Product.name)
     result = await db.execute(query)
@@ -833,7 +838,7 @@ async def patch_case_percentage(
     case_id: UUID,
     body: PatchPercentageRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("case:read")),
 ) -> PatchPercentageResponse:
     await _get_case_or_404(case_id, db)
     await db.execute(
@@ -860,7 +865,7 @@ async def patch_case_status(
     case_id: UUID,
     body: PatchStatusRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("case:read")),
 ) -> PatchStatusResponse:
     await _get_case_or_404(case_id, db)
     values: dict = {"status": body.status}
@@ -885,7 +890,7 @@ class SubmitIntakeResponse(BaseModel):
 async def submit_intake(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role("client", "advisor", "admin", "sales_manager")),
+    current_user: dict = Depends(require_permission("case:read")),
 ) -> SubmitIntakeResponse:
     """Client submits their completed application (forms + documents).
 
@@ -1005,7 +1010,7 @@ class AdvisorApproveResponse(BaseModel):
 async def advisor_approve_case(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_role("advisor", "admin")),
+    current_user: dict = Depends(require_permission("case:create")),
 ) -> AdvisorApproveResponse:
     """Advisor advances the case out of the Advisor Review (REVIEW) stage.
 
@@ -1124,7 +1129,7 @@ async def advisor_approve_case(
 async def resume_case(
     case_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("case:approve")),
 ) -> ResumeResponse:
     case = await _get_case_or_404(case_id, db)
     asyncio.create_task(journey_resumption_service.resume_case(case_id=case.id))

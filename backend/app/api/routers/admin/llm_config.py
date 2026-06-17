@@ -5,7 +5,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.config import settings
 from app.services.llm.deterministic_controls_applier import (
     clear_overrides,
@@ -49,7 +49,7 @@ class LLMConfigUpdate(BaseModel):
 
 @router.get("", response_model=LLMConfigOut)
 async def get_llm_config(
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> LLMConfigOut:
     ov = get_all_overrides()
     return LLMConfigOut(
@@ -70,7 +70,7 @@ async def get_llm_config(
 @router.put("", response_model=LLMConfigOut)
 async def update_llm_config(
     body: LLMConfigUpdate,
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> LLMConfigOut:
     set_overrides(body.model_dump(exclude_none=True))
     return await get_llm_config(_user=_user)
@@ -78,7 +78,7 @@ async def update_llm_config(
 
 @router.delete("", response_model=LLMConfigOut)
 async def reset_llm_config(
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> LLMConfigOut:
     clear_overrides()
     return await get_llm_config(_user=_user)

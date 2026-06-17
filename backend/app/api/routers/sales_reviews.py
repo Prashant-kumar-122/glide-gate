@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.api.error_handlers import NotFoundError, UnprocessableError
 from app.database import get_db
 from app.models.sales_reviews import SalesManagerReview
@@ -72,7 +72,7 @@ async def list_sales_reviews(
     case_id: UUID | None = None,
     include_decided: bool = False,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("sales_manager", "Admin", "admin", "Advisor", "advisor")),
+    _user: dict = Depends(require_permission("sales:review")),
 ) -> list[SalesReviewOut]:
     query = select(SalesManagerReview)
 
@@ -92,7 +92,7 @@ async def list_sales_reviews(
 async def get_sales_review(
     review_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("sales_manager", "Admin", "admin", "Advisor", "advisor")),
+    _user: dict = Depends(require_permission("sales:review")),
 ) -> SalesReviewOut:
     review = await _get_review_or_404(review_id, db)
     return SalesReviewOut.model_validate(review)
@@ -107,7 +107,7 @@ async def decide_sales_review(
     review_id: UUID,
     body: SalesDecideRequest,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_role("sales_manager", "Admin", "admin")),
+    user: dict = Depends(require_permission("sales:decide")),
 ) -> SalesDecisionOut:
     try:
         reviewer_id_raw = user.get("sub")

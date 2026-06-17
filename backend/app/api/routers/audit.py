@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.database import get_db
 from app.models.agents import DecisionLog, EventLog
 from app.services.audit.audit_event_types import AuditEventType
@@ -54,7 +54,7 @@ class PaginatedLogsOut(BaseModel):
 
 @router.get("/event-types", response_model=list[str])
 async def list_event_types(
-    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("audit:read")),
 ) -> list[str]:
     """Return all known audit event type strings for filter dropdowns."""
     return sorted(str(e) for e in AuditEventType)
@@ -73,7 +73,7 @@ async def get_audit_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("audit:read")),
 ) -> PaginatedLogsOut:
     query = select(EventLog).order_by(EventLog.created_at.desc())
 
@@ -117,7 +117,7 @@ async def export_audit_logs_csv(
     from_date: datetime | None = Query(None),
     to_date: datetime | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("compliance_officer", "admin")),
+    _user: dict = Depends(require_permission("audit:export")),
 ) -> StreamingResponse:
     query = select(EventLog).order_by(EventLog.created_at)
 
@@ -207,7 +207,7 @@ class ChainVerifyOut(BaseModel):
 @router.get("/verify", response_model=ChainVerifyOut)
 async def verify_chain(
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("compliance_officer", "admin")),
+    _user: dict = Depends(require_permission("audit:export")),
 ) -> ChainVerifyOut:
     """Walk the full decision_log chain and report whether it is intact."""
     valid, total, broken_at_seq = await decision_log_service.verify_chain(db)
@@ -220,7 +220,7 @@ async def get_case_decision_log(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("advisor", "compliance_officer", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("audit:read")),
 ) -> PaginatedDecisionLogOut:
     """Paginated decision log for a single case with chain hashes visible."""
     base_q = (
@@ -252,7 +252,7 @@ async def export_decision_log(
     to_date: datetime | None = Query(None),
     fmt: str = Query("csv", pattern="^(csv|json)$"),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("compliance_officer", "admin")),
+    _user: dict = Depends(require_permission("audit:export")),
 ) -> StreamingResponse:
     """BSA-compliant export of the decision_log (CSV or JSON) for compliance officers."""
     query = select(DecisionLog).order_by(DecisionLog.seq.asc())

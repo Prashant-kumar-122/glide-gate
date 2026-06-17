@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.agents import EventLog
 
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.api.error_handlers import NotFoundError, UnprocessableError
 from app.database import get_db
 from app.models.kyc_reviews import HumanReview
@@ -74,7 +74,7 @@ async def list_pending_reviews(
     case_id: UUID | None = None,
     include_decided: bool = False,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("review:read")),
 ) -> list[ReviewOut]:
     query = select(HumanReview)
 
@@ -94,7 +94,7 @@ async def list_pending_reviews(
 async def get_review(
     review_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("review:read")),
 ) -> ReviewOut:
     review = await _get_review_or_404(review_id, db)
     return ReviewOut.model_validate(review)
@@ -104,7 +104,7 @@ async def get_review(
 async def get_evidence_packet(
     review_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin", "sales_manager")),
+    _user: dict = Depends(require_permission("review:read")),
 ) -> dict:
     review = await _get_review_or_404(review_id, db)
 
@@ -146,7 +146,7 @@ async def decide_review(
     review_id: UUID,
     body: DecideRequest,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_role("ComplianceOfficer", "Admin", "Advisor", "advisor", "admin")),
+    user: dict = Depends(require_permission("review:approve")),
 ) -> DecisionOut:
     try:
         review = await human_review_service.decide(

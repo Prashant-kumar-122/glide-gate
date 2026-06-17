@@ -13,6 +13,7 @@ security = HTTPBearer(auto_error=False)
 DEMO_USER: dict[str, Any] = {
     "sub": "00000000-0000-0000-0000-000000000001",
     "email": "advisor@demo.glide-gate.local",
+    "roles": ["advisor"],
     "role": "advisor",
     "name": "Demo Advisor",
 }

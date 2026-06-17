@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.api.error_handlers import NotFoundError, UnprocessableError
 from app.database import get_db
 from app.models.tasks import WorkspaceTask
@@ -152,7 +152,7 @@ async def list_tasks(
     role: str | None = None,
     case_id: UUID | None = None,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_role("advisor", "sales_manager", "Admin", "admin")),
+    user: dict = Depends(require_permission("review:read")),
 ) -> list[TaskOut]:
     user_role = role or user.get("role", "advisor")
     tasks = await task_service.list_tasks(
@@ -170,7 +170,7 @@ async def list_tasks(
 async def get_task(
     task_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_role("advisor", "sales_manager", "Admin", "admin")),
+    _user: dict = Depends(require_permission("review:read")),
 ) -> TaskOut:
     task = await task_service.get_task(task_id, db)
     if task is None:
@@ -183,7 +183,7 @@ async def decide_task(
     task_id: UUID,
     body: TaskDecideRequest,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_role("advisor", "sales_manager", "Admin", "admin")),
+    user: dict = Depends(require_permission("case:approve")),
 ) -> TaskOut:
     try:
         raw_id = user.get("sub")

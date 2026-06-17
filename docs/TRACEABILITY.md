@@ -29,7 +29,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-AG-03 | Agents validate data, reconcile shared data | Phase 4.5 | ⬜ | Shared-core doc reuse across product tracks |
 | FR-AG-04 | Agents trigger compliance/identity checks via integrations | Phase 6 | ✅ | `MCPRegistry.invoke()` grant-checked calls (ADR-007); KYC agent calls `verify_identity`, `check_sanctions`, `score_aml_risk` via `mcp_registry`; grant rows in `domain_agent_tool_grants` (migration 0020) |
 | FR-AG-05 | Detect exceptions; escalate to human queue | Existing | 🟡 | `HumanReview` model; `EscalationQueue.tsx` |
-| FR-AG-06 | Respect HITL checkpoints + authority limits | Phase 7 | ⬜ | `require_permission()` guards; `domain_permissions` rows |
+| FR-AG-06 | Respect HITL checkpoints + authority limits | Phase 7 | ✅ | `require_permission()` guards across all routers; `domain_permissions` rows per persona; 15-scope catalog (see `docs/specs/permission-model-security-review.md`) |
 | FR-AG (fraud) | Fraud/anomaly screening; gates activation | Phase 4.6 | ✅ | `FraudScreeningAgent` (`agents/fraud_screening/graph.py`); runs concurrent with KYC via `asyncio.gather`; `fraud_screened` gate in `_evaluate_policy` |
 | FR-GL-01 | Detect product satisfies activation criteria | Phase 4.6 | ✅ | `ActivationGateService` (`services/activation/activation_gate_service.py`); Python policy mirrors `policies/activation.rego`; `product_activation` table (migration 0018) |
 | FR-GL-02 | Activate first completed product independently | Phase 4.6 | ✅ | `_activation_gate_node` in `product_onboarding/graph.py`; per-product `CRITERIA_MET → ACTIVATED` transition; account number provisioned immediately |
@@ -40,7 +40,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | FR-CP-04 | Collect-once document list per product | Phase 4.5 | ⬜ | `DocumentRequirementsCenter.tsx`, `GET /cases/{id}/requirements` |
 | FR-CP-06 | E-signature & consent capture | Deferred (Phase 9+) | ⬜ | Planned for Phase 9 admin portal; consent endpoint TBD |
 | FR-AU-01 | Immutable, hash-chained audit trail | Phase 2.5 | ✅ | `decision_log` table (migration 0016); `DecisionLogService`; SHA-256 chain; `GET /audit/verify` |
-| FR-AU-02 | Capture human override identity/reason/time | Phase 7 | ⬜ | `HUMAN_OVERRIDE` entries in `decision_log` with resolver identity |
+| FR-AU-02 | Capture human override identity/reason/time | Phase 7 | 🟡 | `reviewer_role` captured on `HumanReview.decide()`; `HUMAN_OVERRIDE` decision_log entry deferred to Phase 9 |
 | FR-AU-03 | Operational/compliance reports, exportable | Phase 2.5 | ✅ | `GET /cases/{id}/audit` (paginated, hash-visible); `GET /audit/export` (CSV+JSON) |
 | FR-AU-04 | Adverse-action records on credit decline (ECOA) | Phase 4.6 | ✅ | `product_activation.is_adverse_action` + `adverse_action_reason`; `decision_log` entry with `is_regulatory_breach=True` |
 
@@ -50,7 +50,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 
 | Req | Description | CADF Phase | Status | Artifact(s) |
 |---|---|---|---|---|
-| NFR-01 | Encryption + RBAC + least-privilege + secrets | Phase 7 | 🟡 | `require_permission()`; JWT auth; SPIFFE/Vault deferred |
+| NFR-01 | Encryption + RBAC + least-privilege + secrets | Phase 7 | ✅ | `require_permission()` + 15-scope catalog; `domain_permissions` DB-backed; SPIFFE/Vault deferred to Phase 13 |
 | NFR-02 | Crash recovery and workflow resumption | Phase 0.5 | ✅ | Temporal durable workflows; `OnboardingWorkflow` resumes from last activity checkpoint |
 | NFR-03 | 99.95% availability; RTO ≤ 15 min; RPO ≈ 0 | Phase 13 | ⬜ | Helm dual-AZ topology; DR runbook |
 | NFR-06 | Decisions explainable/reproducible from logs | Phase 2.5 | ✅ | `decision_log` captures inputs/rationale/agent version per decision; `GET /audit/verify` confirms chain integrity |
@@ -106,7 +106,7 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 4.6 | First-to-complete activation gate (FR-GL-01/02/03) | ✅ |
 | Phase 5 | Configurable SLA enforcement | ✅ |
 | Phase 6 | Wire Skills & MCP into live execution | ✅ |
-| Phase 7 | Configurable persona + permission model | ⬜ |
+| Phase 7 | Configurable persona + permission model | ✅ |
 | Phase 8 | Loosen DB CHECK constraints | ⬜ |
 | Phase 9 | Admin Portal | ⬜ |
 | Phase 10 | Serve frontend vocabulary from domain API | ⬜ |

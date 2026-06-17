@@ -684,16 +684,21 @@ Tables loaded: `domain_stages`, `domain_transitions`, `domain_task_routing`,
 
 ## 11. Authentication & Authorization
 
-### Current (pre-Phase 7)
+### Authorization (Phase 7 — implemented)
 - JWT + bcrypt via `python-jose` (`services/auth/auth_service.py`)
-- `require_role("advisor", "compliance")` guards in routers
-- `users.role` DB CHECK enum (wealth-specific)
-
-### After Phase 7
-- `require_permission("scope")` guards (e.g., `require_permission("review:approve")`)
-- `domain_personas` rows define valid roles per domain
-- `domain_permissions` rows map persona → permission scope
-- Permission catalog (15 fixed scopes) documented in `docs/specs/permission-model-security-review.md`
+- `require_permission("scope")` guards (e.g., `require_permission("review:approve")`) replace
+  all former `require_role()` calls across 11 router files
+- `domain_personas` rows define valid persona codes per domain
+- `domain_permissions` rows map `persona_code → permission_scope` (sourced from DB, cached in-process)
+- Permission catalog (15 fixed scopes): `case:read`, `case:create`, `case:approve`,
+  `review:read`, `review:approve`, `review:escalate`, `sales:review`, `sales:decide`,
+  `compliance:read`, `compliance:decide`, `audit:read`, `audit:export`,
+  `document:upload`, `document:validate`, `admin:config`
+- `users.role` CHECK constraint dropped (migration 0021); role value validated at app layer by
+  `require_permission()` — unknown role → 403 on every protected endpoint
+- Security review: `docs/specs/permission-model-security-review.md`
+- `clear_permission_cache()` called on startup; Phase 9 admin portal will call it after
+  bulk permission updates
 
 ### Keycloak OIDC (planned — not in current CADF phases)
 The reference project implements full Keycloak OIDC + RBAC. This is not in the current phase

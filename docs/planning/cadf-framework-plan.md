@@ -18,7 +18,7 @@
 - [x] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
 - [x] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
 - [x] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
-- [ ] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
+- [x] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
 - [ ] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
 - [ ] **Phase 9** — Build the Admin Portal
 - [ ] **Phase 10** — Serve frontend vocabulary from the domain API
@@ -1378,7 +1378,118 @@ All rows use `ON CONFLICT … DO NOTHING` for idempotency.
 
 ---
 
-## Phase 7 — Replace hardcoded personas/roles with configurable persona + permission model
+## Phase 7 — Replace hardcoded personas/roles with configurable persona + permission model ✅ Done
+
+### As-built summary (2026-06-17)
+
+**`permission_guard.py`** (`backend/app/api/dependencies/permission_guard.py`):
+- `require_permission(scope)` — FastAPI dependency; 403 if `domain_permissions` has no row for
+  `(persona_code, scope)`.  Replaces `require_role()` across all 11 router files.
+- `_normalize_role()` maps camel-case legacy role strings (e.g. `ComplianceOfficer` →
+  `compliance_officer`) so that JWTs with mixed-case roles still resolve correctly.
+- Module-level `_perm_cache: dict[tuple[str,str], bool]` caches DB lookups; cleared on app
+  startup via `clear_permission_cache()` (added to `main.py on_startup`).
+
+**Migration 0021** (`backend/alembic/versions/0021_persona_permissions_expand.py`):
+- Adds missing scopes to existing personas (see table below).
+- Inserts new `compliance_officer` persona with 8 scopes.
+- Drops `users_role_check` CHECK constraint — role value now validated at app layer.
+
+**Scope additions over Phase 1 seed (0014):**
+
+| Persona | Scopes added |
+|---|---|
+| `client` | `case:read` |
+| `advisor` | `review:approve`, `sales:review`, `audit:read` |
+| `sales_manager` | `case:approve`, `review:approve`, `audit:read` |
+| `compliance_officer` (new) | `case:read`, `review:read`, `review:approve`, `review:escalate`, `compliance:read`, `compliance:decide`, `audit:read`, `audit:export` |
+
+**Router scope assignments:**
+
+| Scope used | Endpoints |
+|---|---|
+| `case:read` | `PATCH /{id}/percentage`, `PATCH /{id}/status`, `POST /{id}/submit-intake` |
+| `case:create` | `POST /{id}/advisor-approve`, `POST /demo/cases/{id}/reset`, `POST /demo/cases/{id}/kyc-scenario` |
+| `case:approve` | `POST /{id}/resume`, `POST /clients`, `PATCH /clients/{id}`, `PATCH /tasks/{id}/decide` |
+| `review:read` | `GET /reviews`, `GET /reviews/{id}`, `GET /reviews/{id}/evidence`, `GET /tasks`, `GET /tasks/{id}` |
+| `review:approve` | `POST /reviews/{id}/decide` |
+| `sales:review` | `GET /sales-reviews`, `GET /sales-reviews/{id}` |
+| `sales:decide` | `POST /sales-reviews/{id}/decide` |
+| `audit:read` | `GET /audit/event-types`, `GET /audit/logs`, `GET /audit/cases/{id}/audit` |
+| `audit:export` | `GET /audit/logs.csv`, `GET /audit/verify`, `GET /audit/export` |
+| `document:validate` | `PATCH /documents/{id}/validate` |
+| `document:upload` | `PATCH /documents/{id}` |
+| `admin:config` | all `admin/llm-config`, `admin/checkpoint-rules`, `admin/validation-prompts` endpoints |
+
+**13 unit tests** in `backend/tests/unit/api/test_permission_guard.py`:
+- Allowed on valid row; 403 on missing role; 403 on no DB row
+- compliance_officer has `audit:export`; advisor/sales_manager do not
+- advisor lacks `admin:config`; admin has it
+- Cache hit True: DB skipped on second call
+- Cache hit False: DB skipped, 403 raised
+- Role alias `ComplianceOfficer` → `compliance_officer`
+- Whitespace in role stripped; None role → 403
+
+**Security review:** `docs/specs/permission-model-security-review.md`
+
+### Files changed
+- **New:** `backend/app/api/dependencies/permission_guard.py`
+- **New:** `backend/alembic/versions/0021_persona_permissions_expand.py`
+- **New:** `backend/tests/unit/api/__init__.py`
+- **New:** `backend/tests/unit/api/test_permission_guard.py`
+- **New:** `docs/specs/permission-model-security-review.md`
+- **Modified:** `backend/app/main.py` (`clear_permission_cache()` in startup hook)
+- **Modified:** `backend/app/api/routers/cases.py` (5 guards)
+- **Modified:** `backend/app/api/routers/reviews.py` (4 guards)
+- **Modified:** `backend/app/api/routers/tasks.py` (3 guards)
+- **Modified:** `backend/app/api/routers/audit.py` (6 guards)
+- **Modified:** `backend/app/api/routers/documents.py` (2 guards)
+- **Modified:** `backend/app/api/routers/sales_reviews.py` (3 guards)
+- **Modified:** `backend/app/api/routers/clients.py` (2 guards)
+- **Modified:** `backend/app/api/routers/demo.py` (2 guards)
+- **Modified:** `backend/app/api/routers/admin/llm_config.py` (3 guards)
+- **Modified:** `backend/app/api/routers/admin/checkpoint_rules.py` (5 guards)
+- **Modified:** `backend/app/api/routers/admin/validation_prompts.py` (4 guards)
+- **Modified:** `docs/FRAMEWORK.md`, `docs/TRACEABILITY.md`, `docs/planning/cadf-framework-plan.md`
+
+### Phase 7 Addendum — Multi-role support + permission-based institutional product gate (2026-06-17)
+
+**Problem:** A user could only hold a single role (`users.role` string). Phase 11 Retail/Deposit
+will introduce new personas; operators need to assign multiple personas to a user without a code
+change.
+
+**Solution:** Replaced `users.role` column with a `user_personas(user_id, persona_code)` join
+table. JWT now carries both `"roles": ["advisor", "compliance_officer"]` (authoritative) and
+`"role": "advisor"` (primary, for backwards-compatible identity checks). Permission guard updated
+to `IN`-check all of the user's persona codes against `domain_permissions`.
+
+**Institutional product gate:** The `list_products` endpoint previously hardcoded
+`role != "client"` to show institutional products. Replaced with
+`has_permission(sales:review) AND has_permission(case:create)` — the same DB-backed permission
+catalog, no hardcoded role strings. Added `case:create` scope to `sales_manager` persona so
+they can explicitly create/view institutional cases.
+
+**Migration 0022** (`backend/alembic/versions/0022_user_personas.py`):
+- Creates `user_personas(user_id PK FK, persona_code PK, assigned_at)` table with index on
+  `user_id`.
+- Backfills from `users.role`: `INSERT INTO user_personas SELECT id, role FROM users`.
+- Drops `users.role` column.
+- Inserts `(sales_manager, case:create)` into `domain_permissions`.
+
+**Files changed (addendum):**
+- **New:** `backend/alembic/versions/0022_user_personas.py`
+- **Modified:** `backend/app/models/users.py` — `UserPersona` ORM; `User.role` and `User.roles`
+  computed properties; `personas` selectin relationship
+- **Modified:** `backend/app/services/auth/auth_service.py` — embeds `"roles"` in JWT;
+  `signup()` creates `UserPersona("client")`; `login()` refreshes personas before token
+- **Modified:** `backend/app/api/dependencies/auth.py` — `DEMO_USER` gets `"roles": ["advisor"]`
+- **Modified:** `backend/app/api/dependencies/permission_guard.py` — `_extract_persona_codes()`;
+  `has_permission()` helper (bool, no raise); `require_permission()` uses `IN` check;
+  cache key updated to `(frozenset[persona_codes], scope)`
+- **Modified:** `backend/app/api/routers/cases.py` — `list_products` uses `has_permission`
+- **Modified:** `backend/app/api/routers/auth.py` — `UserOut` adds `roles: list[str]`
+- **Modified:** `backend/tests/unit/api/test_permission_guard.py` — updated for `"roles"` array;
+  19 tests including multi-role and `has_permission()` bool cases
 
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 6 commit must be present

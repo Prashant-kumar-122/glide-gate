@@ -5,7 +5,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.api.dependencies.role_guard import require_role
+from app.api.dependencies.permission_guard import require_permission
 from app.api.error_handlers import ConflictError, NotFoundError, UnprocessableError
 from app.agents.kyc_compliance.checkpoint_rule_engine import CheckpointRule
 import app.services.compliance.checkpoint_rule_repository as rule_repo
@@ -59,14 +59,14 @@ def _to_out(rule: CheckpointRule) -> CheckpointRuleOut:
 
 @router.get("", response_model=list[CheckpointRuleOut])
 async def list_checkpoint_rules(
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> list[CheckpointRuleOut]:
     return [_to_out(r) for r in rule_repo.get_all()]
 
 
 @router.post("/reset", response_model=list[CheckpointRuleOut])
 async def reset_checkpoint_rules(
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> list[CheckpointRuleOut]:
     rules = rule_repo.reset()
     return [_to_out(r) for r in rules]
@@ -75,7 +75,7 @@ async def reset_checkpoint_rules(
 @router.post("", response_model=CheckpointRuleOut, status_code=201)
 async def create_checkpoint_rule(
     body: CreateCheckpointRuleRequest,
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> CheckpointRuleOut:
     rule_id = body.rule_id or rule_repo.make_rule_id()
     rule = CheckpointRule(
@@ -100,7 +100,7 @@ async def create_checkpoint_rule(
 async def update_checkpoint_rule(
     rule_id: str,
     body: CreateCheckpointRuleRequest,
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> CheckpointRuleOut:
     if rule_repo.get(rule_id) is None:
         raise NotFoundError("CheckpointRule", rule_id)
@@ -122,7 +122,7 @@ async def update_checkpoint_rule(
 @router.delete("/{rule_id}")
 async def delete_checkpoint_rule(
     rule_id: str,
-    _user: dict = Depends(require_role("Admin")),
+    _user: dict = Depends(require_permission("admin:config")),
 ) -> dict:
     if rule_repo.get(rule_id) is None:
         raise NotFoundError("CheckpointRule", rule_id)
