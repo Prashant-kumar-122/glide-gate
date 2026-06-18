@@ -72,7 +72,7 @@ const FALLBACK: DomainConfigOut = {
   domain_code: 'wealth_management',
   display_name: 'Wealth Management',
   stages: Object.entries(_STAGE_FALLBACK).map(([code, v]) => ({ code, ...v })),
-  personas: Object.entries(_PERSONA_FALLBACK).map(([code, v]) => ({ code, ...v })),
+  personas: Object.entries(_PERSONA_FALLBACK).map(([code, v]) => ({ code, ...v, nav_links: [...v.nav_links] })),
   products: [],
 }
 
