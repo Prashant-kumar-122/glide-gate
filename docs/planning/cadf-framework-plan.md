@@ -5,7 +5,9 @@
 
 > **Read this first every session.** Find the first unchecked phase — that is where to start.
 > When a phase is fully verified and committed, change `[ ]` to `[x]` and commit this file.
-> `[~]` means the phase was explicitly skipped by the team — do not implement it; treat it as done for sequencing purposes.
+> `[~]` means the phase was intentionally deferred or skipped by the team — do not implement it; treat it as done for sequencing purposes.
+>
+> **Current status (as of 2026-06-18):** All active phases (0–11) are complete. Phases 4.5, 12, and 13 are intentionally deferred pending full validation of the implemented phases. There are no unchecked `[ ]` phases — the framework is feature-complete for the current validation scope.
 
 - [x] **Phase 0** — Audit & wire dead orchestrator config
 - [x] **Phase 0.5** — Migrate orchestration to Temporal + LangGraph (ADR-001 / ADR-004)
@@ -14,7 +16,7 @@
 - [x] **Phase 2.5** — Hash-chain audit log (FR-AU-01 / BSA compliance)
 - [x] **Phase 3** — Replace if/elif stage routing with config-driven StageDispatcher
 - [x] **Phase 4** — Make products, questions, and per-product agent pipelines config-driven
-- [~] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03) ⚠️ SKIPPED — implementation was reverted; do not implement, proceed directly to Phase 4.6
+- [~] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03) ⚠️ DEFERRED — intentionally skipped; implementation was reverted; pending full validation of Phases 0–11 before re-attempting
 - [x] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
 - [x] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
 - [x] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
@@ -23,8 +25,8 @@
 - [x] **Phase 9** — Build the Admin Portal
 - [x] **Phase 10** — Serve frontend vocabulary from the domain API
 - [x] **Phase 11** — Stand up Retail/Deposit through the admin portal (acceptance proof)
-- [ ] **Phase 12** — Extract the framework/domain package boundary
-- [ ] **Phase 13** — Observability, IaC & Operations (NFR-03 / NFR-10)
+- [~] **Phase 12** — Extract the framework/domain package boundary ⚠️ DEFERRED — intentionally skipped pending full validation of Phases 0–11; do not implement until the team confirms readiness
+- [~] **Phase 13** — Observability, IaC & Operations (NFR-03 / NFR-10) ⚠️ DEFERRED — intentionally skipped pending full validation of Phases 0–11; do not implement until the team confirms readiness
 
 ---
 
@@ -160,15 +162,18 @@ windows with priority-tier overrides and per-product feature flags can all be co
 ```
 Phase 0 → Phase 0.5 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 ────────────────────────┐
                                                           └── Phase 4 (parallel w/ 5) ──┤
-                                                          |   └── Phase 4.5 ────────────┤
+                                                          |   └── Phase 4.5 (DEFERRED) ─┤
                                                           |   └── Phase 4.6 ────────────┤
                                                           └── Phase 5 (parallel w/ 4) ──┤
                                                                                          ↓
-                     Phase 6 → Phase 7 → Phase 8 → Phase 9 → Phase 10 → Phase 11 → Phase 12 → Phase 13
+                     Phase 6 → Phase 7 → Phase 8 → Phase 9 → Phase 10 → Phase 11
+                                                                              ↓
+                                                              [Phase 12 — DEFERRED] → [Phase 13 — DEFERRED]
 ```
 
 Phases 4, 4.5, 4.6, and 5 all depend on Phase 3 but are independent of each other and can be
-worked in parallel by different team members.
+worked in parallel by different team members. Phases 4.5, 12, and 13 are intentionally deferred
+pending validation of the completed phases.
 
 ---
 
@@ -205,7 +210,7 @@ Full detail in `docs/TRACEABILITY.md`. Summary of coverage:
 
 | BRD Req | Description | Phase | Status |
 |---|---|---|---|
-| FR-DM-01/02/03 | Shared-core document collect-once + reuse | Phase 4.5 | ⬜ |
+| FR-DM-01/02/03 | Shared-core document collect-once + reuse | Phase 4.5 | ⏸ Deferred |
 | FR-WF-01/02 | Per-product configurable workflows | Phase 4 | ✅ |
 | FR-OR-01/02/03/04/05 | Parallel multi-product orchestration | Phase 0.5, Phase 4 | ⬜ |
 | FR-AG-01/02/03 | Autonomous agent progression + data collection | Phase 0.5 | ⬜ |
@@ -219,9 +224,9 @@ Full detail in `docs/TRACEABILITY.md`. Summary of coverage:
 | FR-AU-03 | Audit export + reporting | Phase 2.5 | ✅ |
 | FR-AU-04 | Adverse-action records (ECOA) | Phase 4.6 | ✅ |
 | NFR-01 | Encryption + RBAC + least-privilege | Phase 7 | ⬜ |
-| NFR-03 | 99.95% availability, RTO ≤ 15m, RPO ≈ 0 | Phase 13 | ⬜ |
+| NFR-03 | 99.95% availability, RTO ≤ 15m, RPO ≈ 0 | Phase 13 | ⏸ Deferred |
 | NFR-09 | WCAG 2.1 AA accessibility | Phase 10 | ⬜ |
-| NFR-10 | OTel/Prometheus/Grafana/Loki/Tempo | Phase 13 | ⬜ |
+| NFR-10 | OTel/Prometheus/Grafana/Loki/Tempo | Phase 13 | ⏸ Deferred |
 | ADR-001 | Temporal self-hosted orchestration | Phase 0.5 | ✅ |
 | ADR-002 | Criteria-driven blackboard activation | Phase 3, Phase 4.6 | ✅ |
 | ADR-004 | LangGraph Python agents | Phase 0.5 | ✅ |
@@ -1870,6 +1875,10 @@ Mark **Phase 11** as `[x]` in the Phase Status Tracker and commit this file.
 
 ## Phase 12 — Extract the framework/domain package boundary
 
+> ⚠️ **DEFERRED** — This phase is intentionally skipped pending full validation of Phases 0–11.
+> Do not implement until the team confirms readiness. The phase description below is preserved
+> for planning purposes only.
+
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 11 + passing acceptance checklist must be present
 - Run `grep -r "from app.agents.kyc" backend/app/framework` — should find nothing
@@ -1896,6 +1905,10 @@ Mark **Phase 12** as `[x]` in the Phase Status Tracker and commit this file.
 ---
 
 ## Phase 13 — Observability, IaC & Operations (NFR-03 / NFR-10)
+
+> ⚠️ **DEFERRED** — This phase is intentionally skipped pending full validation of Phases 0–11.
+> Do not implement until the team confirms readiness. The phase description below is preserved
+> for planning purposes only.
 
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 12 commit must be present

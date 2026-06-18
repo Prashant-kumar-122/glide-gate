@@ -862,7 +862,10 @@ See `.env.example` for all required variables. Key groups:
 
 ---
 
-## 14. Observability (Phase 13+)
+## 14. Observability (Phase 13 — Deferred)
+
+> **⚠️ DEFERRED** — Phase 13 is intentionally skipped pending full validation of Phases 0–11.
+> The specification below is preserved for future implementation.
 
 After Phase 13, every Temporal Activity and LangGraph node emits OTel spans.
 
@@ -876,7 +879,10 @@ Start observability stack: `docker compose -f docker-compose.yml -f docker-compo
 
 ---
 
-## 15. CI/CD (Phase 13+)
+## 15. CI/CD (Phase 13 — Deferred)
+
+> **⚠️ DEFERRED** — Phase 13 is intentionally skipped pending full validation of Phases 0–11.
+> The specification below is preserved for future implementation.
 
 GitHub Actions workflows in `.github/workflows/`:
 
