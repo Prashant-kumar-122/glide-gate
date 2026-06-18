@@ -168,7 +168,26 @@ async def get_me(
 ) -> UserOut:
     user_id = UUID(current_user["sub"])
     async with db.begin():
-        user = await auth_service.get_profile(user_id, db)
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if user is None:
+            # TODO: remove JIT provisioning once a proper Keycloak→DB sync (SCIM/webhook) exists.
+            # JIT-provision on first Keycloak SSO login — local users are always pre-seeded.
+            raw_name = current_user.get("name", "") or ""
+            parts = raw_name.split(" ", 1)
+            first = parts[0] if parts[0] else (current_user.get("email", "sso").split("@")[0])
+            last = parts[1] if len(parts) > 1 else first
+            user = User(
+                id=user_id,
+                email=current_user.get("email", ""),
+                first_name=first,
+                last_name=last,
+                password_hash="!keycloak",  # sentinel — KC users never use local passwords
+                role=current_user.get("role", "client"),
+                is_active=True,
+            )
+            db.add(user)
+            await db.flush()
     return UserOut.model_validate(user)
 
 

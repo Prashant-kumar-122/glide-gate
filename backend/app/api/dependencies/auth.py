@@ -48,20 +48,21 @@ _JWKS_TTL = 3600  # re-fetch public keys every hour
 _APP_ROLES = {"advisor", "client", "admin", "sales_manager"}
 
 
-def _get_jwks() -> dict:
+async def _get_jwks() -> dict:
     global _jwks_cache, _jwks_fetched_at
     now = time.time()
     if _jwks_cache is None or (now - _jwks_fetched_at) > _JWKS_TTL:
-        resp = httpx.get(settings.keycloak_jwks_url, timeout=10)
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(settings.keycloak_jwks_url, timeout=10)
         resp.raise_for_status()
         _jwks_cache = resp.json()
         _jwks_fetched_at = now
     return _jwks_cache
 
 
-def _decode_keycloak_jwt(token: str) -> dict[str, Any]:
+async def _decode_keycloak_jwt(token: str) -> dict[str, Any]:
     try:
-        jwks = _get_jwks()
+        jwks = await _get_jwks()
         header = jwt.get_unverified_header(token)
         kid = header.get("kid")
 
@@ -122,7 +123,7 @@ async def get_current_user(
             alg = "HS256"
 
         if alg == "RS256":
-            return _decode_keycloak_jwt(token)
+            return await _decode_keycloak_jwt(token)
         return _decode_jwt(token)
 
     if settings.DEMO_MODE:

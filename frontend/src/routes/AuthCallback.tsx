@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { exchangeCodeForToken, storeToken } from '@/lib/authConfig'
+import { exchangeCodeForToken, storeToken, storeRefreshToken } from '@/lib/authConfig'
 import { api } from '@/lib/api'
 import type { UserOut } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
@@ -36,8 +36,9 @@ export default function AuthCallback() {
     }
 
     exchangeCodeForToken(code)
-      .then(({ access_token }) => {
+      .then(({ access_token, refresh_token }) => {
         storeToken(access_token)
+        if (refresh_token) storeRefreshToken(refresh_token)
         return api.get<UserOut>('/auth/me', {
           headers: { Authorization: `Bearer ${access_token}` },
         })

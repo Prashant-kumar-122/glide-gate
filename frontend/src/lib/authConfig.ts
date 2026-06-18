@@ -1,4 +1,4 @@
-const KC_URL    = (import.meta.env.VITE_KEYCLOAK_URL    as string | undefined) ?? 'http://18.60.103.228:8080'
+const KC_URL    = (import.meta.env.VITE_KEYCLOAK_URL    as string | undefined) ?? 'http://18.60.103.228:8180'
 const KC_REALM  = (import.meta.env.VITE_KEYCLOAK_REALM  as string | undefined) ?? 'glidegate'
 const KC_CLIENT = (import.meta.env.VITE_KEYCLOAK_CLIENT_ID as string | undefined) ?? 'glidegate-frontend'
 
@@ -84,10 +84,45 @@ export function storeToken(token: string): void {
   sessionStorage.setItem('kc_access_token', token)
 }
 
+export function getStoredRefreshToken(): string | null {
+  return sessionStorage.getItem('kc_refresh_token')
+}
+
+export function storeRefreshToken(token: string): void {
+  sessionStorage.setItem('kc_refresh_token', token)
+}
+
 export function clearStoredToken(): void {
   sessionStorage.removeItem('kc_access_token')
+  sessionStorage.removeItem('kc_refresh_token')
   sessionStorage.removeItem('kc_verifier')
   sessionStorage.removeItem('kc_state')
+}
+
+export async function refreshKeycloakToken(): Promise<{
+  access_token: string
+  refresh_token: string
+  expires_in: number
+}> {
+  const refreshToken = getStoredRefreshToken()
+  if (!refreshToken) throw new Error('No refresh token stored')
+
+  const body = new URLSearchParams({
+    grant_type:    'refresh_token',
+    client_id:     KC_CLIENT,
+    refresh_token: refreshToken,
+  })
+
+  const resp = await fetch(authEndpoints.token, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  })
+  if (!resp.ok) {
+    const text = await resp.text()
+    throw new Error(`Token refresh failed (${resp.status}): ${text}`)
+  }
+  return resp.json() as Promise<{ access_token: string; refresh_token: string; expires_in: number }>
 }
 
 export function keycloakLogout(postLogoutRedirectUri?: string): void {

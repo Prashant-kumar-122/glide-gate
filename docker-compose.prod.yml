@@ -36,7 +36,7 @@ services:
       - ./scripts/keycloak:/opt/keycloak/data/import
       - keycloak_data:/opt/keycloak/data
     ports:
-      - "8080:8080"
+      - "8180:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,6 +63,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD:-Root}@postgres:5432/${DB_NAME:-glide_gate}
       DATABASE_URL_SYNC: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-Root}@postgres:5432/${DB_NAME:-glide_gate}
       TEMPORAL_ENABLED: "false"
+      # TODO: revert to using .env.production value once split into KC_INTERNAL_URL / KC_PUBLIC_URL
+      # Backend uses internal Docker hostname; browser uses the public IP (set on frontend below)
+      KEYCLOAK_URL: "http://keycloak:8080"
     ports:
       - "8000:8000"
     depends_on:
@@ -92,6 +95,8 @@ services:
     environment:
       VITE_API_URL: http://backend:8000
       VITE_API_TIMEOUT: "30000"
+      # TODO: revert once a proper build-arg pipeline replaces runtime env injection for Vite
+      VITE_KEYCLOAK_URL: "http://18.60.103.228:8180"
     command: npm run dev -- --host 0.0.0.0
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:5173', r => r.statusCode < 400 ? process.exit(0) : process.exit(1)).on('error', () => process.exit(1))\""]
