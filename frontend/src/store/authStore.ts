@@ -6,7 +6,7 @@ export interface AuthUser {
   email: string
   firstName: string
   lastName: string
-  role: 'client' | 'advisor' | 'admin' | 'sales_manager'
+  role: string  // persona code — any domain-configured persona, not just the 4 built-in ones
 }
 
 interface AuthState {

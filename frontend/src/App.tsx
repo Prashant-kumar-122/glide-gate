@@ -36,11 +36,15 @@ const _STATIC_NAV: { to: string; label: string; roles: string[] }[] = [
 ]
 
 // Static fallback home routes — used before domain config loads.
+// Unknown domain-specific personas (e.g. deposit_ops, branch_manager) fall back to '/'.
 const _STATIC_ROLE_HOME: Record<string, string> = {
   client:        '/client',
   advisor:       '/',
   sales_manager: '/',
   admin:         '/admin',
+}
+function _staticRoleHome(role: string): string {
+  return _STATIC_ROLE_HOME[role] ?? (role === 'client' ? '/client' : role === 'admin' ? '/admin' : '/')
 }
 
 function NavBar() {
@@ -55,7 +59,7 @@ function NavBar() {
   // Prefer domain config home routes; fall back to static for unknown personas
   const roleHome = Object.keys(domainRoleHome).length ? domainRoleHome : _STATIC_ROLE_HOME
 
-  const homeRoute = user ? (roleHome[user.role] ?? '/login') : '/login'
+  const homeRoute = user ? (roleHome[user.role] ?? _staticRoleHome(user.role)) : '/login'
 
   const visibleLinks = isAuthenticated && user
     ? navLinks.filter((l) => l.roles.includes(user.role))
@@ -228,7 +232,7 @@ export default function App() {
             <Route
               path="/profile"
               element={
-                <ProtectedRoute allowedRoles={['client', 'advisor', 'admin', 'sales_manager']}>
+                <ProtectedRoute audience="any">
                   <ErrorBoundary><Profile /></ErrorBoundary>
                 </ProtectedRoute>
               }
@@ -236,15 +240,17 @@ export default function App() {
             <Route
               path="/"
               element={
-                <ProtectedRoute allowedRoles={['advisor', 'sales_manager']}>
+                <ProtectedRoute audience="staff">
                   <ErrorBoundary><AdvisorWorkspace /></ErrorBoundary>
                 </ProtectedRoute>
               }
             />
+            {/* Alias for domain-configured nav_links that use /advisor/cases */}
+            <Route path="/advisor/*" element={<Navigate to="/" replace />} />
             <Route
               path="/contact-centre"
               element={
-                <ProtectedRoute allowedRoles={['advisor', 'sales_manager']}>
+                <ProtectedRoute audience="staff">
                   <ErrorBoundary><ContactCentre /></ErrorBoundary>
                 </ProtectedRoute>
               }
@@ -252,7 +258,7 @@ export default function App() {
             <Route
               path="/agent-trace"
               element={
-                <ProtectedRoute allowedRoles={['advisor', 'admin', 'sales_manager']}>
+                <ProtectedRoute audience="staff">
                   <ErrorBoundary><AgentTrace /></ErrorBoundary>
                 </ProtectedRoute>
               }
@@ -260,7 +266,7 @@ export default function App() {
             <Route
               path="/admin"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute audience="admin">
                   <ErrorBoundary><AdminConfig /></ErrorBoundary>
                 </ProtectedRoute>
               }
@@ -268,7 +274,7 @@ export default function App() {
             <Route
               path="/client"
               element={
-                <ProtectedRoute allowedRoles={['client']}>
+                <ProtectedRoute audience="client">
                   <ErrorBoundary><ClientPortal /></ErrorBoundary>
                 </ProtectedRoute>
               }

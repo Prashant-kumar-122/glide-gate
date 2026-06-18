@@ -110,6 +110,6 @@ Legend: ✅ implemented & verified · 🟡 partial (phase in progress) · ⬜ pl
 | Phase 8 | Loosen DB CHECK constraints | ✅ |
 | Phase 9 | Admin Portal | ✅ |
 | Phase 10 | Serve frontend vocabulary from domain API | ✅ |
-| Phase 11 | Retail/Deposit acceptance proof | ⬜ |
+| Phase 11 | Retail/Deposit acceptance proof | ✅ |
 | Phase 12 | Extract framework/domain package boundary | ⬜ |
 | Phase 13 | Observability, IaC & Operations | ⬜ |

@@ -62,13 +62,12 @@ export function useLogin() {
       const user = toAuthUser(data.user)
       qc.clear()
       setAuth(user)
-      const defaultRoute: Record<string, string> = {
-        client: '/client',
-        advisor: '/',
-        admin: '/admin',
-        sales_manager: '/',
-      }
-      navigate(defaultRoute[user.role] ?? '/')
+      // Route by role semantics: client → portal, admin → admin panel,
+      // all other personas (advisors, domain-specific staff) → workspace.
+      const dest = user.role === 'client' ? '/client'
+                 : user.role === 'admin'  ? '/admin'
+                 : '/'
+      navigate(dest)
     },
   })
 }

@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.permission_guard import require_permission
-from app.api.error_handlers import NotFoundError, UnprocessableError
+from app.api.error_handlers import ConflictError, NotFoundError, UnprocessableError
 from app.database import get_db
 from app.models.domain import Domain, DomainStageSLA
 from app.models.cases import OnboardingCase
@@ -147,6 +147,21 @@ async def create_sla(
     db: AsyncSession = Depends(get_db),
 ) -> SLAOut:
     await _get_domain_or_404(domain_id, db)
+
+    existing = await db.execute(
+        select(DomainStageSLA).where(
+            DomainStageSLA.domain_id == domain_id,
+            DomainStageSLA.stage_code == body.stage_code,
+            DomainStageSLA.priority_tier == body.priority_tier,
+            DomainStageSLA.product_code == body.product_code,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise ConflictError(
+            f"SLA for stage '{body.stage_code}' "
+            f"(tier={body.priority_tier!r}, product={body.product_code!r}) "
+            "already exists in this domain"
+        )
 
     row = DomainStageSLA(
         domain_id=domain_id,

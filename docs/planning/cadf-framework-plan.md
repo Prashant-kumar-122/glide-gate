@@ -22,7 +22,7 @@
 - [x] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
 - [x] **Phase 9** — Build the Admin Portal
 - [x] **Phase 10** — Serve frontend vocabulary from the domain API
-- [ ] **Phase 11** — Stand up Retail/Deposit through the admin portal (acceptance proof)
+- [x] **Phase 11** — Stand up Retail/Deposit through the admin portal (acceptance proof)
 - [ ] **Phase 12** — Extract the framework/domain package boundary
 - [ ] **Phase 13** — Observability, IaC & Operations (NFR-03 / NFR-10)
 
@@ -1771,6 +1771,58 @@ Mark **Phase 10** as `[x]` in the Phase Status Tracker and commit this file.
 ---
 
 ## Phase 11 — Stand up Retail/Deposit through the admin portal (the real proof)
+
+### As-built summary (2026-06-17)
+
+**0 new agent classes.** The strongest possible proof of framework genericity: the
+`retail_deposit` domain reuses all existing agent classes (`CustomerServiceAgent`,
+`KYCComplianceAgent`, `ProductOnboardingAgent`, `CollaborationAgent`, `NotificationAgent`).
+All task types used by the domain were already registered in
+`OnboardingWorkflow._TASK_TYPE_TO_ACTIVITY_NAME`; no changes to `onboarding_workflow.py`,
+`a2a_types.py`, `stage_dispatcher.py`, `mcp_connector.py`, or `sla_monitor_service.py`.
+
+**`scripts/setup_retail_deposit_domain.py`** (new) — idempotent portal setup script
+that calls the admin portal REST API in sequence to create the full `retail_deposit`
+domain.  Zero alembic migrations; zero direct DB writes.
+
+**Domain design:**
+
+| Stage | Task type | Agent |
+|---|---|---|
+| INTAKE | `collect_client_data` | `customer_service` |
+| VERIFICATION | `run_kyc_check` | `kyc_compliance` |
+| PRODUCT_SELECTION | `onboard_product` | `product_onboarding` |
+| APPROVAL | `create_collaboration_room` | `collaboration` |
+| COMPLETE | `send_notification` | `notification` |
+| REJECTED | `send_notification` | `notification` |
+
+**Products:** `savings_account`, `checking_account`, `deposit_cd`
+
+**Personas:** `deposit_ops` (branch staff), `branch_manager`, `customer` — each with
+`default_route` and `nav_links`; frontend `useDomainConfig()` hook serves them with no
+frontend code change.
+
+**SLA configuration:**
+- `INTAKE` default (2 h) + `priority_tier="sme"` override (1 h) — proves tier override
+- `savings_account` product-scoped `PRODUCT_SELECTION` SLA: `is_enabled=False` (instant product)
+- `APPROVAL` SLA: `pause_on_human_review=True` (clock pauses during branch-manager hold)
+
+**Phase 4.5 gap note:** The "collect-once shared document" acceptance criterion cannot be
+fully automated because Phase 4.5 was explicitly skipped.  `GOVT_PHOTO_ID` is listed in
+`required_documents` for all products (the portal's document requirements editor shows it),
+but the LangGraph `check_existing_shared_docs` enforcement node was never built.
+
+**`backend/tests/e2e/test_retail_deposit_acceptance.py`** (new) — 20 unit tests (no live
+DB) covering all 15 acceptance-checklist items: configuration consistency, no migration
+scripts, no new agent classes, SLA tier override, savings_account SLA disabled, APPROVAL
+pause, deposit_ops persona, pipeline step ordering, transition graph reachability, etc.
+
+### Files changed
+- **New:** `scripts/setup_retail_deposit_domain.py`
+- **New:** `backend/tests/e2e/test_retail_deposit_acceptance.py`
+- **Modified:** `docs/FRAMEWORK.md` (Phase 11 portal setup section)
+- **Modified:** `docs/TRACEABILITY.md` (Phase 11 ✅)
+- **Modified:** `docs/planning/cadf-framework-plan.md` (this file)
 
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 10 commit must be present

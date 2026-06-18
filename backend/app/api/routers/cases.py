@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel
+import sqlalchemy as sa
 from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -20,7 +21,7 @@ from app.api.dependencies.permission_guard import has_permission, require_permis
 from app.api.error_handlers import ConflictError, NotFoundError
 from app.database import get_db
 from app.models.cases import CaseProduct, CaseProductStep, OnboardingCase, Product
-from app.models.domain import Domain, DomainProduct
+from app.models.domain import Domain, DomainPersona, DomainProduct
 from app.models.questionnaire import OnboardingQuestion, OnboardingQuestionnaire, OnboardingQuestionSession
 from app.models.clients import Client
 from app.models.users import User
@@ -303,20 +304,22 @@ async def list_products(
     can_see_institutional = await has_permission(
         current_user, "sales:review", db
     ) and await has_permission(current_user, "case:create", db)
-    product_type = "institutional" if can_see_institutional else "retail"
 
     # Read from domain_products (Phase 10: replaces legacy products table).
     # Fall back to the legacy products table when no active domain exists so
     # that deployments that have not run the Phase 1 seed still work.
     domain = await db.scalar(select(Domain).where(Domain.is_active.is_(True)).limit(1))
     if domain is not None:
-        rows = (await db.scalars(
+        q = (
             select(DomainProduct)
             .where(DomainProduct.domain_id == domain.id)
             .where(DomainProduct.is_active.is_(True))
-            .where(DomainProduct.product_type == product_type)
-            .order_by(DomainProduct.display_name)
-        )).all()
+        )
+        # Clients and advisors without institutional access see everything
+        # except products explicitly typed "institutional".
+        if not can_see_institutional:
+            q = q.where(DomainProduct.product_type != "institutional")
+        rows = (await db.scalars(q.order_by(DomainProduct.display_name))).all()
         return [
             ProductOut(
                 id=p.id,
@@ -328,7 +331,8 @@ async def list_products(
             for p in rows
         ]
 
-    # Legacy fallback
+    # Legacy fallback — exact type match (legacy table uses "retail"/"institutional")
+    product_type = "institutional" if can_see_institutional else "retail"
     query = (
         select(Product)
         .where(Product.is_active.is_(True))
@@ -352,9 +356,28 @@ async def list_cases(
         .order_by(OnboardingCase.updated_at.desc())
     )
 
-    # Clients may only see their own cases
-    if current_user.get("role") == "client":
+    role = current_user.get("role", "")
+
+    if role == "client":
+        # Clients see only their own cases regardless of domain
         query = query.where(OnboardingCase.client_id == UUID(current_user["sub"]))
+    elif role != "admin":
+        # Staff personas: scope to the domain(s) their personas belong to.
+        # The JWT carries all persona codes for this user; look them up in
+        # domain_personas to find the corresponding domain IDs.
+        # Admin persona is intentionally absent from domain_personas so admins
+        # bypass this filter and see cases across all domains.
+        persona_codes: list[str] = current_user.get("roles", [role])
+        domain_ids = list(await db.scalars(
+            select(DomainPersona.domain_id)
+            .where(DomainPersona.persona_code.in_(persona_codes))
+            .distinct()
+        ))
+        if domain_ids:
+            query = query.where(OnboardingCase.domain_id.in_(domain_ids))
+        else:
+            # Persona not mapped to any domain — show nothing rather than everything
+            query = query.where(sa.false())
 
     result = await db.execute(query)
     rows = result.all()
@@ -421,11 +444,13 @@ async def initiate_case(
     if body.legal_entity_name:
         metadata["legal_entity_name"] = body.legal_entity_name
 
+    active_domain = await db.scalar(select(Domain).where(Domain.is_active.is_(True)).limit(1))
     case = OnboardingCase(
         client_id=client_id,
         selected_products=body.selected_products,
         assigned_advisor_id=body.assigned_advisor_id,
         extra_metadata=metadata,
+        domain_id=active_domain.id if active_domain else None,
     )
     db.add(case)
     await db.flush()

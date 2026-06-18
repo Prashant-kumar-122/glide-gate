@@ -796,6 +796,53 @@ have been migrated; remaining consumers can migrate incrementally.
 
 ---
 
+### Phase 11: Standing up Retail/Deposit via the admin portal
+
+Phase 11 is the acceptance proof that the CADF framework is genuinely generic.
+The `retail_deposit` domain is configured **entirely** through the admin portal
+API — zero migration scripts, zero new Python agent classes, zero changes to
+any framework file.
+
+**Portal setup script:** `scripts/setup_retail_deposit_domain.py`
+
+```bash
+python scripts/setup_retail_deposit_domain.py --base-url http://localhost:8000
+```
+
+The script calls the same REST endpoints as the portal frontend in sequence:
+domain creation → stages → transitions → task routing → agent roster →
+capabilities → personas → permissions → products → pipeline steps → SLAs →
+display config → validate.
+
+**Domain design (retail_deposit):**
+
+| Stage | Agent | Task type | Notes |
+|---|---|---|---|
+| INTAKE | `customer_service` | `collect_client_data` | Reused from wealth |
+| VERIFICATION | `kyc_compliance` | `run_kyc_check` | Reused; retail criteria configured in DB |
+| PRODUCT_SELECTION | `product_onboarding` | `onboard_product` | Reused; retail pipelines in DB |
+| APPROVAL | `collaboration` | `create_collaboration_room` | For CD products requiring review |
+| COMPLETE | `notification` | `send_notification` | Reused |
+| REJECTED | `notification` | `send_notification` | Reused |
+
+**Products:** `savings_account`, `checking_account`, `deposit_cd`
+
+**Personas:** `deposit_ops` (branch staff), `branch_manager`, `customer`
+
+**SLA highlights:**
+- `INTAKE` has a `priority_tier="sme"` override row (1 h vs standard 2 h)
+- `savings_account` product-scoped SLA on `PRODUCT_SELECTION` is `is_enabled=False` (instant product)
+- `APPROVAL` SLA has `pause_on_human_review=True`
+
+**Key proof:** all six task types used by `retail_deposit` were already registered in
+`OnboardingWorkflow._TASK_TYPE_TO_ACTIVITY_NAME` before Phase 11. No workflow code changes
+were required. A new domain means new DB rows, not new code.
+
+**Acceptance tests:** `backend/tests/e2e/test_retail_deposit_acceptance.py` — 20 tests
+verify all 15 acceptance-checklist items.
+
+---
+
 ## 13. Environment Variables
 
 See `.env.example` for all required variables. Key groups:

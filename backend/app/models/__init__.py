@@ -1,6 +1,24 @@
 from app.database import Base
 
-# Import all models so Alembic autogenerates the full migration
+# Import all models so Alembic autogenerates the full migration and so that
+# SQLAlchemy can resolve cross-model ForeignKey references (e.g. OnboardingCase → domains).
+from app.models.domain import (
+    Domain,
+    DomainAgentCapabilities,
+    DomainAgentPrompt,
+    DomainAgentRoster,
+    DomainAgentSkill,
+    DomainAgentToolGrant,
+    DomainDisplayConfig,
+    DomainPermission,
+    DomainPersona,
+    DomainProduct,
+    DomainProductPipeline,
+    DomainStageSLA,
+    DomainStage,
+    DomainTaskRouting,
+    DomainTransition,
+)
 from app.models.admin_config import AdminConfig
 from app.models.accounts import ClientAccount
 from app.models.users import User
@@ -30,6 +48,22 @@ from app.models.questionnaire import (
 
 __all__ = [
     "Base",
+    # domain tables
+    "Domain",
+    "DomainStage",
+    "DomainTransition",
+    "DomainTaskRouting",
+    "DomainAgentRoster",
+    "DomainAgentCapabilities",
+    "DomainAgentPrompt",
+    "DomainAgentSkill",
+    "DomainAgentToolGrant",
+    "DomainProductPipeline",
+    "DomainStageSLA",
+    "DomainPersona",
+    "DomainPermission",
+    "DomainProduct",
+    "DomainDisplayConfig",
     # admin config
     "AdminConfig",
     # accounts

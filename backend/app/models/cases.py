@@ -25,6 +25,7 @@ class OnboardingCase(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     client_id: Mapped[UUID] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
+    domain_id: Mapped[UUID | None] = mapped_column(ForeignKey("domains.id", ondelete="SET NULL"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="INTAKE", index=True)
     current_stage: Mapped[str] = mapped_column(String(30), nullable=False, default="INTAKE", index=True)
     selected_products: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
