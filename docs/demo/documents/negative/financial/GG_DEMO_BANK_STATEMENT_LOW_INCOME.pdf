@@ -1,0 +1,85 @@
+%PDF-1.4
+%‚„œ”
+
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+
+2 0 obj
+<< /Type /Pages /Kids [6 0 R] /Count 1 >>
+endobj
+
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+
+5 0 obj
+<< /Length 2988 >>
+stream
+BT /F2 18 Tf 50.0 790.0 Td (HSBC UK  - Statement of Account) Tj ET
+0.4 w 50 763.9 m 562 763.9 l S
+BT /F1 9 Tf 50.0 747.9 Td (Personal Current Account  - Advance Banking) Tj ET
+BT /F2 11 Tf 50.0 718.9 Td (*** INCOME INCONSISTENCY - Declared vs. actual income mismatch ***) Tj ET
+BT /F2 13 Tf 50.0 683.9 Td (Account Holder Information) Tj ET
+BT /F2 11 Tf 50.0 662.0 Td (Account Name:) Tj ET
+BT /F1 11 Tf 220.0 662.0 Td (A. Mehta) Tj ET
+BT /F2 11 Tf 50.0 646.1 Td (Sort Code:) Tj ET
+BT /F1 11 Tf 220.0 646.1 Td (40-02-50) Tj ET
+BT /F2 11 Tf 50.0 630.1 Td (Account Number:) Tj ET
+BT /F1 11 Tf 220.0 630.1 Td (87654321) Tj ET
+BT /F2 11 Tf 50.0 614.2 Td (Statement Period:) Tj ET
+BT /F1 11 Tf 220.0 614.2 Td (20 March 2026 to 17 June 2026) Tj ET
+BT /F2 13 Tf 50.0 579.2 Td (Transactions) Tj ET
+0.4 w 50 559.4 m 562 559.4 l S
+BT /F2 11 Tf 50.0 547.4 Td (DATE:) Tj ET
+BT /F1 11 Tf 220.0 547.4 Td (DESCRIPTION                               CREDIT      BALANCE) Tj ET
+0.4 w 50 533.4 m 562 533.4 l S
+BT /F2 11 Tf 50.0 521.4 Td (25 Mar 2026:) Tj ET
+BT /F1 11 Tf 220.0 521.4 Td (SALARY - EMPLOYER                         1,250.00     1,250.00) Tj ET
+BT /F2 11 Tf 50.0 505.5 Td (24 Apr 2026:) Tj ET
+BT /F1 11 Tf 220.0 505.5 Td (SALARY - EMPLOYER                         1,250.00     2,500.00) Tj ET
+BT /F2 11 Tf 50.0 489.5 Td (24 May 2026:) Tj ET
+BT /F1 11 Tf 220.0 489.5 Td (SALARY - EMPLOYER                         1,250.00     3,750.00) Tj ET
+0.4 w 50 475.6 m 562 475.6 l S
+BT /F2 11 Tf 50.0 463.6 Td (Total Monthly Credits:) Tj ET
+BT /F1 11 Tf 220.0 463.6 Td (GBP 1,250.00) Tj ET
+BT /F2 11 Tf 50.0 447.6 Td (Annualised Income \(estimate\):) Tj ET
+BT /F1 11 Tf 220.0 447.6 Td (GBP 15,000.00) Tj ET
+BT /F2 13 Tf 50.0 412.7 Td (Compliance Alert  - Income Discrepancy) Tj ET
+BT /F2 11 Tf 50.0 390.8 Td (REJECTION: Income does not match declared amount) Tj ET
+BT /F1 11 Tf 50.0 374.9 Td (Client declared annual income of GBP 95,000 during onboarding. This bank statement shows) Tj ET
+BT /F1 11 Tf 50.0 358.9 Td (total monthly credits of GBP 1,250, equivalent to an estimated annual income of GBP) Tj ET
+BT /F1 11 Tf 50.0 343.0 Td (15,000 - a discrepancy of GBP 80,000 \(84% below declared amount\).) Tj ET
+BT /F1 11 Tf 50.0 313.0 Td (This document does not support the declared source of funds. Escalation to compliance) Tj ET
+BT /F1 11 Tf 50.0 297.1 Td (review team is required. Additional documentation \(e.g., payslips, tax returns, employer) Tj ET
+BT /F1 11 Tf 50.0 281.1 Td (letter\) must be obtained before onboarding can proceed.) Tj ET
+0.4 w 50 253.2 m 562 253.2 l S
+BT /F2 11 Tf 50.0 241.2 Td (Validation Status:) Tj ET
+BT /F1 11 Tf 220.0 241.2 Td (REJECTED  - Income GBP 15,000 vs. declared GBP 95,000 \(84% discrepancy\)) Tj ET
+BT /F1 9 Tf 50.0 225.2 Td (HSBC UK Limited. Authorised by the PRA and regulated by the FCA and PRA. DEMO DOCUMENT - Generated) Tj ET
+BT /F1 9 Tf 50.0 212.2 Td (for GlideGate demonstration purposes only. Not a genuine legal, financial, or official document.) Tj ET
+endstream
+endobj
+
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Contents 5 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>
+endobj
+
+xref
+0 7
+0000000000 65535 f 
+0000000016 00000 n 
+0000000066 00000 n 
+0000000124 00000 n 
+0000000222 00000 n 
+0000000325 00000 n 
+0000003366 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+3503
+%%EOF

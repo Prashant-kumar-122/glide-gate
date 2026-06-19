@@ -1,0 +1,83 @@
+%PDF-1.4
+%‚„œ”
+
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+
+2 0 obj
+<< /Type /Pages /Kids [6 0 R] /Count 1 >>
+endobj
+
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+
+5 0 obj
+<< /Length 2434 >>
+stream
+BT /F2 18 Tf 50.0 790.0 Td (PAYSLIP  - December 2025) Tj ET
+0.4 w 50 763.9 m 562 763.9 l S
+BT /F1 9 Tf 50.0 747.9 Td (TechVision Ltd  - HR & Payroll Services) Tj ET
+BT /F2 11 Tf 50.0 718.9 Td (*** OUT OF DATE - Document issued more than 90 days ago ***) Tj ET
+BT /F2 13 Tf 50.0 683.9 Td (Employee Details) Tj ET
+BT /F2 11 Tf 50.0 662.0 Td (Employee Name:) Tj ET
+BT /F1 11 Tf 220.0 662.0 Td (Aarav Mehta) Tj ET
+BT /F2 11 Tf 50.0 646.1 Td (Employee ID:) Tj ET
+BT /F1 11 Tf 220.0 646.1 Td (EMP-00823) Tj ET
+BT /F2 11 Tf 50.0 630.1 Td (Department:) Tj ET
+BT /F1 11 Tf 220.0 630.1 Td (Software Engineering) Tj ET
+BT /F2 11 Tf 50.0 614.2 Td (Pay Period:) Tj ET
+BT /F1 11 Tf 220.0 614.2 Td (December 2025) Tj ET
+BT /F2 11 Tf 50.0 598.2 Td (Pay Date:) Tj ET
+BT /F1 11 Tf 220.0 598.2 Td (20 December 2025) Tj ET
+BT /F2 13 Tf 50.0 563.3 Td (Earnings) Tj ET
+BT /F2 11 Tf 50.0 541.4 Td (Basic Salary:) Tj ET
+BT /F1 11 Tf 220.0 541.4 Td (GBP 7,916.67 \(Annual: GBP 95,000.00\)) Tj ET
+BT /F2 13 Tf 50.0 506.5 Td (Deductions) Tj ET
+BT /F2 11 Tf 50.0 484.6 Td (Income Tax \(PAYE\):) Tj ET
+BT /F1 11 Tf 220.0 484.6 Td (GBP 2,166.67) Tj ET
+BT /F2 11 Tf 50.0 468.7 Td (National Insurance:) Tj ET
+BT /F1 11 Tf 220.0 468.7 Td (GBP 516.67) Tj ET
+BT /F2 11 Tf 50.0 452.7 Td (Pension \(5%\):) Tj ET
+BT /F1 11 Tf 220.0 452.7 Td (GBP 395.83) Tj ET
+0.4 w 50 438.8 m 562 438.8 l S
+BT /F2 11 Tf 50.0 426.8 Td (NET PAY:) Tj ET
+BT /F1 11 Tf 220.0 426.8 Td (GBP 4,837.50) Tj ET
+0.4 w 50 412.8 m 562 412.8 l S
+BT /F2 13 Tf 50.0 381.8 Td (Validation Failure Reason) Tj ET
+BT /F2 11 Tf 50.0 360.0 Td (REJECTION: Payslip is 180 days old \(limit: 90 days\)) Tj ET
+BT /F1 11 Tf 50.0 344.0 Td (This payslip was issued on 20 December 2025. KYC requirements for income verification) Tj ET
+BT /F1 11 Tf 50.0 328.1 Td (mandate that payslips must be dated within 90 days of the onboarding application date.) Tj ET
+BT /F1 11 Tf 50.0 312.1 Td (This document is 180 days old and falls outside the acceptable recency window. A payslip) Tj ET
+BT /F1 11 Tf 50.0 296.2 Td (from the last 3 months must be provided.) Tj ET
+0.4 w 50 268.2 m 562 268.2 l S
+BT /F2 11 Tf 50.0 256.2 Td (Validation Status:) Tj ET
+BT /F1 11 Tf 220.0 256.2 Td (REJECTED  - Issued 180 days ago \(maximum: 90 days\)) Tj ET
+BT /F1 9 Tf 50.0 240.3 Td (DEMO DOCUMENT - Generated for GlideGate demonstration purposes only. Not a genuine legal, financial,) Tj ET
+BT /F1 9 Tf 50.0 227.2 Td (or official document.) Tj ET
+endstream
+endobj
+
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Contents 5 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>
+endobj
+
+xref
+0 7
+0000000000 65535 f 
+0000000016 00000 n 
+0000000066 00000 n 
+0000000124 00000 n 
+0000000222 00000 n 
+0000000325 00000 n 
+0000002812 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2949
+%%EOF

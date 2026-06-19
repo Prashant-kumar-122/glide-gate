@@ -1,0 +1,78 @@
+%PDF-1.4
+%‚„œ”
+
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+
+2 0 obj
+<< /Type /Pages /Kids [6 0 R] /Count 1 >>
+endobj
+
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+
+5 0 obj
+<< /Length 2234 >>
+stream
+BT /F2 18 Tf 50.0 790.0 Td (UNITED KINGDOM PASSPORT) Tj ET
+0.4 w 50 763.9 m 562 763.9 l S
+BT /F1 9 Tf 50.0 747.9 Td (Her Majesty's Passport Office  - ICAO 9303 Travel Document) Tj ET
+BT /F2 11 Tf 50.0 718.9 Td (*** DOCUMENT EXPIRED - DO NOT ACCEPT FOR KYC ***) Tj ET
+BT /F2 13 Tf 50.0 683.9 Td (Personal Information) Tj ET
+BT /F2 11 Tf 50.0 662.0 Td (Surname:) Tj ET
+BT /F1 11 Tf 220.0 662.0 Td (MEHTA) Tj ET
+BT /F2 11 Tf 50.0 646.1 Td (Given Names:) Tj ET
+BT /F1 11 Tf 220.0 646.1 Td (AARAV) Tj ET
+BT /F2 11 Tf 50.0 630.1 Td (Date of Birth:) Tj ET
+BT /F1 11 Tf 220.0 630.1 Td (15 March 1985) Tj ET
+BT /F2 11 Tf 50.0 614.2 Td (Nationality:) Tj ET
+BT /F1 11 Tf 220.0 614.2 Td (British Citizen) Tj ET
+BT /F2 13 Tf 50.0 579.2 Td (Document Details) Tj ET
+BT /F2 11 Tf 50.0 557.4 Td (Passport Number:) Tj ET
+BT /F1 11 Tf 220.0 557.4 Td (P9876543) Tj ET
+BT /F2 11 Tf 50.0 541.4 Td (Date of Issue:) Tj ET
+BT /F1 11 Tf 220.0 541.4 Td (21 June 2014) Tj ET
+BT /F2 11 Tf 50.0 525.5 Td (Date of Expiry:) Tj ET
+BT /F1 11 Tf 220.0 525.5 Td (18 June 2024) Tj ET
+BT /F2 11 Tf 50.0 509.5 Td (Issuing Authority:) Tj ET
+BT /F1 11 Tf 220.0 509.5 Td (HM Passport Office, United Kingdom) Tj ET
+BT /F2 13 Tf 50.0 474.6 Td (Machine Readable Zone \(MRZ\)) Tj ET
+BT /F1 9 Tf 50.0 452.7 Td (P<GBRMEHTA<<AARAV<<<<<<<<<<<<<<<<<<<<<<<<<<<) Tj ET
+BT /F1 9 Tf 50.0 439.7 Td (P9876543<GBR8503152M240618<<<<<<9) Tj ET
+BT /F2 13 Tf 50.0 401.6 Td (Validation Failure Reason) Tj ET
+BT /F2 11 Tf 50.0 379.8 Td (REJECTION: Passport expired on 18 June 2024) Tj ET
+BT /F1 11 Tf 50.0 363.8 Td (This passport expired on 18 June 2024 - over 2 years ago. UK KYC regulations require) Tj ET
+BT /F1 11 Tf 50.0 347.9 Td (identity documents to be valid \(not expired\) at the time of the onboarding application.) Tj ET
+BT /F1 11 Tf 50.0 331.9 Td (This document cannot be accepted. Client must present a current, valid passport.) Tj ET
+0.4 w 50 304.0 m 562 304.0 l S
+BT /F2 11 Tf 50.0 292.0 Td (Validation Status:) Tj ET
+BT /F1 11 Tf 220.0 292.0 Td (REJECTED  - Expired identity document) Tj ET
+BT /F1 9 Tf 50.0 276.0 Td (DEMO DOCUMENT - Generated for GlideGate demonstration purposes only. Not a genuine legal, financial,) Tj ET
+BT /F1 9 Tf 50.0 263.0 Td (or official document.) Tj ET
+endstream
+endobj
+
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Contents 5 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>
+endobj
+
+xref
+0 7
+0000000000 65535 f 
+0000000016 00000 n 
+0000000066 00000 n 
+0000000124 00000 n 
+0000000222 00000 n 
+0000000325 00000 n 
+0000002612 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2749
+%%EOF
