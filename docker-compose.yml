@@ -22,34 +22,6 @@ services:
     networks:
       - glide_gate_network
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:24.0.0
-    container_name: glide_gate_keycloak
-    command: start-dev --import-realm
-    environment:
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-copskeycloke122}
-      KC_HTTP_PORT: 8080
-      KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_ENABLED: "true"
-    volumes:
-      - ./scripts/keycloak:/opt/keycloak/data/import
-      - keycloak_data:/opt/keycloak/data
-    ports:
-      - "8180:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health/ready || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    networks:
-      - glide_gate_network
-    restart: unless-stopped
-
   backend:
     build:
       context: ./backend
@@ -65,7 +37,7 @@ services:
       TEMPORAL_ENABLED: "true"
       TEMPORAL_HOST: "temporal:7233"
       # Backend reaches Keycloak via Docker-internal hostname for JWKS validation
-      KEYCLOAK_URL: "http://keycloak:8080"
+      KEYCLOAK_URL: "http://keycloak:8180"
     ports:
       - "8000:8000"
     depends_on:
@@ -152,7 +124,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.0
     container_name: glide_gate_keycloak
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
@@ -161,11 +133,21 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_HTTP_PORT: 8180
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./scripts/keycloak:/opt/keycloak/data/import
+      - keycloak_data:/opt/keycloak/data
     ports:
       - "8180:8180"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8180/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
     networks:
       - glide_gate_network
     restart: unless-stopped
