@@ -249,7 +249,13 @@ export default function ClientDocumentHub({ caseId, readOnly = false }: ClientDo
   useEffect(() => {
     if (!hasOpenedRef.current && docs && docs.length > 0) {
       hasOpenedRef.current = true
-      const withDocs = new Set(CATEGORIES.filter((cat) => (groupByCategory(docs)[cat]?.length ?? 0) > 0))
+      const grouped = groupByCategory(docs)
+      const withDocs = new Set(
+        CATEGORIES.filter((cat) => {
+          const catDocs = grouped[cat] ?? []
+          return catDocs.length > 0 && !catDocs.every((d) => d.status === 'APPROVED')
+        })
+      )
       setOpenCategories(withDocs)
     }
   }, [docs])
