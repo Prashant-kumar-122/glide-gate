@@ -90,6 +90,24 @@ async def _trigger_document_intelligence(
             logger.debug("[UploadService] Orchestration service not started; skipping DIA trigger")
             return
 
+        # Fetch client_data from the case's shared_context so the OCR agent uses
+        # real client information rather than hardcoded fallback data.
+        client_data: dict | None = None
+        try:
+            from app.models.cases import OnboardingCase
+            from sqlalchemy import select
+            async with AsyncSessionLocal() as _db:
+                result = await _db.execute(
+                    select(OnboardingCase).where(OnboardingCase.id == case_id)
+                )
+                case = result.scalar_one_or_none()
+                if case:
+                    client_data = (case.shared_context or {}).get("client_data")
+        except Exception as exc:
+            logger.warning(
+                f"[UploadService] Could not fetch client_data for case={case_id}: {exc}"
+            )
+
         classify_packet = TaskPacket(
             from_agent=AgentID.ORCHESTRATOR,
             to_agent=AgentID.DOCUMENT_INTELLIGENCE,
@@ -116,6 +134,7 @@ async def _trigger_document_intelligence(
                 "document_id": str(document_id),
                 "filename": filename,
                 "category": category,
+                "client_data": client_data,
             },
         )
         await orchestration_service.publish_task(ocr_packet)
@@ -212,15 +231,28 @@ class DocumentUploadService:
             name=f"dia-{doc.id}",
         )
 
-        # Step 5a — auto-trigger AI completeness validation so results appear
-        # in the UI without requiring a manual "Run AI Check".
-        # The explicit POST /documents/{id}/validate endpoint remains available
-        # for advisors to re-run validation on demand.
-        from app.services.validation.validation_orchestrator import run_validate_in_background
-        asyncio.create_task(
-            run_validate_in_background(doc.id),
-            name=f"validate-auto-{doc.id}",
+        # Step 5a — auto-trigger AI completeness validation only when the case has
+        # reached REVIEW stage. During INTAKE the client may not have submitted all
+        # their data yet, so shared_context.client_data is incomplete and the
+        # simulated OCR fallback would produce inaccurate results.
+        # Advisors can always re-run validation manually via POST /documents/{id}/validate.
+        from app.models.cases import OnboardingCase
+        from sqlalchemy import select
+        _stage_row = await db.execute(
+            select(OnboardingCase.current_stage).where(OnboardingCase.id == case_id)
         )
+        _current_stage = _stage_row.scalar_one_or_none()
+        if _current_stage == "REVIEW":
+            from app.services.validation.validation_orchestrator import run_validate_in_background
+            asyncio.create_task(
+                run_validate_in_background(doc.id),
+                name=f"validate-auto-{doc.id}",
+            )
+        else:
+            logger.debug(
+                f"[UploadService] Skipping auto-validation for doc={doc.id} "
+                f"(case stage={_current_stage!r}, validation only runs in REVIEW)"
+            )
 
         # Step 5b — if this is a resubmission, compute version diff asynchronously
         if parent_doc_id is not None:

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { Package, CheckCircle, AlertTriangle, Loader2, Zap } from 'lucide-react'
 import ProgressBar from '@/components/ProgressBar'
 import type { ProductTrack } from '@/lib/api'
@@ -131,12 +132,67 @@ function ProductTrackCard({ track, isFirstActivated }: ProductTrackCardProps) {
   )
 }
 
+// ── SSE activation state overlay ──────────────────────────────────────────────
+
+interface ActivationEntry {
+  state: string
+  account_number: string | null
+}
+
+function useProductActivationSSE(caseId: string | undefined) {
+  const [overrides, setOverrides] = useState<Record<string, ActivationEntry>>({})
+  const esRef = useRef<EventSource | null>(null)
+
+  useEffect(() => {
+    if (!caseId) return
+    const es = new EventSource(`/api/cases/${caseId}/events`, { withCredentials: true })
+    esRef.current = es
+
+    es.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data) as {
+          type: string
+          activations: Record<string, ActivationEntry>
+        }
+        if (msg.type === 'activation_update') {
+          setOverrides(msg.activations)
+        }
+      } catch {
+        // malformed SSE payload — ignore
+      }
+    }
+
+    return () => {
+      es.close()
+      esRef.current = null
+    }
+  }, [caseId])
+
+  return overrides
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 interface ParallelProductTracksProps {
   tracks: ProductTrack[]
   isLoading?: boolean
+  caseId?: string
 }
 
-export default function ParallelProductTracks({ tracks, isLoading }: ParallelProductTracksProps) {
+export default function ParallelProductTracks({ tracks, isLoading, caseId }: ParallelProductTracksProps) {
+  const sseActivations = useProductActivationSSE(caseId)
+
+  // Merge SSE overrides into tracks: SSE is authoritative for activation_state
+  // and account_number; other track fields come from the polled REST response.
+  const mergedTracks = tracks.map((t) => {
+    const sse = sseActivations[t.product_code]
+    if (!sse) return t
+    return {
+      ...t,
+      activation_state: sse.state as ProductTrack['activation_state'],
+      account_number:   sse.account_number,
+    }
+  })
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 gap-4">
@@ -147,7 +203,7 @@ export default function ParallelProductTracks({ tracks, isLoading }: ParallelPro
     )
   }
 
-  if (!tracks || tracks.length === 0) {
+  if (!mergedTracks || mergedTracks.length === 0) {
     return (
       <div className="border border-dashed border-gray-200 py-6 text-center dark:border-gray-700">
         <Package className="mx-auto h-6 w-6 text-gray-300 dark:text-gray-600" />
@@ -157,7 +213,7 @@ export default function ParallelProductTracks({ tracks, isLoading }: ParallelPro
   }
 
   // The first product that reached ACTIVATED is highlighted
-  const firstActivatedCode = tracks.find(
+  const firstActivatedCode = mergedTracks.find(
     (t) => t.activation_state === 'ACTIVATED'
   )?.product_code
 
@@ -165,10 +221,10 @@ export default function ParallelProductTracks({ tracks, isLoading }: ParallelPro
     <div
       className={[
         'grid gap-4',
-        tracks.length >= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1',
+        mergedTracks.length >= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1',
       ].join(' ')}
     >
-      {tracks.map((track) => (
+      {mergedTracks.map((track) => (
         <ProductTrackCard
           key={track.product_code}
           track={track}

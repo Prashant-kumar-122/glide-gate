@@ -11,11 +11,18 @@ from app.api.routers import health
 from app.api.routers import auth
 from app.api.routers import clients, cases, documents, conversations, reviews, agents, audit, notifications
 from app.api.routers.admin import llm_config, validation_prompts, checkpoint_rules
+from app.api.routers.admin import domains as admin_domains
+from app.api.routers.admin import stages as admin_stages
+from app.api.routers.admin import agents as admin_agents
+from app.api.routers.admin import products as admin_products
+from app.api.routers.admin import sla as admin_sla
+from app.api.routers.admin import personas as admin_personas
 from app.api.routers import demo
 from app.api.routers import collaboration
 from app.api.routers import sales_reviews
 from app.api.routers import tasks
 from app.api.routers import push
+from app.api.routers import domain_config
 from app.websocket.socket_server import sio  # noqa: F401
 from app.services.orchestration.agent_orchestration_service import orchestration_service
 
@@ -102,11 +109,18 @@ app.include_router(notifications.router, prefix=_prefix)
 app.include_router(llm_config.router, prefix=_prefix)
 app.include_router(validation_prompts.router, prefix=_prefix)
 app.include_router(checkpoint_rules.router, prefix=_prefix)
+app.include_router(admin_domains.router, prefix=_prefix)
+app.include_router(admin_stages.router, prefix=_prefix)
+app.include_router(admin_agents.router, prefix=_prefix)
+app.include_router(admin_products.router, prefix=_prefix)
+app.include_router(admin_sla.router, prefix=_prefix)
+app.include_router(admin_personas.router, prefix=_prefix)
 app.include_router(demo.router, prefix=_prefix)
 app.include_router(collaboration.router, prefix=_prefix)
 app.include_router(sales_reviews.router, prefix=_prefix)
 app.include_router(tasks.router, prefix=_prefix)
 app.include_router(push.router, prefix=_prefix)
+app.include_router(domain_config.router, prefix=_prefix)
 
 # Socket.IO ASGI mount
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)

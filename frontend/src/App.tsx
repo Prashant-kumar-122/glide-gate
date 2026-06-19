@@ -4,6 +4,7 @@ import { Menu, X, Sun, Moon, WifiOff, RefreshCw } from 'lucide-react'
 
 import Login from '@/routes/Login'
 import Signup from '@/routes/Signup'
+import AuthCallback from '@/routes/AuthCallback'
 
 const AdvisorWorkspace = lazy(() => import('@/routes/AdvisorWorkspace'))
 const ClientPortal     = lazy(() => import('@/routes/ClientPortal'))
@@ -24,30 +25,45 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate'
 import { useAuthInit } from '@/hooks/useAuth'
 import { usePushRefresh } from '@/hooks/usePushRefresh'
+import { useDomainConfig } from '@/hooks/useDomainConfig'
 
-const NAV_LINKS: { to: string; label: string; roles: string[] }[] = [
+// Static fallback nav links — used before domain config loads or when personas
+// have no nav_links seeded.  These match the current wealth-domain configuration.
+const _STATIC_NAV: { to: string; label: string; roles: string[] }[] = [
   { to: '/',               label: 'Workspace',      roles: ['advisor', 'sales_manager'] },
   { to: '/contact-centre', label: 'Contact Centre', roles: ['advisor', 'sales_manager'] },
   { to: '/agent-trace',    label: 'Agent Trace',    roles: ['advisor', 'sales_manager', 'admin'] },
   { to: '/admin',          label: 'Admin',          roles: ['admin'] },
 ]
 
+// Static fallback home routes — used before domain config loads.
+// Unknown domain-specific personas (e.g. deposit_ops, branch_manager) fall back to '/'.
+const _STATIC_ROLE_HOME: Record<string, string> = {
+  client:        '/client',
+  advisor:       '/',
+  sales_manager: '/',
+  admin:         '/admin',
+}
+function _staticRoleHome(role: string): string {
+  return _STATIC_ROLE_HOME[role] ?? (role === 'client' ? '/client' : role === 'admin' ? '/admin' : '/')
+}
+
 function NavBar() {
   const { user, isAuthenticated } = useAuthStore()
   const { theme, toggleTheme } = useThemeStore()
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
+  const { navLinks: domainNavLinks, roleHome: domainRoleHome } = useDomainConfig()
 
-  const ROLE_HOME: Record<string, string> = {
-    client:        '/client',
-    advisor:       '/',
-    sales_manager: '/',
-    admin:         '/admin',
-  }
-  const homeRoute = user ? (ROLE_HOME[user.role] ?? '/login') : '/login'
+  // Prefer domain config nav links; fall back to static when domain has no seeded nav_links
+  const navLinks = domainNavLinks.length ? domainNavLinks : _STATIC_NAV
+  // Prefer domain config home routes; fall back to static for unknown personas
+  const roleHome = Object.keys(domainRoleHome).length ? domainRoleHome : _STATIC_ROLE_HOME
+
+  const homeRoute = user ? (roleHome[user.role] ?? _staticRoleHome(user.role)) : '/login'
 
   const visibleLinks = isAuthenticated && user
-    ? NAV_LINKS.filter((l) => l.roles.includes(user.role))
+    ? navLinks.filter((l) => l.roles.includes(user.role))
     : []
 
   return (
@@ -211,13 +227,14 @@ export default function App() {
           </div>
         }>
           <Routes>
-            <Route path="/login"  element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/login"         element={<Login />} />
+            <Route path="/signup"        element={<Signup />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             <Route
               path="/profile"
               element={
-                <ProtectedRoute allowedRoles={['client', 'advisor', 'admin', 'sales_manager']}>
+                <ProtectedRoute audience="any">
                   <ErrorBoundary><Profile /></ErrorBoundary>
                 </ProtectedRoute>
               }
@@ -225,15 +242,17 @@ export default function App() {
             <Route
               path="/"
               element={
-                <ProtectedRoute allowedRoles={['advisor', 'sales_manager']}>
+                <ProtectedRoute audience="staff">
                   <ErrorBoundary><AdvisorWorkspace /></ErrorBoundary>
                 </ProtectedRoute>
               }
             />
+            {/* Alias for domain-configured nav_links that use /advisor/cases */}
+            <Route path="/advisor/*" element={<Navigate to="/" replace />} />
             <Route
               path="/contact-centre"
               element={
-                <ProtectedRoute allowedRoles={['advisor', 'sales_manager']}>
+                <ProtectedRoute audience="staff">
                   <ErrorBoundary><ContactCentre /></ErrorBoundary>
                 </ProtectedRoute>
               }
@@ -241,7 +260,7 @@ export default function App() {
             <Route
               path="/agent-trace"
               element={
-                <ProtectedRoute allowedRoles={['advisor', 'admin', 'sales_manager']}>
+                <ProtectedRoute audience="staff">
                   <ErrorBoundary><AgentTrace /></ErrorBoundary>
                 </ProtectedRoute>
               }
@@ -249,7 +268,7 @@ export default function App() {
             <Route
               path="/admin"
               element={
-                <ProtectedRoute allowedRoles={['admin']}>
+                <ProtectedRoute audience="admin">
                   <ErrorBoundary><AdminConfig /></ErrorBoundary>
                 </ProtectedRoute>
               }
@@ -257,7 +276,7 @@ export default function App() {
             <Route
               path="/client"
               element={
-                <ProtectedRoute allowedRoles={['client']}>
+                <ProtectedRoute audience="client">
                   <ErrorBoundary><ClientPortal /></ErrorBoundary>
                 </ProtectedRoute>
               }

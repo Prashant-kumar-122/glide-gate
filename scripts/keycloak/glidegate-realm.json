@@ -1,0 +1,117 @@
+{
+  "realm": "glidegate",
+  "enabled": true,
+  "displayName": "GlideGate",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+
+  "roles": {
+    "realm": [
+      { "name": "advisor",       "description": "Wealth advisor — full workspace access" },
+      { "name": "client",        "description": "End client — client portal access" },
+      { "name": "admin",         "description": "Platform administrator" },
+      { "name": "sales_manager", "description": "Sales manager — institutional review queue" }
+    ]
+  },
+
+  "defaultRole": {
+    "name": "client",
+    "description": "Default role assigned to new registrations"
+  },
+
+  "clients": [
+    {
+      "clientId": "glidegate-frontend",
+      "name": "GlideGate Frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://18.60.103.228:5173/*",
+        "http://18.60.103.228/*",
+        "http://localhost:5173/*",
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "post.logout.redirect.uris": "http://18.60.103.228:5173/login##http://localhost:5173/login"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "full name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-full-name-mapper",
+          "config": {
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "email",
+            "claim.name": "email",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "advisor@glide-gate.local",
+      "email": "advisor@glide-gate.local",
+      "firstName": "Demo",
+      "lastName": "Advisor",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "Advisor123!", "temporary": false }],
+      "realmRoles": ["advisor"]
+    },
+    {
+      "username": "admin@glide-gate.local",
+      "email": "admin@glide-gate.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "Admin123!", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "aarav.mehta@demo.glide-gate.local",
+      "email": "aarav.mehta@demo.glide-gate.local",
+      "firstName": "Aarav",
+      "lastName": "Mehta",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "Client123!", "temporary": false }],
+      "realmRoles": ["client"]
+    }
+  ]
+}

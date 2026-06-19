@@ -1143,3 +1143,63 @@ Complete `CHANGELOG_IMPLEMENTATION.md` for all 40 steps. Final Mermaid diagrams 
 10. Open Contact Centre → verify AI call summary visible (Criterion #6)
 11. `cd backend && pytest tests/` — all pass
 12. Confirm all 4 NFR latency targets met in `docs/nfr_baseline.md`
+
+---
+
+## CADF Framework Extension
+
+> This section documents structural additions made during the CADF framework conversion.
+> All work is on `feat/cadf-framework`. Full phase-by-phase detail is in
+> `docs/planning/CHANGELOG_IMPLEMENTATION.md` (STEP-C0 through STEP-C9) and the conversion
+> plan in `docs/planning/cadf-framework-plan.md`.
+
+### New Backend Directories
+
+| Directory | Added in | Purpose |
+|---|---|---|
+| `backend/app/domain/` | Phase 1 | `DomainDefinition`, `DomainDefinitionLoader`, `StageDispatcher` |
+| `backend/app/workflows/` | Phase 0.5 | Temporal `OnboardingWorkflow` + Activity wrappers |
+| `backend/app/agents/*/graph.py` | Phase 0.5 | LangGraph `StateGraph` per agent |
+| `backend/app/services/activation/` | Phase 4.6 | `ActivationGateService` (OPA-style criteria gate) |
+| `backend/app/services/sla/` | Phase 5 | `SLAMonitorService`, `sla_tick_activity` |
+| `backend/app/services/audit/` | Phase 2.5 | `DecisionLogService`, `AuditEventType` |
+| `backend/app/api/routers/admin/` | Phase 9 | 6 admin routers: `domains`, `stages`, `agents`, `products`, `sla`, `personas` |
+| `backend/app/api/dependencies/` | Phase 7 | `permission_guard.py` — `require_permission()` replaces `require_role()` |
+
+### New Frontend Directories / Files
+
+| File | Added in | Purpose |
+|---|---|---|
+| `frontend/src/features/admin/DomainPortal.tsx` | Phase 9 | Domain selector + lifecycle toolbar + tab routing |
+| `frontend/src/features/admin/StagesEditor.tsx` | Phase 9 | Stage / transition / task-routing editor |
+| `frontend/src/features/admin/AgentsEditor.tsx` | Phase 9 | Agent roster + prompts + skills + tool-grant editor |
+| `frontend/src/features/admin/ProductsEditor.tsx` | Phase 9 | Domain products + pipeline-step editor |
+| `frontend/src/features/admin/SLAEditor.tsx` | Phase 9 | SLA window editor |
+| `frontend/src/features/admin/SLAHealthDashboard.tsx` | Phase 9 | Live SLA health view |
+| `frontend/src/features/admin/PersonasEditor.tsx` | Phase 9 | Persona + permission checkbox editor |
+| `frontend/src/hooks/useDomainAdmin.ts` | Phase 9 | TanStack Query hooks for admin domain APIs |
+| `frontend/src/hooks/usePersonas.ts` | Phase 7 | TanStack Query hooks for persona/permission data |
+
+### New DB Migrations
+
+| Migration | Phase | Tables added |
+|---|---|---|
+| `0017_domain_tables.py` | Phase 1 | 14 `domain_*` tables (full DomainDefinition graph) |
+| `0019_decision_log.py` | Phase 2.5 | `decision_log` (hash-chained audit) |
+| `0020_domain_products.py` | Phase 4 | `domain_products`, `domain_product_pipeline` |
+| `0021_activation_gate.py` | Phase 4.6 | `product_activation_criteria` |
+| `0022_sla_tables.py` | Phase 5 | `domain_stage_slas`, `case_sla_tracking` |
+| `0023_skill_tool_grants.py` | Phase 6 | `domain_agent_skills`, `domain_agent_tool_grants` |
+| `0024_personas.py` | Phase 7 | `domain_personas`, `domain_permissions`, `user_personas`; `domain_agent_roster.status` col |
+| `0025_loosen_constraints.py` | Phase 8 | Drops wealth CHECK constraints; adds `onboarding_cases.domain_code` FK |
+
+### Architecture Changes
+
+| Aspect | Before CADF | After CADF |
+|---|---|---|
+| Orchestration | asyncio `BaseAgent` + `AgentEventBus` | Temporal Workflows + LangGraph StateGraph |
+| Stage routing | 150-line `if/elif` in `orchestrator_agent.py` | `StageDispatcher` reads `domain_stages`/`task_routing` rows |
+| Roles / permissions | `users.role` CHECK ENUM + `require_role()` | `domain_personas` DB rows + `require_permission(scope)` |
+| Audit log | Plain `event_logs` rows | Hash-chained `decision_log` (SHA-256 `prev_hash`) |
+| Product activation | All products wait for slowest | First-to-complete gate — independent activation per track |
+| SLA enforcement | Dead `sla_deadline` field | `SLAMonitorService` tick with configurable `warning_pct`/`escalation_pct` |

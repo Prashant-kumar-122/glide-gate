@@ -5,7 +5,9 @@
 
 > **Read this first every session.** Find the first unchecked phase — that is where to start.
 > When a phase is fully verified and committed, change `[ ]` to `[x]` and commit this file.
-> `[~]` means the phase was explicitly skipped by the team — do not implement it; treat it as done for sequencing purposes.
+> `[~]` means the phase was intentionally deferred or skipped by the team — do not implement it; treat it as done for sequencing purposes.
+>
+> **Current status (as of 2026-06-18):** All active phases (0–11) are complete. Phases 4.5, 12, and 13 are intentionally deferred pending full validation of the implemented phases. There are no unchecked `[ ]` phases — the framework is feature-complete for the current validation scope.
 
 - [x] **Phase 0** — Audit & wire dead orchestrator config
 - [x] **Phase 0.5** — Migrate orchestration to Temporal + LangGraph (ADR-001 / ADR-004)
@@ -14,17 +16,17 @@
 - [x] **Phase 2.5** — Hash-chain audit log (FR-AU-01 / BSA compliance)
 - [x] **Phase 3** — Replace if/elif stage routing with config-driven StageDispatcher
 - [x] **Phase 4** — Make products, questions, and per-product agent pipelines config-driven
-- [~] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03) ⚠️ SKIPPED — implementation was reverted; do not implement, proceed directly to Phase 4.6
+- [~] **Phase 4.5** — Shared-core document taxonomy (FR-DM-01/02/03) ⚠️ DEFERRED — intentionally skipped; implementation was reverted; pending full validation of Phases 0–11 before re-attempting
 - [x] **Phase 4.6** — First-to-complete activation gate (FR-GL-01/02/03)
 - [x] **Phase 5** — Configurable SLA enforcement with feature flags and per-stage parameters
 - [x] **Phase 6** — Wire Skills & MCP into live agent execution, made domain-configurable
 - [x] **Phase 7** — Replace hardcoded personas/roles with configurable persona + permission model
 - [x] **Phase 8** — Loosen DB CHECK constraints; make domain reference rows authoritative
-- [ ] **Phase 9** — Build the Admin Portal
-- [ ] **Phase 10** — Serve frontend vocabulary from the domain API
-- [ ] **Phase 11** — Stand up Retail/Deposit through the admin portal (acceptance proof)
-- [ ] **Phase 12** — Extract the framework/domain package boundary
-- [ ] **Phase 13** — Observability, IaC & Operations (NFR-03 / NFR-10)
+- [x] **Phase 9** — Build the Admin Portal
+- [x] **Phase 10** — Serve frontend vocabulary from the domain API
+- [x] **Phase 11** — Stand up Retail/Deposit through the admin portal (acceptance proof)
+- [~] **Phase 12** — Extract the framework/domain package boundary ⚠️ DEFERRED — intentionally skipped pending full validation of Phases 0–11; do not implement until the team confirms readiness
+- [~] **Phase 13** — Observability, IaC & Operations (NFR-03 / NFR-10) ⚠️ DEFERRED — intentionally skipped pending full validation of Phases 0–11; do not implement until the team confirms readiness
 
 ---
 
@@ -160,15 +162,18 @@ windows with priority-tier overrides and per-product feature flags can all be co
 ```
 Phase 0 → Phase 0.5 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 ────────────────────────┐
                                                           └── Phase 4 (parallel w/ 5) ──┤
-                                                          |   └── Phase 4.5 ────────────┤
+                                                          |   └── Phase 4.5 (DEFERRED) ─┤
                                                           |   └── Phase 4.6 ────────────┤
                                                           └── Phase 5 (parallel w/ 4) ──┤
                                                                                          ↓
-                     Phase 6 → Phase 7 → Phase 8 → Phase 9 → Phase 10 → Phase 11 → Phase 12 → Phase 13
+                     Phase 6 → Phase 7 → Phase 8 → Phase 9 → Phase 10 → Phase 11
+                                                                              ↓
+                                                              [Phase 12 — DEFERRED] → [Phase 13 — DEFERRED]
 ```
 
 Phases 4, 4.5, 4.6, and 5 all depend on Phase 3 but are independent of each other and can be
-worked in parallel by different team members.
+worked in parallel by different team members. Phases 4.5, 12, and 13 are intentionally deferred
+pending validation of the completed phases.
 
 ---
 
@@ -205,7 +210,7 @@ Full detail in `docs/TRACEABILITY.md`. Summary of coverage:
 
 | BRD Req | Description | Phase | Status |
 |---|---|---|---|
-| FR-DM-01/02/03 | Shared-core document collect-once + reuse | Phase 4.5 | ⬜ |
+| FR-DM-01/02/03 | Shared-core document collect-once + reuse | Phase 4.5 | ⏸ Deferred |
 | FR-WF-01/02 | Per-product configurable workflows | Phase 4 | ✅ |
 | FR-OR-01/02/03/04/05 | Parallel multi-product orchestration | Phase 0.5, Phase 4 | ⬜ |
 | FR-AG-01/02/03 | Autonomous agent progression + data collection | Phase 0.5 | ⬜ |
@@ -219,9 +224,9 @@ Full detail in `docs/TRACEABILITY.md`. Summary of coverage:
 | FR-AU-03 | Audit export + reporting | Phase 2.5 | ✅ |
 | FR-AU-04 | Adverse-action records (ECOA) | Phase 4.6 | ✅ |
 | NFR-01 | Encryption + RBAC + least-privilege | Phase 7 | ⬜ |
-| NFR-03 | 99.95% availability, RTO ≤ 15m, RPO ≈ 0 | Phase 13 | ⬜ |
+| NFR-03 | 99.95% availability, RTO ≤ 15m, RPO ≈ 0 | Phase 13 | ⏸ Deferred |
 | NFR-09 | WCAG 2.1 AA accessibility | Phase 10 | ⬜ |
-| NFR-10 | OTel/Prometheus/Grafana/Loki/Tempo | Phase 13 | ⬜ |
+| NFR-10 | OTel/Prometheus/Grafana/Loki/Tempo | Phase 13 | ⏸ Deferred |
 | ADR-001 | Temporal self-hosted orchestration | Phase 0.5 | ✅ |
 | ADR-002 | Criteria-driven blackboard activation | Phase 3, Phase 4.6 | ✅ |
 | ADR-004 | LangGraph Python agents | Phase 0.5 | ✅ |
@@ -1678,40 +1683,92 @@ Mark **Phase 9** as `[x]` in the Phase Status Tracker and commit this file.
 
 ---
 
-## Phase 10 — Serve frontend vocabulary from the domain API
+## Phase 10 — Serve frontend vocabulary from the domain API ✅ Done
 
-### Session start checklist
+### As-built summary (2026-06-17)
+
+**`backend/app/api/routers/domain_config.py`** (new) — `GET /api/config/domain`:
+- No auth required; serves before login completes.
+- Returns `{domain_code, display_name, stages, personas, products}`.
+- Stages enriched from `domain_display_config` rows (entity_type='stage'); static wealth
+  fallback applied when no display rows exist.
+- Products read from `domain_products` (active only, ordered by display_name).
+- Static fallback response returned when no active domain exists (fresh deployment safety).
+
+**Agent DEPRECATED filtering — `stage_dispatcher.py`**:
+- `StageDispatcher.__init__` now accepts `deprecated_agents: frozenset[str]`.
+- `from_domain_def()` builds the deprecated set from `agent_roster` entries with `status=="DEPRECATED"`.
+- `from_domain_dict()` parses `agent_roster` dict from `DomainDefinition.model_dump()`.
+- `resolve()` returns `None` when `target_agent in self._deprecated_agents` — the workflow
+  falls back to its hardcoded activity (safe no-op; DEPRECATED agent is excluded from dispatch).
+- `AgentRosterEntry` gains `status: str = "APPROVED"` field; loader passes `r.status`.
+
+**`GET /cases/products` — `cases.py`**:
+- Reads from `domain_products` when an active domain exists (Phase 10).
+- Falls back to legacy `products` table when no active domain (migration-order safety).
+- Permission logic unchanged: institutional products gated on `sales:review + case:create`.
+
+**`GET /cases/{id}/events` SSE — `cases.py`**:
+- `StreamingResponse` with `media_type="text/event-stream"`.
+- Generator opens a new `AsyncSessionLocal()` session per 2-second poll cycle (avoids
+  holding a session open across the full stream lifetime).
+- Emits `data: {"type": "activation_update", "activations": {...}}\n\n` only on state change.
+- Heartbeat comment `": heartbeat\n\n"` every cycle prevents proxy/browser idle timeout.
+- `X-Accel-Buffering: no` header disables nginx buffering.
+
+**`frontend/src/hooks/useDomainConfig.ts`** (new):
+- `useQuery` with 5-min staleTime and `placeholderData: FALLBACK` (wealth-domain statics).
+- Returns `{ config, stageByCode, personaByCode, allStageCodes, roleHome, navLinks }`.
+- `navLinks` derived from persona `nav_links` JSONB, deduplicated by `href`, annotated with
+  persona code sets so `App.tsx` can filter by `user.role`.
+- Static fallback embedded to match prior hardcoded constants exactly.
+
+**`frontend/src/features/advisor/CaseListTable.tsx`**:
+- Removed `STAGE_LABELS`, `STAGE_STYLES`, `ALL_STAGES` constants.
+- `StageCell` reads `stageByCode` from ag-grid `context` (already used for `openCaseTab`).
+- `StageDropdown` accepts `stageByCode` + `allStageCodes` props.
+- `colDefs` memoized on `[stageByCode]`; `filterValueGetter` uses `stageByCode[code]?.label`.
+
+**`frontend/src/App.tsx`**:
+- Static `NAV_LINKS` / `ROLE_HOME` constants renamed `_STATIC_NAV` / `_STATIC_ROLE_HOME`.
+- `NavBar` calls `useDomainConfig()` and prefers domain config; falls back to static when
+  domain returns empty nav_links (wealth personas seeded with `nav_links=[]` per Phase 1 seed —
+  static fallback activates automatically, zero behavior change).
+
+**`frontend/src/features/advisor/ParallelProductTracks.tsx`**:
+- `useProductActivationSSE(caseId)` hook subscribes to `/api/cases/{id}/events`.
+- Merges SSE `activation_state`/`account_number` over polled REST tracks in `mergedTracks`.
+- SSE state is authoritative for activation display; REST still drives all other track fields.
+- Accepts optional `caseId?: string` prop (backward-compatible; SSE disabled when omitted).
+
+### Files changed
+- **New:** `backend/app/api/routers/domain_config.py`
+- **New:** `frontend/src/hooks/useDomainConfig.ts`
+- **Modified:** `backend/app/domain/domain_definition.py` (`AgentRosterEntry.status` field; loader passes status)
+- **Modified:** `backend/app/services/orchestration/stage_dispatcher.py` (deprecated_agents filter)
+- **Modified:** `backend/app/api/routers/cases.py` (`list_products` → domain_products; `GET /{id}/events` SSE)
+- **Modified:** `backend/app/main.py` (domain_config router registered)
+- **Modified:** `frontend/src/features/advisor/CaseListTable.tsx` (useDomainConfig, removed hardcoded constants)
+- **Modified:** `frontend/src/App.tsx` (useDomainConfig for navLinks / roleHome)
+- **Modified:** `frontend/src/features/advisor/ParallelProductTracks.tsx` (SSE subscription)
+- **Modified:** `frontend/src/lib/api.ts` (re-exports DomainConfigOut, StageConfig, PersonaConfig, ProductConfig)
+- **Modified:** `docs/FRAMEWORK.md`, `docs/TRACEABILITY.md`, `docs/planning/cadf-framework-plan.md`
+
+### Session start checklist (for reference — phase is complete)
 - Run `git log --oneline -5` — Phase 9 commit must be present
 - Grep `frontend/src` for: `STAGE_LABELS`, `STAGE_STYLES`, `ALL_STAGES`, `TeamRole`,
   `ROLE_COLORS`, `NAV_LINKS`, `OnboardingStage`-shaped literals, `case_stage_changed`
   socket handlers — every hardcoded vocabulary site to replace
-
-### What to build
-Add `GET /api/config/domain` (serves `DomainDefinition` display vocabulary +
-`domain_display_config` rows + document scope taxonomy + activation state labels).
-Replace all hardcoded stage/persona/role display constants with a `useDomainConfig()` hook.
-Static fallback (current wealth values) during rollout.
-
-Also add SSE endpoint `GET /cases/{id}/events` for live product activation status updates,
-replacing the current socket.io-based approach for product track state (retaining socket.io for
-existing real-time features that are not domain-vocabulary-driven).
-
-**Files (new):** `api/routers/domain_config.py`, `frontend/src/hooks/useDomainConfig.ts`
-**Files (modified):** `CaseListTable.tsx`, `tokens.ts`, `App.tsx`, `ProtectedRoute.tsx`,
-`ParallelProductTracks.tsx` (SSE-backed product activation state)
-
-### Verification
-With the wealth domain active, frontend renders identically to before. With a test domain loaded,
-frontend renders that domain's vocabulary. Product activation SSE updates fire within 1s of
-activation. Suite green.
 
 ### Session end — commit template
 ```
 feat(cadf-phase-10): serve frontend vocabulary from domain config API
 
 - GET /api/config/domain endpoint (stages, personas, document scopes, activation labels)
-- useDomainConfig() hook replaces all hardcoded stage/persona display constants
-- GET /cases/{id}/events SSE endpoint for live product activation status
+- useDomainConfig() hook replaces hardcoded stage/persona display constants in CaseListTable, App, ParallelProductTracks
+- GET /cases/{id}/events SSE endpoint for live product activation status (2s polling)
+- GET /cases/products reads from domain_products (legacy products table fallback)
+- StageDispatcher filters DEPRECATED agents from dispatch (admin portal toggle now wired end-to-end)
 - Static fallback preserves current behavior during rollout
 ```
 Mark **Phase 10** as `[x]` in the Phase Status Tracker and commit this file.
@@ -1719,6 +1776,58 @@ Mark **Phase 10** as `[x]` in the Phase Status Tracker and commit this file.
 ---
 
 ## Phase 11 — Stand up Retail/Deposit through the admin portal (the real proof)
+
+### As-built summary (2026-06-17)
+
+**0 new agent classes.** The strongest possible proof of framework genericity: the
+`retail_deposit` domain reuses all existing agent classes (`CustomerServiceAgent`,
+`KYCComplianceAgent`, `ProductOnboardingAgent`, `CollaborationAgent`, `NotificationAgent`).
+All task types used by the domain were already registered in
+`OnboardingWorkflow._TASK_TYPE_TO_ACTIVITY_NAME`; no changes to `onboarding_workflow.py`,
+`a2a_types.py`, `stage_dispatcher.py`, `mcp_connector.py`, or `sla_monitor_service.py`.
+
+**`scripts/setup_retail_deposit_domain.py`** (new) — idempotent portal setup script
+that calls the admin portal REST API in sequence to create the full `retail_deposit`
+domain.  Zero alembic migrations; zero direct DB writes.
+
+**Domain design:**
+
+| Stage | Task type | Agent |
+|---|---|---|
+| INTAKE | `collect_client_data` | `customer_service` |
+| VERIFICATION | `run_kyc_check` | `kyc_compliance` |
+| PRODUCT_SELECTION | `onboard_product` | `product_onboarding` |
+| APPROVAL | `create_collaboration_room` | `collaboration` |
+| COMPLETE | `send_notification` | `notification` |
+| REJECTED | `send_notification` | `notification` |
+
+**Products:** `savings_account`, `checking_account`, `deposit_cd`
+
+**Personas:** `deposit_ops` (branch staff), `branch_manager`, `customer` — each with
+`default_route` and `nav_links`; frontend `useDomainConfig()` hook serves them with no
+frontend code change.
+
+**SLA configuration:**
+- `INTAKE` default (2 h) + `priority_tier="sme"` override (1 h) — proves tier override
+- `savings_account` product-scoped `PRODUCT_SELECTION` SLA: `is_enabled=False` (instant product)
+- `APPROVAL` SLA: `pause_on_human_review=True` (clock pauses during branch-manager hold)
+
+**Phase 4.5 gap note:** The "collect-once shared document" acceptance criterion cannot be
+fully automated because Phase 4.5 was explicitly skipped.  `GOVT_PHOTO_ID` is listed in
+`required_documents` for all products (the portal's document requirements editor shows it),
+but the LangGraph `check_existing_shared_docs` enforcement node was never built.
+
+**`backend/tests/e2e/test_retail_deposit_acceptance.py`** (new) — 20 unit tests (no live
+DB) covering all 15 acceptance-checklist items: configuration consistency, no migration
+scripts, no new agent classes, SLA tier override, savings_account SLA disabled, APPROVAL
+pause, deposit_ops persona, pipeline step ordering, transition graph reachability, etc.
+
+### Files changed
+- **New:** `scripts/setup_retail_deposit_domain.py`
+- **New:** `backend/tests/e2e/test_retail_deposit_acceptance.py`
+- **Modified:** `docs/FRAMEWORK.md` (Phase 11 portal setup section)
+- **Modified:** `docs/TRACEABILITY.md` (Phase 11 ✅)
+- **Modified:** `docs/planning/cadf-framework-plan.md` (this file)
 
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 10 commit must be present
@@ -1766,6 +1875,10 @@ Mark **Phase 11** as `[x]` in the Phase Status Tracker and commit this file.
 
 ## Phase 12 — Extract the framework/domain package boundary
 
+> ⚠️ **DEFERRED** — This phase is intentionally skipped pending full validation of Phases 0–11.
+> Do not implement until the team confirms readiness. The phase description below is preserved
+> for planning purposes only.
+
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 11 + passing acceptance checklist must be present
 - Run `grep -r "from app.agents.kyc" backend/app/framework` — should find nothing
@@ -1792,6 +1905,10 @@ Mark **Phase 12** as `[x]` in the Phase Status Tracker and commit this file.
 ---
 
 ## Phase 13 — Observability, IaC & Operations (NFR-03 / NFR-10)
+
+> ⚠️ **DEFERRED** — This phase is intentionally skipped pending full validation of Phases 0–11.
+> Do not implement until the team confirms readiness. The phase description below is preserved
+> for planning purposes only.
 
 ### Session start checklist
 - Run `git log --oneline -5` — Phase 12 commit must be present

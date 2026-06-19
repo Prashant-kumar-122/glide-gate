@@ -1,6 +1,14 @@
 import axios from 'axios'
 import type { DocumentStatus } from '@/design-system/tokens'
 import { useAuthStore } from '@/store/authStore'
+import {
+  getStoredToken,
+  getStoredRefreshToken,
+  storeToken,
+  storeRefreshToken,
+  refreshKeycloakToken,
+  keycloakLogout,
+} from '@/lib/authConfig'
 
 export const api = axios.create({
   baseURL: '/api',
@@ -15,6 +23,12 @@ function getCsrfToken(): string | undefined {
 }
 
 api.interceptors.request.use((config) => {
+  // Keycloak Bearer token (takes precedence over httpOnly cookie for SSO sessions)
+  const kcToken = getStoredToken()
+  if (kcToken && !config.headers['Authorization']) {
+    config.headers['Authorization'] = `Bearer ${kcToken}`
+  }
+
   const method = config.method?.toLowerCase()
   if (method && ['post', 'put', 'patch', 'delete'].includes(method)) {
     const csrf = getCsrfToken()
@@ -25,12 +39,48 @@ api.interceptors.request.use((config) => {
 
 const AUTH_PATHS = ['/login', '/signup']
 
+// Serialises concurrent refresh calls so only one token exchange happens at a time.
+let _refreshPromise: Promise<string> | null = null
+
+async function _doRefresh(): Promise<string> {
+  if (_refreshPromise) return _refreshPromise
+  _refreshPromise = refreshKeycloakToken()
+    .then(({ access_token, refresh_token }) => {
+      storeToken(access_token)
+      storeRefreshToken(refresh_token)
+      return access_token
+    })
+    .finally(() => { _refreshPromise = null })
+  return _refreshPromise
+}
+
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    // Only force-navigate on 401 when the user is not already on an auth page.
-    // Without this guard, useAuthInit's startup /auth/me call (expected to 401
-    // for unauthenticated users) causes a hard-reload loop in incognito/fresh sessions.
+  async (err) => {
+    const original = err.config as typeof err.config & { _retry?: boolean }
+
+    // Attempt silent token refresh on 401 for Keycloak sessions only.
+    // _retry flag prevents an infinite loop if the retried request also 401s.
+    if (
+      err?.response?.status === 401 &&
+      !original._retry &&
+      !AUTH_PATHS.includes(window.location.pathname) &&
+      getStoredRefreshToken()
+    ) {
+      original._retry = true
+      try {
+        const newToken = await _doRefresh()
+        original.headers = original.headers ?? {}
+        original.headers['Authorization'] = `Bearer ${newToken}`
+        return api(original)
+      } catch {
+        useAuthStore.getState().clearAuth()
+        keycloakLogout()
+        return Promise.reject(err)
+      }
+    }
+
+    // No refresh token (local auth) or retry already attempted — go to login.
     if (
       err?.response?.status === 401 &&
       !AUTH_PATHS.includes(window.location.pathname)
@@ -359,6 +409,11 @@ export interface ProductOut {
   name: string
   description: string | null
 }
+
+// ── Domain config types (Phase 10) ────────────────────────────────────────────
+// Canonical types live in useDomainConfig.ts; re-exported here for consumers
+// that import API types from this module.
+export type { DomainConfigOut, StageConfig, PersonaConfig, ProductConfig } from '@/hooks/useDomainConfig'
 
 export interface AdvisorOut {
   id: string

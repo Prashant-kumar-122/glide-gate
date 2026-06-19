@@ -113,9 +113,27 @@ class ValidationOrchestrator:
                         f"doc={document_id}: {exc}"
                     )
 
+            # Fetch client_data from the case's shared_context so the simulated
+            # fallback path uses the real client's information rather than hardcoded data.
+            client_data: dict | None = None
+            try:
+                from app.models.cases import OnboardingCase
+                case_result = await db.execute(
+                    select(OnboardingCase).where(OnboardingCase.id == doc.case_id)
+                )
+                case = case_result.scalar_one_or_none()
+                if case:
+                    client_data = (case.shared_context or {}).get("client_data")
+            except Exception as exc:
+                logger.warning(
+                    f"[ValidationOrchestrator] Could not fetch client_data for "
+                    f"case={doc.case_id}: {exc}"
+                )
+
             logger.debug(
                 f"[ValidationOrchestrator] Running OCR for doc={document_id} "
-                f"file_bytes={'present' if file_bytes else 'absent (will simulate)'}"
+                f"file_bytes={'present' if file_bytes else 'absent (will simulate)'} "
+                f"client_data={'present' if client_data else 'absent'}"
             )
             try:
                 ocr_result = await _ocr.extract(
@@ -123,6 +141,7 @@ class ValidationOrchestrator:
                     filename=doc.original_filename or "document",
                     category=doc.category,  # type: ignore[arg-type]
                     file_bytes=file_bytes,
+                    client_data=client_data,
                 )
                 doc.ocr_result = ocr_result.model_dump(mode="json")
             except Exception as exc:

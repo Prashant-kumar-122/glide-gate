@@ -88,17 +88,25 @@ class StageDispatcher:
         self,
         task_routing: dict[str, dict[str, Any]],
         stages: dict[str, dict[str, Any]],
+        deprecated_agents: frozenset[str] | None = None,
     ) -> None:
         # stage_code → {task_type, target_agent, priority, payload_template, ...}
         self._task_routing = task_routing
         # stage_code → {is_human_pending, is_terminal}
         self._stages = stages
+        # agent_ids whose status == "DEPRECATED" — resolve() returns None for these
+        self._deprecated_agents: frozenset[str] = deprecated_agents or frozenset()
 
     # ── Constructors ──────────────────────────────────────────────────────────
 
     @classmethod
     def from_domain_def(cls, domain_def: "DomainDefinition") -> "StageDispatcher":
         """Construct from a loaded DomainDefinition.  Use in tests and non-sandbox code."""
+        deprecated = frozenset(
+            entry.agent_id
+            for entry in domain_def.agent_roster.values()
+            if entry.status == "DEPRECATED"
+        )
         return cls(
             task_routing={
                 code: {
@@ -119,6 +127,7 @@ class StageDispatcher:
                 }
                 for code, spec in domain_def.stages.items()
             },
+            deprecated_agents=deprecated,
         )
 
     @classmethod
@@ -132,7 +141,14 @@ class StageDispatcher:
         # task_routing is stored as dict[stage_code → StageActionSpec-dict] in model_dump()
         raw_routing = data.get("task_routing", {})
         raw_stages = data.get("stages", {})
-        return cls(task_routing=raw_routing, stages=raw_stages)
+        # agent_roster is dict[agent_id → {agent_id, agent_class, status}]
+        raw_roster: dict[str, Any] = data.get("agent_roster", {})
+        deprecated = frozenset(
+            agent_id
+            for agent_id, entry in raw_roster.items()
+            if entry.get("status") == "DEPRECATED"
+        )
+        return cls(task_routing=raw_routing, stages=raw_stages, deprecated_agents=deprecated)
 
     # ── Resolution ────────────────────────────────────────────────────────────
 
@@ -151,9 +167,12 @@ class StageDispatcher:
         activity_name = _TASK_TYPE_TO_ACTIVITY_NAME.get(task_type)
         if activity_name is None:
             return None
+        target_agent = spec_dict.get("target_agent", "")
+        if target_agent in self._deprecated_agents:
+            return None
         action_spec = SimpleNamespace(
             stage_code=stage_code,
-            target_agent=spec_dict.get("target_agent", ""),
+            target_agent=target_agent,
             task_type=task_type,
             priority=spec_dict.get("priority", "NORMAL"),
             payload_template=spec_dict.get("payload_template", {}),

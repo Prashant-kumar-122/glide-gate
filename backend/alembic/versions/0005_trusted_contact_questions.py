@@ -43,6 +43,15 @@ def _esc(s: str) -> str:
 def upgrade() -> None:
     conn = op.get_bind()
 
+    # On a fresh database the questionnaire row is created by the seed script,
+    # not by any prior migration. Skip data inserts here; the seed will handle them.
+    questionnaire_exists = conn.execute(sa.text(
+        f"SELECT 1 FROM onboarding_questionnaires WHERE id = '{_QUESTIONNAIRE_ID}' LIMIT 1"
+    )).fetchone()
+
+    if not questionnaire_exists:
+        return
+
     # Shift existing questions at order_index >= 12 up by 4, but only if the
     # trusted-contact questions aren't already present (e.g. inserted by the seed).
     already_seeded = conn.execute(sa.text(

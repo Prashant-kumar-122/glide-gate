@@ -151,7 +151,6 @@ export function useProducts() {
   return useQuery<ProductOut[]>({
     queryKey: qk.products,
     queryFn: () => api.get('/cases/products').then((r) => r.data),
-    staleTime: 5 * 60_000,
   })
 }
 

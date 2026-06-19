@@ -24,6 +24,7 @@ if str(_backend_dir) not in sys.path:
 _seeds_dir = Path(__file__).parent
 
 from app.database import AsyncSessionLocal  # noqa: E402 — after sys.path setup
+import app.models  # noqa: F401, E402 — registers all model classes in SQLAlchemy metadata
 from sqlalchemy import text  # noqa: E402
 
 
@@ -63,6 +64,7 @@ _ALL_TABLES = [
     "client_addresses",
     "client_profiles",
     "clients",
+    "user_personas",
     "users",
     "products",
     "agents",

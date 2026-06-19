@@ -57,97 +57,212 @@ Rules:
 - Do not add commentary outside the JSON object
 """
 
-_CATEGORY_TEMPLATES: dict[str, dict[str, Any]] = {
+def _build_simulated_templates(client_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Build per-category OCR templates from the case's shared_context.client_data."""
+    first = client_data.get("first_name", "")
+    last = client_data.get("last_name", "")
+    full_name = f"{first} {last}".strip() or "Unknown Client"
+
+    dob = client_data.get("date_of_birth", "")
+    id_number = client_data.get("id_number", "")
+    id_expiry = client_data.get("id_expiration_date", "")
+    id_type = client_data.get("id_type", "Passport")
+    nationality = client_data.get(
+        "country_of_citizenship", client_data.get("tax_residency_country", "")
+    )
+
+    tin = (
+        client_data.get("social_security_number")
+        or client_data.get("large_trader_id_number")
+        or ""
+    )
+    tax_residency = client_data.get("tax_residency_country", "")
+    pep_raw = str(client_data.get("is_senior_political_figure", "No")).lower()
+    pep = "No" if pep_raw in ("no", "false", "0", "") else "Yes"
+
+    occupation = client_data.get("occupation", "")
+    employer = client_data.get("employer_name", "")
+    income = client_data.get("annual_income", "")
+    source_of_funds = client_data.get("source_of_funds", "")
+    country = client_data.get("country", "")
+
+    address = ", ".join(
+        p for p in [
+            client_data.get("address_line_1", ""),
+            client_data.get("city", ""),
+            client_data.get("state", ""),
+            client_data.get("postal_code", ""),
+            country,
+        ]
+        if p
+    )
+
+    return {
+        "identity": {
+            "raw": (
+                f"{id_type.upper()}\nSurname: {last.upper()}\nGiven Names: {first.upper()}\n"
+                f"Nationality: {nationality}\nDate of Birth: {dob}\n"
+                f"Date of Expiry: {id_expiry}\n{id_type} No: {id_number}\n"
+                f"Address: {address}\nPhoto: Present\n"
+            ),
+            "fields": [
+                ("full_name", full_name),
+                ("nationality", nationality),
+                ("date_of_birth", dob),
+                ("document_number", id_number),
+                ("id_number", id_number),
+                ("expiry_date", id_expiry),
+                ("photo", "Present"),
+            ],
+        },
+        "financial": {
+            "raw": (
+                f"ACCOUNT STATEMENT\nAccount Holder: {full_name}\n"
+                f"Statement Period: Recent 3 months\nClosing Balance: Present\n"
+                f"Bank: Financial Institution\n"
+                f"Annual Income: {income}\nSource of Funds: {source_of_funds}\n"
+            ),
+            "fields": [
+                ("account_holder", full_name),
+                ("statement_period", "Recent 3 months"),
+                ("closing_balance", "Present"),
+                ("bank_name", "Financial Institution"),
+                ("annual_income", income),
+                ("source_of_funds", source_of_funds),
+            ],
+        },
+        "legal": {
+            "raw": (
+                f"LEGAL DOCUMENT\nGrantor / Donor: {full_name}\n"
+                f"Attorney / Trustee: Present\nEstablishment Date: Present\n"
+                f"Governing Jurisdiction: {country}\nAddress: {address}\n"
+            ),
+            "fields": [
+                ("full_name", full_name),
+                ("grantor", full_name),
+                ("attorney", "Present"),
+                ("establishment_date", "Present"),
+                ("governing_jurisdiction", country),
+            ],
+        },
+        "compliance": {
+            "raw": (
+                f"KYC / COMPLIANCE FORM\nClient Name: {full_name}\n"
+                f"Date of Birth: {dob}\nTax Residency: {tax_residency}\nTIN: {tin}\n"
+                f"Politically Exposed Person: {pep}\n"
+                f"Occupation: {occupation}\nEmployer: {employer}\n"
+                f"Source of Funds: {source_of_funds}\n"
+                f"Date Completed: Present\nSignature: Present\n"
+            ),
+            "fields": [
+                ("client_name", full_name),
+                ("tax_residency", tax_residency),
+                ("tin", tin),
+                ("pep", pep),
+                ("occupation", occupation),
+                ("employer", employer),
+                ("source_of_funds", source_of_funds),
+                ("date_completed", "Present"),
+                ("signature", "Present"),
+            ],
+        },
+        "insurance": {
+            "raw": (
+                f"INSURANCE POLICY\nPolicyholder: {full_name}\n"
+                f"Policy Number: Present\nSum Assured: Present\n"
+                f"Insurer: Present\nPolicy Expiry: Present\n"
+            ),
+            "fields": [
+                ("policyholder", full_name),
+                ("policy_number", "Present"),
+                ("sum_assured", "Present"),
+                ("insurer", "Present"),
+                ("expiry_date", "Present"),
+            ],
+        },
+        "entity": {
+            "raw": (
+                f"COMPANY REGISTRATION\nCompany Name: Present\n"
+                f"Registration Number: Present\nRegistration Date: Present\n"
+                f"Status: Active\nDirectors: {full_name}\nBeneficial Owners: {full_name}\n"
+            ),
+            "fields": [
+                ("company_name", "Present"),
+                ("registration_number", "Present"),
+                ("registration_date", "Present"),
+                ("status", "Active"),
+                ("directors", full_name),
+                ("beneficial_owners", full_name),
+            ],
+        },
+        "unknown": {
+            "raw": "Document content could not be classified.",
+            "fields": [],
+        },
+    }
+
+
+# Fallback templates used when no client_data is available (e.g. unit tests,
+# direct agent calls that don't carry a case context).
+_FALLBACK_TEMPLATES: dict[str, dict[str, Any]] = {
     "identity": {
-        "raw": (
-            "PASSPORT\nSurname: MEHTA\nGiven Names: AARAV KUMAR\n"
-            "Nationality: INDIAN\nDate of Birth: 15 JAN 1985\n"
-            "Place of Birth: MUMBAI, INDIA\nDate of Issue: 10 MAR 2020\n"
-            "Date of Expiry: 09 MAR 2030\nPassport No: J8342910\n"
-            "Photo: Present\n"
-        ),
+        "raw": "IDENTITY DOCUMENT\nFull Name: Present\nDate of Birth: Present\nDocument Number: Present\nExpiry Date: Present\nNationality: Present\nPhoto: Present\n",
         "fields": [
-            ("full_name", "Aarav Kumar Mehta"),
-            ("nationality", "Indian"),
-            ("date_of_birth", "15 Jan 1985"),
-            ("document_number", "J8342910"),
-            ("issue_date", "10 Mar 2020"),
-            ("expiry_date", "09 Mar 2030"),
+            ("full_name", "Present"),
+            ("date_of_birth", "Present"),
+            ("document_number", "Present"),
+            ("expiry_date", "Present"),
+            ("nationality", "Present"),
             ("photo", "Present"),
         ],
     },
     "financial": {
-        "raw": (
-            "ACCOUNT STATEMENT\nAccount Holder: Aarav Kumar Mehta\n"
-            "Account Number: ****-****-****-4821\nStatement Period: 01 Jan 2025 – 31 Mar 2025\n"
-            "Opening Balance: SGD 125,430.00\nClosing Balance: SGD 148,960.50\n"
-            "Total Credits: SGD 47,250.00\nTotal Debits: SGD 23,719.50\n"
-            "Bank: DBS Bank Limited\n"
-        ),
+        "raw": "FINANCIAL DOCUMENT\nAccount Holder: Present\nStatement Period: Present\nClosing Balance: Present\nBank: Present\n",
         "fields": [
-            ("account_holder", "Aarav Kumar Mehta"),
-            ("account_number", "****-****-****-4821"),
-            ("period_from", "01 Jan 2025"),
-            ("period_to", "31 Mar 2025"),
-            ("closing_balance", "SGD 148,960.50"),
-            ("bank_name", "DBS Bank Limited"),
+            ("account_holder", "Present"),
+            ("statement_period", "Present"),
+            ("closing_balance", "Present"),
+            ("bank_name", "Present"),
         ],
     },
     "legal": {
-        "raw": (
-            "TRUST DEED\nTrust Name: Mehta Family Trust\nTrustee: Aarav Kumar Mehta\n"
-            "Beneficiaries: Priya Mehta, Arjun Mehta\nEstablishment Date: 05 Feb 2018\n"
-            "Governing Law: Singapore\nRegistration Number: T18TT12345A\n"
-        ),
+        "raw": "LEGAL DOCUMENT\nGrantor: Present\nAttorney: Present\nEstablishment Date: Present\nGoverning Jurisdiction: Present\n",
         "fields": [
-            ("trust_name", "Mehta Family Trust"),
-            ("trustee", "Aarav Kumar Mehta"),
-            ("beneficiary", "Priya Mehta, Arjun Mehta"),
-            ("establishment_date", "05 Feb 2018"),
-            ("registration_number", "T18TT12345A"),
+            ("grantor", "Present"),
+            ("attorney", "Present"),
+            ("establishment_date", "Present"),
+            ("governing_jurisdiction", "Present"),
         ],
     },
     "compliance": {
-        "raw": (
-            "KYC FORM\nClient Name: Aarav Kumar Mehta\nDate of Birth: 15 Jan 1985\n"
-            "Tax Residency: Singapore\nTIN: S1234567D\n"
-            "Politically Exposed Person: No\nUSA Person: No\nDate Completed: 15 May 2025\n"
-        ),
+        "raw": "COMPLIANCE FORM\nClient Name: Present\nTax Residency: Present\nTIN: Present\nPEP: No\nDate Completed: Present\nSignature: Present\n",
         "fields": [
-            ("client_name", "Aarav Kumar Mehta"),
-            ("tax_residency", "Singapore"),
-            ("tin", "S1234567D"),
+            ("client_name", "Present"),
+            ("tax_residency", "Present"),
+            ("tin", "Present"),
             ("pep", "No"),
-            ("date_completed", "15 May 2025"),
+            ("date_completed", "Present"),
+            ("signature", "Present"),
         ],
     },
     "insurance": {
-        "raw": (
-            "LIFE INSURANCE POLICY\nPolicyholder: Aarav Kumar Mehta\nPolicy Number: LI-2022-884321\n"
-            "Sum Assured: SGD 1,000,000\nAnnual Premium: SGD 8,400\n"
-            "Commencement Date: 01 Jul 2022\nExpiry Date: 30 Jun 2042\nInsurer: Great Eastern Life\n"
-        ),
+        "raw": "INSURANCE POLICY\nPolicyholder: Present\nPolicy Number: Present\nSum Assured: Present\nInsurer: Present\nExpiry Date: Present\n",
         "fields": [
-            ("policyholder", "Aarav Kumar Mehta"),
-            ("policy_number", "LI-2022-884321"),
-            ("sum_assured", "SGD 1,000,000"),
-            ("expiry_date", "30 Jun 2042"),
-            ("insurer", "Great Eastern Life"),
+            ("policyholder", "Present"),
+            ("policy_number", "Present"),
+            ("sum_assured", "Present"),
+            ("insurer", "Present"),
+            ("expiry_date", "Present"),
         ],
     },
     "entity": {
-        "raw": (
-            "COMPANY REGISTRATION\nCompany Name: Mehta Ventures Pte. Ltd.\n"
-            "UEN: 202012345K\nRegistration Date: 12 Jun 2020\nStatus: Live\n"
-            "Registered Address: 1 Raffles Place, #40-01, Singapore 048616\n"
-            "Directors: Aarav Kumar Mehta\nShareholding: Aarav Kumar Mehta 100%\n"
-        ),
+        "raw": "ENTITY DOCUMENT\nCompany Name: Present\nRegistration Number: Present\nRegistration Date: Present\nStatus: Active\nDirectors: Present\n",
         "fields": [
-            ("company_name", "Mehta Ventures Pte. Ltd."),
-            ("uen", "202012345K"),
-            ("registration_date", "12 Jun 2020"),
-            ("status", "Live"),
-            ("directors", "Aarav Kumar Mehta"),
+            ("company_name", "Present"),
+            ("registration_number", "Present"),
+            ("registration_date", "Present"),
+            ("status", "Active"),
+            ("directors", "Present"),
         ],
     },
     "unknown": {
@@ -231,6 +346,7 @@ class OcrExtractor:
         filename: str,
         category: DocumentCategory,
         file_bytes: bytes | None = None,
+        client_data: dict[str, Any] | None = None,
     ) -> OcrResult:
         if file_bytes:
             try:
@@ -240,7 +356,7 @@ class OcrExtractor:
                     f"[OcrExtractor] LLM extraction failed for {filename}: {exc!r}; "
                     "falling back to simulated"
                 )
-        return await self._simulated_extract(document_id, filename, category)
+        return await self._simulated_extract(document_id, filename, category, client_data)
 
     # ── Real LLM extraction ───────────────────────────────────────────────────
 
@@ -382,11 +498,17 @@ class OcrExtractor:
         document_id: UUID | None,
         filename: str,
         category: DocumentCategory,
+        client_data: dict[str, Any] | None = None,
     ) -> OcrResult:
         latency = random.uniform(0.1, 0.6)
         await asyncio.sleep(latency)
 
-        template = _CATEGORY_TEMPLATES.get(category, _CATEGORY_TEMPLATES["unknown"])
+        templates = (
+            _build_simulated_templates(client_data)
+            if client_data
+            else _FALLBACK_TEMPLATES
+        )
+        template = templates.get(category, templates["unknown"])
         raw_text: str = template["raw"]
 
         rng = random.Random(str(document_id) + filename)

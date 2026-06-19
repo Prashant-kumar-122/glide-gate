@@ -360,6 +360,41 @@ async def persist_stage_activity(input: dict[str, Any]) -> None:
 
     await socket_emitter.case_stage_changed(case_id_str, {"stage": stage, "case_id": case_id_str})
 
+    # When the case enters REVIEW, trigger AI completeness validation for every
+    # document that was uploaded during INTAKE. client_data in shared_context is
+    # now guaranteed to be complete, so the OCR simulated fallback (and LLM path)
+    # will produce accurate, client-specific results.
+    if stage == "REVIEW":
+        import asyncio
+
+        from sqlalchemy import select
+
+        from app.models.documents import Document
+        from app.services.validation.validation_orchestrator import run_validate_in_background
+
+        try:
+            async with AsyncSessionLocal() as db:
+                rows = await db.execute(
+                    select(Document.id).where(Document.case_id == UUID(case_id_str))
+                )
+                doc_ids = rows.scalars().all()
+
+            for doc_id in doc_ids:
+                asyncio.create_task(
+                    run_validate_in_background(doc_id),
+                    name=f"validate-review-{doc_id}",
+                )
+
+            activity.logger.info(
+                f"[persist_stage_activity] Queued validation for {len(doc_ids)} document(s) "
+                f"on REVIEW entry for case={case_id_str}"
+            )
+        except Exception as exc:
+            activity.logger.warning(
+                f"[persist_stage_activity] Failed to queue document validations "
+                f"for case={case_id_str}: {exc}"
+            )
+
 
 @activity.defn(name="fraud_screening_activity")
 async def fraud_screening_activity(state: OnboardingStateDict) -> OnboardingStateDict:

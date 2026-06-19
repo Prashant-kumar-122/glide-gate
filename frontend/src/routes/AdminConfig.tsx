@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Settings, Sliders, FileText, Shield } from 'lucide-react'
+import { Settings, Sliders, FileText, Shield, LayoutGrid } from 'lucide-react'
 import LLMProviderConfig from '@/features/admin/LLMProviderConfig'
 import DeterministicControls from '@/features/admin/DeterministicControls'
 import ValidationPromptEditor from '@/features/admin/ValidationPromptEditor'
 import CheckpointRulesEditor from '@/features/admin/CheckpointRulesEditor'
+import DomainPortal from '@/features/admin/DomainPortal'
 
 const TABS = [
+  { id: 'domain', label: 'Domain Portal', shortLabel: 'Domain', icon: LayoutGrid },
   { id: 'provider', label: 'LLM Provider', shortLabel: 'LLM', icon: Settings },
   { id: 'deterministic', label: 'Deterministic Controls', shortLabel: 'Controls', icon: Sliders },
   { id: 'prompts', label: 'Validation Prompts', shortLabel: 'Prompts', icon: FileText },
@@ -15,7 +17,7 @@ const TABS = [
 type TabId = (typeof TABS)[number]['id']
 
 export default function AdminConfig() {
-  const [active, setActive] = useState<TabId>('provider')
+  const [active, setActive] = useState<TabId>('domain')
 
   return (
     <div className="flex h-[calc(100vh-48px)] flex-col">
@@ -23,7 +25,7 @@ export default function AdminConfig() {
       <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-3 sm:px-6 sm:py-4 dark:border-gray-700 dark:bg-gray-800">
         <h1 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Admin Configuration</h1>
         <p className="mt-0.5 text-[11px] text-gray-400">
-          LLM provider, deterministic controls, validation prompts, and checkpoint rules
+          Domain portal, LLM provider, deterministic controls, validation prompts, and checkpoint rules
         </p>
       </div>
 
@@ -75,13 +77,19 @@ export default function AdminConfig() {
           ))}
         </nav>
 
-        {/* Content area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          {active === 'provider' && <LLMProviderConfig />}
-          {active === 'deterministic' && <DeterministicControls />}
-          {active === 'prompts' && <ValidationPromptEditor />}
-          {active === 'rules' && <CheckpointRulesEditor />}
-        </div>
+        {/* Content area — Domain Portal fills the full pane; others scroll */}
+        {active === 'domain' ? (
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <DomainPortal />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+            {active === 'provider' && <LLMProviderConfig />}
+            {active === 'deterministic' && <DeterministicControls />}
+            {active === 'prompts' && <ValidationPromptEditor />}
+            {active === 'rules' && <CheckpointRulesEditor />}
+          </div>
+        )}
       </div>
     </div>
   )
