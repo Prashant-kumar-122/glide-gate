@@ -351,7 +351,7 @@ export default function OnboardingFormView({
                 onClick={() => toggleSection(sectionKey)}
                 className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 transition-colors hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700"
               >
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="text-xs font-semibold text-gray-500">
                   {sectionTitle(sectionKey)}
                 </h3>
                 <div className="flex items-center gap-2">
@@ -369,7 +369,7 @@ export default function OnboardingFormView({
                     <div key={question_key} className="group px-4 py-3">
                       {/* Label row */}
                       <div className="mb-1 flex items-center justify-between">
-                        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        <p className="text-[10px] font-medium text-gray-400">
                           {label}
                         </p>
                         {!isEditing && !readOnly && !NON_EDITABLE_KEYS.has(question_key) && (

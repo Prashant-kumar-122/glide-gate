@@ -25,7 +25,7 @@ from app.agents.base.a2a_types import (
 # ── Temporal configuration ────────────────────────────────────────────────────
 
 _TEMPORAL_HOST = os.environ.get("TEMPORAL_HOST", "localhost:7233")
-_TEMPORAL_ENABLED = os.environ.get("TEMPORAL_ENABLED", "false").lower() == "true"
+_TEMPORAL_ENABLED = os.environ.get("TEMPORAL_ENABLED", "true").lower() == "true"
 _TASK_QUEUE = "onboarding"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

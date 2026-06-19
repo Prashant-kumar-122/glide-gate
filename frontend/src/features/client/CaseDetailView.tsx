@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText, ClipboardList, BadgeCheck } from 'lucide-react'
-import { useCaseProgress, useQuestionnaireSchema, useCollectedFields, useAccount } from '@/hooks/useDocuments'
+import { ArrowLeft, AlertCircle, FileText, ClipboardList, Check, ChevronDown, Package } from 'lucide-react'
+import { useCaseProgress, useQuestionnaireSchema, useCollectedFields } from '@/hooks/useDocuments'
 import ClientDocumentHub from '@/features/client/ClientDocumentHub'
 import OnboardingFormView from '@/features/client/OnboardingFormView'
+import ParallelProductTracks from '@/features/advisor/ParallelProductTracks'
 
 // Retail:        Application → Documents → KYC Review → Account Setup → Complete
 // Institutional: Application → Documents → Sales Review → KYC Review → Account Setup → Complete
@@ -25,7 +26,7 @@ function formatProductNames(products: string[]): string {
     .join(' · ')
 }
 
-type Tab = 'application' | 'documents'
+type Tab = 'products' | 'application' | 'documents'
 
 interface Props {
   caseId: string
@@ -33,28 +34,32 @@ interface Props {
 }
 
 export default function CaseDetailView({ caseId, onBack }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('application')
+  const [activeTab, setActiveTab] = useState<Tab>('products')
+  const [mobileExpanded, setMobileExpanded] = useState(false)
 
   const { data: summary, isLoading } = useCaseProgress(caseId)
   const { data: schemaData, isLoading: schemaLoading } = useQuestionnaireSchema(caseId)
   const { data: collectedData, isLoading: collectedLoading } = useCollectedFields(caseId)
-  const { data: account } = useAccount(caseId, summary?.current_stage === 'COMPLETE')
+
 
   const isInstitutional = summary?.is_institutional ?? false
+  const isEscalated     = summary?.escalated ?? false
   const STAGES: readonly string[] = isInstitutional ? STAGES_INSTITUTIONAL : STAGES_RETAIL
 
   const activeStageIndex = STAGES.indexOf(summary?.current_stage ?? 'INTAKE')
+  const currentStepLabel = STAGE_LABELS[summary?.current_stage ?? 'INTAKE'] ?? (summary?.current_stage ?? 'Application')
 
   const tabs: { id: Tab; label: string; icon: typeof ClipboardList }[] = [
-    { id: 'application', label: 'Application', icon: ClipboardList },
-    { id: 'documents',   label: 'Documents',   icon: FileText },
+    { id: 'products',    label: 'Product Tracks', icon: Package },
+    { id: 'application', label: 'Application',    icon: ClipboardList },
+    { id: 'documents',   label: 'Documents',      icon: FileText },
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4 dark:bg-gray-800 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <header className="shrink-0 z-10 bg-white border-b border-gray-200 px-6 py-4 dark:bg-gray-800 dark:border-gray-700">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
@@ -93,159 +98,194 @@ export default function CaseDetailView({ caseId, onBack }: Props) {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Stage timeline */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
-            Application Progress
-          </h2>
-          <div className="flex items-center gap-0">
-            {STAGES.map((stage, idx) => {
-              const isCompleted = idx < activeStageIndex
-              const isActive = idx === activeStageIndex
-              const isLast = idx === STAGES.length - 1
-              return (
-                <div key={stage} className="flex items-center flex-1 min-w-0">
-                  <div className="flex flex-col items-center gap-1.5 shrink-0">
-                    <div
-                      className={[
-                        'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
-                        isCompleted
-                          ? 'bg-emerald-500 text-white'
-                          : isActive
-                          ? 'bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-900'
-                          : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500',
-                      ].join(' ')}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle className="w-3.5 h-3.5" />
-                      ) : isActive ? (
-                        <Clock className="w-3.5 h-3.5" />
-                      ) : (
-                        <span>{idx + 1}</span>
-                      )}
-                    </div>
-                    <span
-                      className={[
-                        'text-xs font-medium text-center leading-tight',
-                        isActive ? 'text-blue-600 dark:text-blue-400' : isCompleted ? 'text-gray-600 dark:text-gray-300' : 'text-gray-300 dark:text-gray-600',
-                      ].join(' ')}
-                    >
-                      {STAGE_LABELS[stage]}
-                    </span>
-                  </div>
-                  {!isLast && (
-                    <div
-                      className={[
-                        'flex-1 h-0.5 mx-1',
-                        isCompleted ? 'bg-emerald-300 dark:bg-emerald-700' : 'bg-gray-100 dark:bg-gray-700',
-                      ].join(' ')}
-                    />
-                  )}
-                </div>
-              )
-            })}
-          </div>
+      {/* Body */}
+      <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
+        {/* Left sidebar — vertical stage tracker */}
+        <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950 md:w-56 md:border-b-0 md:border-r">
+          {/* Mobile toggle — visible only below md */}
+          <button
+            onClick={() => setMobileExpanded((v) => !v)}
+            className="flex items-center justify-between px-4 py-2.5 text-xs text-gray-600 dark:text-gray-400 md:hidden"
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">Progress</span>
+              <span className={[
+                'px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                isEscalated
+                  ? 'border border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-700/30'
+                  : 'border border-gray-200 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+              ].join(' ')}>
+                {isEscalated ? 'Escalated' : currentStepLabel}
+              </span>
+            </span>
+            <ChevronDown className={['h-3.5 w-3.5 text-gray-400 transition-transform', mobileExpanded ? 'rotate-180' : ''].join(' ')} />
+          </button>
 
-          {/* Progress bar */}
-          {summary && (
-            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-400">Overall progress</span>
-                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                  {summary.overall_progress ?? 0}%
-                </span>
+          {/* Collapsible body */}
+          <div className={['flex-col flex-1 overflow-y-auto', mobileExpanded ? 'flex' : 'hidden md:flex'].join(' ')}>
+            <div className="flex-1 py-4">
+              <p className="mb-3 px-4 text-[10px] font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                Application Progress
+              </p>
+
+              {isLoading ? (
+                <div className="space-y-5 px-4">
+                  {STAGES.map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="h-6 w-6 animate-pulse bg-gray-200 dark:bg-gray-800" />
+                      <div className="h-2 w-20 animate-pulse bg-gray-200 dark:bg-gray-800" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4">
+                  {STAGES.map((stage, idx) => {
+                    const isCompleted = idx < activeStageIndex
+                    const isActive    = idx === activeStageIndex
+                    const isLast      = idx === STAGES.length - 1
+
+                    return (
+                      <div key={stage} className="flex gap-2.5">
+                        {/* Square step indicator */}
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={[
+                              'flex h-6 w-6 shrink-0 items-center justify-center text-[10px] font-bold',
+                              isCompleted
+                                ? 'bg-primary text-white'
+                                : isActive
+                                ? isEscalated
+                                  ? 'bg-amber-500 text-white ring-2 ring-amber-500/30'
+                                  : 'bg-primary text-white ring-2 ring-primary/30'
+                                : 'border border-gray-300 text-gray-400 bg-white dark:border-gray-700 dark:text-gray-600 dark:bg-transparent',
+                            ].join(' ')}
+                          >
+                            {isCompleted ? <Check className="h-3 w-3" /> : <span>{idx + 1}</span>}
+                          </div>
+
+                          {!isLast && (
+                            <div
+                              className={[
+                                'my-0.5 min-h-[24px] w-px flex-1',
+                                isCompleted ? 'bg-primary/60' : 'bg-gray-200 dark:bg-gray-800',
+                              ].join(' ')}
+                            />
+                          )}
+                        </div>
+
+                        {/* Step label */}
+                        <div className={isLast ? 'pb-0' : 'pb-4'}>
+                          <p
+                            className={[
+                              'pt-0.5 text-xs font-medium',
+                              isActive
+                                ? 'text-gray-900 dark:text-white'
+                                : isCompleted
+                                ? 'text-gray-500 dark:text-gray-500'
+                                : 'text-gray-400 dark:text-gray-700',
+                            ].join(' ')}
+                          >
+                            {STAGE_LABELS[stage]}
+                          </p>
+                          {isActive && (
+                            <span
+                              className={[
+                                'mt-1 inline-block px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
+                                isEscalated
+                                  ? 'border border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700/30 dark:bg-amber-950/60 dark:text-amber-400'
+                                  : 'border border-blue-200 bg-blue-50 text-blue-700 dark:border-primary/20 dark:bg-primary-subtle dark:text-primary',
+                              ].join(' ')}
+                            >
+                              {isEscalated ? 'Escalated' : 'Active'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Overall progress bar at the bottom of sidebar */}
+            {summary && (
+              <div className="border-t border-gray-100 px-4 py-4 dark:border-gray-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400">Overall</span>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                    {summary.overall_progress ?? 0}%
+                  </span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden dark:bg-gray-700">
+                  <div
+                    className="h-full bg-blue-600 rounded-full transition-all"
+                    style={{ width: `${summary.overall_progress ?? 0}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden dark:bg-gray-700">
-                <div
-                  className="h-full bg-blue-600 rounded-full transition-all"
-                  style={{ width: `${summary.overall_progress ?? 0}%` }}
-                />
-              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-gray-50 dark:bg-gray-900">
+          {/* Escalation banner */}
+          {summary?.escalated && (
+            <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 dark:bg-amber-950 dark:border-amber-800">
+              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                Your case has been escalated for enhanced review. Our compliance team will be in touch.
+              </p>
             </div>
           )}
-        </div>
 
-        {/* Escalation banner */}
-        {summary?.escalated && (
-          <div className="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 dark:bg-amber-950 dark:border-amber-800">
-            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-800 dark:text-amber-300">
-              Your case has been escalated for enhanced review. Our compliance team will be in touch.
-            </p>
+          {/* Tabs */}
+          <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden dark:border-gray-700 dark:bg-gray-800">
+            {/* Tab bar */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700">
+              {tabs.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={[
+                    'flex flex-1 items-center justify-center gap-2 py-3.5 text-sm font-medium border-b-2 transition-colors',
+                    activeTab === id
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200',
+                  ].join(' ')}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="p-5">
+              {activeTab === 'products' && (
+                <ParallelProductTracks
+                  tracks={summary?.products ?? []}
+                  isLoading={isLoading}
+                  caseId={caseId}
+                />
+              )}
+
+              {activeTab === 'application' && (
+                <OnboardingFormView
+                  caseId={caseId}
+                  clientData={collectedData?.client_data ?? {}}
+                  schema={schemaData?.fields ?? []}
+                  isLoading={schemaLoading || collectedLoading}
+                  readOnly={summary?.current_stage !== 'REVIEW'}
+                />
+              )}
+
+              {activeTab === 'documents' && (
+                <ClientDocumentHub caseId={caseId} readOnly={summary?.current_stage !== 'REVIEW'} />
+              )}
+            </div>
           </div>
-        )}
-
-        {/* Account number banners — one per product */}
-        {account && account.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {account.map((acc) => (
-              <div
-                key={acc.account_number}
-                className="flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-800 dark:bg-emerald-950"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center shrink-0">
-                    <BadgeCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
-                      {acc.product.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                    </p>
-                    <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100 tracking-wider font-mono">
-                      {acc.account_number}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Onboarding complete</p>
-                  <p className="text-xs text-emerald-500 dark:text-emerald-500 mt-0.5">
-                    {new Date(acc.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden dark:border-gray-700 dark:bg-gray-800">
-          {/* Tab bar */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700">
-            {tabs.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={[
-                  'flex flex-1 items-center justify-center gap-2 py-3.5 text-sm font-medium border-b-2 transition-colors',
-                  activeTab === id
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200',
-                ].join(' ')}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div className="p-5">
-            {activeTab === 'application' && (
-              <OnboardingFormView
-                caseId={caseId}
-                clientData={collectedData?.client_data ?? {}}
-                schema={schemaData?.fields ?? []}
-                isLoading={schemaLoading || collectedLoading}
-                readOnly={summary?.current_stage !== 'REVIEW'}
-              />
-            )}
-
-            {activeTab === 'documents' && (
-              <ClientDocumentHub caseId={caseId} readOnly={summary?.current_stage !== 'REVIEW'} />
-            )}
-          </div>
-        </div>
+        </main>
       </div>
     </div>
   )
