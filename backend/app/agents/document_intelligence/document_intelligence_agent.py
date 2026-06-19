@@ -89,16 +89,19 @@ class DocumentIntelligenceAgent(BaseAgent):
         document_id: UUID | None = UUID(document_id_str) if document_id_str else None
         filename: str = task.payload.get("filename", "")
         category: str = task.payload.get("category", "unknown")
+        client_data: dict[str, Any] | None = task.payload.get("client_data")
 
         self.logger.info(
             f"OCR extraction for case={task.case_id} "
-            f"document_id={document_id} category={category}"
+            f"document_id={document_id} category={category} "
+            f"client_data={'present' if client_data else 'absent'}"
         )
 
         result = await self._ocr.extract(
             document_id=document_id,
             filename=filename,
             category=category,  # type: ignore[arg-type]
+            client_data=client_data,
         )
 
         return TaskResponse(
