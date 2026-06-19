@@ -8,6 +8,7 @@ every agent call is durable, retried, and visible in the Temporal Web UI.
 from __future__ import annotations
 
 import asyncio
+import os
 from uuid import UUID
 
 from loguru import logger
@@ -23,7 +24,8 @@ from app.agents.base.a2a_types import (
 
 # ── Temporal configuration ────────────────────────────────────────────────────
 
-_TEMPORAL_HOST = "localhost:7233"
+_TEMPORAL_HOST = os.environ.get("TEMPORAL_HOST", "localhost:7233")
+_TEMPORAL_ENABLED = os.environ.get("TEMPORAL_ENABLED", "false").lower() == "true"
 _TASK_QUEUE = "onboarding"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -64,15 +66,27 @@ class AgentOrchestrationService:
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async def start(self) -> None:
-        """Connect to Temporal and start the worker. Raises if Temporal is unavailable."""
+        """Connect to Temporal and start the worker. Skipped when TEMPORAL_ENABLED=false."""
         if self._started:
             return
 
-        # Mandatory — let the exception propagate if Temporal is unreachable.
-        await self._start_temporal_worker()
+        if not _TEMPORAL_ENABLED:
+            logger.warning(
+                "TEMPORAL_ENABLED=false — Temporal worker not started. "
+                "Set TEMPORAL_ENABLED=true once Temporal is running."
+            )
+            self._started = True
+            return
+
+        try:
+            await self._start_temporal_worker()
+            logger.info("AgentOrchestrationService started (Temporal worker running)")
+        except Exception as exc:
+            logger.warning(
+                f"Temporal unavailable at {_TEMPORAL_HOST} — worker not started. Error: {exc}"
+            )
 
         self._started = True
-        logger.info("AgentOrchestrationService started (Temporal worker running)")
 
     async def stop(self) -> None:
         """Cancel the background worker task and close Temporal connection."""

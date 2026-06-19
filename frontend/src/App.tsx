@@ -4,6 +4,7 @@ import { Menu, X, Sun, Moon, WifiOff, RefreshCw } from 'lucide-react'
 
 import Login from '@/routes/Login'
 import Signup from '@/routes/Signup'
+import AuthCallback from '@/routes/AuthCallback'
 
 const AdvisorWorkspace = lazy(() => import('@/routes/AdvisorWorkspace'))
 const ClientPortal     = lazy(() => import('@/routes/ClientPortal'))
@@ -226,8 +227,9 @@ export default function App() {
           </div>
         }>
           <Routes>
-            <Route path="/login"  element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/login"         element={<Login />} />
+            <Route path="/signup"        element={<Signup />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
             <Route
               path="/profile"
