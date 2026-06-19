@@ -15,15 +15,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Auth Provider — "local" uses HS256 SECRET_KEY, "keycloak" uses Keycloak JWKS
-    AUTH_PROVIDER: Literal["local", "keycloak"] = "local"
-
-    # Keycloak SSO (only used when AUTH_PROVIDER=keycloak)
-    KEYCLOAK_URL: str = "http://keycloak:8080"
-    KEYCLOAK_REALM: str = "glidegate"
-    KEYCLOAK_CLIENT_ID: str = "glidegate-backend"
-    KEYCLOAK_CLIENT_SECRET: str = ""
-
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/glide_gate"
     DATABASE_URL_SYNC: str = "postgresql://postgres:postgres@localhost:5432/glide_gate"
@@ -55,9 +46,10 @@ class Settings(BaseSettings):
 
     # Auth provider — "local" uses HS256 JWT, "keycloak" validates via JWKS
     AUTH_PROVIDER: Literal["local", "keycloak"] = "local"
-    KEYCLOAK_URL: str = "http://localhost:8080"
+    KEYCLOAK_URL: str = "http://keycloak:8180"
     KEYCLOAK_REALM: str = "glidegate"
     KEYCLOAK_CLIENT_ID: str = "glidegate-frontend"
+    KEYCLOAK_CLIENT_SECRET: str = ""
 
     @property
     def keycloak_jwks_url(self) -> str:
