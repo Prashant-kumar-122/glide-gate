@@ -19,7 +19,6 @@ stages:
     - if: '$CI_COMMIT_BRANCH == "COPS_Agentic_AI_Deploy"'
       when: always
   before_script:
-    - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
     - chmod 600 "$EC2_SSH_KEY"
     - ssh-add "$EC2_SSH_KEY"
@@ -34,7 +33,6 @@ stages:
     - if: '$CI_COMMIT_BRANCH == "feat/cadf-framework_Keycloke_SSO"'
       when: always
   before_script:
-    - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
     - chmod 600 "$EC2_SSH_KEY"
     - ssh-add "$EC2_SSH_KEY"
@@ -49,7 +47,6 @@ stages:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: always
   before_script:
-    - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
     - chmod 600 "$EC2_SSH_KEY"
     - ssh-add "$EC2_SSH_KEY"
@@ -202,7 +199,6 @@ prepare-feature:
     - if: '$CI_COMMIT_BRANCH != "COPS_Agentic_AI_Deploy" && $CI_COMMIT_BRANCH != "main"'
       when: always
   before_script:
-    - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
     - chmod 600 "$EC2_SSH_KEY"
     - ssh-add "$EC2_SSH_KEY"
@@ -250,7 +246,6 @@ build-feature:
     - if: '$CI_COMMIT_BRANCH != "COPS_Agentic_AI_Deploy" && $CI_COMMIT_BRANCH != "main" && $CI_COMMIT_BRANCH != "feat/cadf-framework_Keycloke_SSO"'
       when: always
   before_script:
-    - apt-get update -qq && apt-get install -y -qq openssh-client
     - eval $(ssh-agent -s)
     - chmod 600 "$EC2_SSH_KEY"
     - ssh-add "$EC2_SSH_KEY"
