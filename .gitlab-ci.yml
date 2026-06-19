@@ -105,6 +105,34 @@ deploy:
 # Feature branch / MR pipeline — prepare + validate + build on runner (no deploy)
 # ══════════════════════════════════════════════════════════════════════════════
 
+prepare-feature:
+  stage: prepare
+  tags:
+    - ec2 arm64 ubuntu
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH != "COPS_Agentic_AI_Deploy" && $CI_COMMIT_BRANCH != "main"'
+      when: always
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq openssh-client
+    - eval $(ssh-agent -s)
+    - chmod 600 "$EC2_SSH_KEY"
+    - ssh-add "$EC2_SSH_KEY"
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H 18.60.103.228 >> ~/.ssh/known_hosts
+  script:
+    - echo "=========================================="
+    - echo "   [Feature] Pulling Latest Code on EC2"
+    - echo "   Branch - $CI_COMMIT_BRANCH"
+    - echo "   Commit - $CI_COMMIT_SHORT_SHA"
+    - echo "=========================================="
+    - ssh ubuntu@18.60.103.228 "
+        cd /home/ubuntu/office_project/glidegate &&
+        git fetch origin &&
+        git reset --hard origin/$CI_COMMIT_REF_NAME &&
+        echo '✓ Code synced successfully'"
+
 validate-frontend-feature:
   stage: validate
   tags:
@@ -149,8 +177,6 @@ build-feature:
     - echo "=========================================="
     - ssh ubuntu@18.60.103.228 "
         cd /home/ubuntu/office_project/glidegate &&
-        git fetch origin &&
-        git reset --hard origin/$CI_COMMIT_REF_NAME &&
         mkdir -p db/data &&
         sudo chown -R 999:999 db/data &&
         DOCKER_BUILDKIT=0 docker-compose -f docker-compose.prod.yml build &&
