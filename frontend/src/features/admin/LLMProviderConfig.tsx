@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, CheckCircle } from 'lucide-react'
+import { Save, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import { useLLMConfig, useUpdateLLMConfig } from '@/hooks/useLLMConfig'
 import type { LLMConfig } from '@/lib/api'
 
@@ -32,27 +32,30 @@ export default function LLMProviderConfig() {
 
   const [provider, setProvider] = useState<LLMConfig['provider']>('anthropic')
   const [model, setModel] = useState('claude-sonnet-4-6')
+  const [apiKey, setApiKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (config) {
       setProvider(config.provider)
       setModel(config.model)
+      setApiKey('')
     }
   }, [config])
 
   const selectedProvider = PROVIDERS.find((p) => p.value === provider)
 
   function handleSave() {
-    update.mutate(
-      { provider, model },
-      {
-        onSuccess: () => {
-          setSaved(true)
-          setTimeout(() => setSaved(false), 2000)
-        },
+    const payload: Partial<LLMConfig> = { provider, model }
+    if (apiKey.trim()) payload.api_key = apiKey.trim()
+    update.mutate(payload, {
+      onSuccess: () => {
+        setApiKey('')
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
       },
-    )
+    })
   }
 
   return (
@@ -74,6 +77,8 @@ export default function LLMProviderConfig() {
               onClick={() => {
                 setProvider(p.value)
                 setModel(p.models[0])
+                setApiKey('')
+                setShowKey(false)
               }}
               className={[
                 'border px-4 py-3 text-left text-sm font-medium transition-all',
@@ -125,6 +130,38 @@ export default function LLMProviderConfig() {
           />
         </div>
       </div>
+
+      {/* API Key — not shown for local provider */}
+      {provider !== 'local' && (
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-700 dark:text-gray-300">API Key</label>
+          <div className="relative">
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={
+                config?.api_key_configured
+                  ? 'Configured — leave blank to keep'
+                  : 'Enter API key…'
+              }
+              className="w-full border border-gray-200 px-3 py-2 pr-9 font-mono text-xs text-gray-700 placeholder-gray-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder-gray-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey((v) => !v)}
+              className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              {showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+          {config?.api_key_configured && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              ✓ API key configured
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Save */}
       <button

@@ -296,6 +296,8 @@ export interface LLMConfig {
   presence_penalty: number
   max_retries: number
   cache_ttl: number
+  api_key_configured: boolean
+  api_key?: string
 }
 
 export interface ValidationPrompt {

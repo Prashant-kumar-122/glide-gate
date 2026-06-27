@@ -29,11 +29,14 @@ class LLMProviderFactory:
         mdl = model or overrides.get("model", settings.PRIMARY_LLM_MODEL)
 
         if name == "anthropic":
-            return AnthropicProvider(api_key=settings.ANTHROPIC_API_KEY, model=mdl)
+            key = overrides.get("anthropic_api_key") or settings.ANTHROPIC_API_KEY
+            return AnthropicProvider(api_key=key, model=mdl)
         if name == "openai":
-            return OpenAIProvider(api_key=settings.OPENAI_API_KEY, model=mdl)
+            key = overrides.get("openai_api_key") or settings.OPENAI_API_KEY
+            return OpenAIProvider(api_key=key, model=mdl)
         if name == "google":
-            return GoogleProvider(api_key=settings.GOOGLE_API_KEY, model=mdl)
+            key = overrides.get("google_api_key") or settings.GOOGLE_API_KEY
+            return GoogleProvider(api_key=key, model=mdl)
         if name == "local":
             local_model = model or overrides.get("model") or settings.LOCAL_MODEL_NAME
             return LocalModelProvider(base_url=settings.LOCAL_MODEL_ENDPOINT, model=local_model)
