@@ -95,7 +95,6 @@ services:
       - POSTGRES_PWD=${DB_PASSWORD:-Root}
       - POSTGRES_SEEDS=postgres
       - DB_PORT=5432
-      - TEMPORAL_ADDRESS=0.0.0.0:7233
     depends_on:
       postgres:
         condition: service_healthy
