@@ -14,6 +14,7 @@ const DEFAULT_CONFIG: LLMConfig = {
   presence_penalty: 0.0,
   max_retries: 3,
   cache_ttl: 300,
+  api_key_configured: false,
 }
 
 export function useLLMConfig() {

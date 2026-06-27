@@ -30,6 +30,7 @@ class LLMConfigOut(BaseModel):
     cache_ttl: int
     max_retries: int
     overrides_active: bool
+    api_key_configured: bool
 
 
 class LLMConfigUpdate(BaseModel):
@@ -43,17 +44,32 @@ class LLMConfigUpdate(BaseModel):
     max_tokens: int | None = Field(None, ge=1, le=32000)
     cache_ttl: int | None = Field(None, ge=0)
     max_retries: int | None = Field(None, ge=0, le=10)
+    api_key: str | None = None
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+_PROVIDER_SETTINGS_KEY = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "google": "GOOGLE_API_KEY",
+}
+
+
+def _api_key_configured(provider: str, overrides: dict) -> bool:
+    override_key = overrides.get(f"{provider}_api_key", "")
+    settings_key = getattr(settings, _PROVIDER_SETTINGS_KEY.get(provider, ""), "")
+    return bool(override_key or settings_key)
+
 
 @router.get("", response_model=LLMConfigOut)
 async def get_llm_config(
     _user: dict = Depends(require_permission("admin:config")),
 ) -> LLMConfigOut:
     ov = get_all_overrides()
+    provider = ov.get("provider", settings.PRIMARY_LLM_PROVIDER)
     return LLMConfigOut(
-        provider=ov.get("provider", settings.PRIMARY_LLM_PROVIDER),
+        provider=provider,
         model=ov.get("model", settings.PRIMARY_LLM_MODEL),
         temperature=ov.get("temperature", settings.LLM_TEMPERATURE),
         top_p=ov.get("top_p", settings.LLM_TOP_P),
@@ -64,6 +80,7 @@ async def get_llm_config(
         cache_ttl=ov.get("cache_ttl", settings.LLM_CACHE_TTL),
         max_retries=ov.get("max_retries", settings.LLM_MAX_RETRIES),
         overrides_active=bool(ov),
+        api_key_configured=_api_key_configured(provider, ov),
     )
 
 
@@ -72,7 +89,13 @@ async def update_llm_config(
     body: LLMConfigUpdate,
     _user: dict = Depends(require_permission("admin:config")),
 ) -> LLMConfigOut:
-    set_overrides(body.model_dump(exclude_none=True))
+    updates = body.model_dump(exclude_none=True)
+    if "api_key" in updates:
+        # Store per-provider so keys survive provider switches
+        ov = get_all_overrides()
+        provider = updates.get("provider") or ov.get("provider") or settings.PRIMARY_LLM_PROVIDER
+        updates[f"{provider}_api_key"] = updates.pop("api_key")
+    set_overrides(updates)
     return await get_llm_config(_user=_user)
 
 
