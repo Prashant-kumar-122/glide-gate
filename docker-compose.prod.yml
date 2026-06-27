@@ -93,7 +93,7 @@ services:
       - POSTGRES_USER=${DB_USER:-postgres}
       - POSTGRES_PWD=${DB_PASSWORD:-Root}
       - POSTGRES_SEEDS=postgres
-      - POSTGRES_PORT=5432
+      - DB_PORT=5432
       - TEMPORAL_ADDRESS=0.0.0.0:7233
     depends_on:
       postgres:
